@@ -105,10 +105,10 @@ Tokens are in `app/src/index.css`.
 | `/wallet/purchases` | Purchase history | Real, read from Arkiv |
 | `/wallet/ticket/:id` | Ticket | Real |
 | `/wallet/claim/:id` | Claim | Two steps, with a real signed claim. World ID happens at sign in |
-| `/wallet/checkin/:id` | Holder check in | Simulated. Sonar lives in `/lab` |
+| `/wallet/checkin/:id` | Holder check in | Real sound, wallet signed. Shows a QR code and 6 digit code |
 | `/wallet/transfer/:id` | Send ticket | Simulated |
-| `/door`, `/door/checking`, `/door/result` | Door check in | Simulated, typed pass number only |
-| `/door/manual`, `/door/recent` | Manual admit, recent | Simulated. Manual admit is out of demo scope |
+| `/door` | Door check in | Real sound. Scan or type the holder's code, with a door PIN |
+| `/door/recent` | Recent check ins | Real, read from Arkiv. Manual admit was removed: it is out of demo scope |
 | `/organizer` | Issue tickets and look up a wallet | Built, real. It calls `/api/issue` and `/api/tickets` |
 | `/u/:name`, `/privacy`, `/terms` | Profile, legal | Stubs that say "Not built yet" |
 | `/lab` | Sonar test page | Person 1's, outside the design system |

@@ -13,6 +13,8 @@ export const env = {
     maxCostWei: BigInt(process.env.ARKIV_MAX_COST_WEI ?? "10000000000000000"),
     eventId: process.env.ARKIV_EVENT_ID ?? "demo-event",
   },
+  /** Door phones must know this, so nobody can run their own door at home. */
+  doorPin: process.env.DOOR_PIN,
   world: {
     appId: requireEnv("WORLD_APP_ID"),
     rpId: requireEnv("WORLD_RP_ID"),

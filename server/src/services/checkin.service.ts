@@ -1,0 +1,140 @@
+import { randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import { distanceCm, verdictFor } from "../../../app/src/sonar/distance.ts";
+import type { CheckinStore, DoorTicket } from "../arkiv/tickets.ts";
+import { isWalletOwner, type Signed } from "../utils/signature.ts";
+
+export type CheckinState = "waiting" | "running" | "saving" | "pass" | "too_far" | "no_sound" | "invalid" | "expired" | "failed";
+type Failure = { status: 400 | 401 | 402 | 403 | 404 | 409 | 410; error: string };
+type Started = { status: 200; id: string; code: string; seed: string };
+type Joined = { status: 200; id: string; seed: string; doorToken: string; holder: string; tier: string };
+
+type Session = {
+  id: string; code: string; seed: string; ticket: DoorTicket; state: CheckinState;
+  createdAt: number; runningAt?: number; doorToken?: string;
+  door?: number; holder?: number; cm?: number;
+  ordinal?: number; transactionHash?: string; entityKey?: string;
+};
+export type Options = { store: CheckinStore; allowSkip: boolean; doorPin?: string; now?: () => number };
+
+const CODE_TTL_MS = 2 * 60 * 1000;
+/** The phones record for 6 seconds, so a run with no result by now has gone wrong. */
+const RUN_TTL_MS = 25 * 1000;
+const MAX_SESSIONS = 200;
+const FINISHED: CheckinState[] = ["pass", "too_far", "no_sound", "invalid", "expired", "failed"];
+
+const sameSecret = (a: string, b: string) => {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+
+/** Live check-ins, held in memory for a few minutes. Only a passed check-in is permanent, on Arkiv. */
+export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Options) {
+  const sessions = new Map<string, Session>();
+
+  function refresh(session: Session) {
+    const age = now() - (session.runningAt ?? session.createdAt);
+    const limit = session.state === "waiting" ? CODE_TTL_MS : RUN_TTL_MS;
+    if ((session.state === "waiting" || session.state === "running") && age > limit) session.state = "expired";
+    return session;
+  }
+
+  /** The holder's wallet proves it is here, and every rule about the ticket is checked before any sound plays. */
+  async function start(input: Partial<Signed> & { passId?: string }): Promise<Started | Failure> {
+    const passId = String(input.passId ?? "");
+    if (!(await isWalletOwner(`checkin:${passId}`, input))) return { status: 401, error: "bad_signature" };
+    const wallet = input.wallet!.toLowerCase();
+
+    const ticket = await store.doorTicket(passId, wallet);
+    if (!ticket) return { status: 404, error: "ticket_not_found" };
+    if (ticket.holder !== wallet) return { status: 403, error: "not_ticket_holder" };
+    if (ticket.status === "checked_in") return { status: 409, error: "already_checked_in" };
+    if (ticket.status === "revoked") return { status: 403, error: "ticket_revoked" };
+    if (ticket.status === "issued") return { status: 409, error: "not_claimed" };
+    if (ticket.status === "skipped" && !allowSkip) return { status: 403, error: "not_verified" };
+    if (await store.eventEnded(ticket.eventId)) return { status: 410, error: "event_ended" };
+    if (await store.hasCheckedIn(ticket.eventId, wallet)) return { status: 409, error: "already_checked_in" };
+    if (ticket.bought && !(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };
+
+    for (const [id, old] of sessions) {
+      if (old.ticket.passId === passId || FINISHED.includes(refresh(old).state)) sessions.delete(id);
+    }
+    if (sessions.size >= MAX_SESSIONS) sessions.delete(sessions.keys().next().value!);
+
+    const taken = new Set([...sessions.values()].map((item) => item.code));
+    let code: string;
+    do code = String(randomInt(100_000, 1_000_000)); while (taken.has(code));
+    const session: Session = { id: randomUUID(), code, seed: randomBytes(16).toString("hex"), ticket, state: "waiting", createdAt: now() };
+    sessions.set(session.id, session);
+    return { status: 200, id: session.id, code, seed: session.seed };
+  }
+
+  /** The door joins with the holder's code. That is the moment both phones start recording. */
+  function join(input: { code?: string; pin?: string }): Joined | Failure {
+    if (doorPin && !sameSecret(String(input.pin ?? ""), doorPin)) return { status: 403, error: "bad_door_pin" };
+    const session = [...sessions.values()].find((item) => item.code === String(input.code ?? "").trim());
+    if (!session || refresh(session).state !== "waiting") return { status: 404, error: "code_not_found" };
+    session.state = "running";
+    session.runningAt = now();
+    session.doorToken = randomBytes(16).toString("hex");
+    return { status: 200, id: session.id, seed: session.seed, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
+  }
+
+  function status(id: string) {
+    const session = sessions.get(id);
+    if (!session) return null;
+    const { state, cm, ordinal, transactionHash, entityKey } = refresh(session);
+    return { state, cm, ordinal, transactionHash, entityKey };
+  }
+
+  async function finish(session: Session) {
+    const cm = distanceCm(session.door!, session.holder!);
+    session.cm = cm;
+    const verdict = verdictFor(cm);
+    if (verdict === "invalid") return void (session.state = "invalid");
+    if (verdict === "far") return void (session.state = "too_far");
+    session.state = "saving";
+    try {
+      Object.assign(session, await store.commitCheckin(session.ticket, cm));
+      session.state = "pass";
+    } catch (error) {
+      console.error("Check-in write failed:", error instanceof Error ? error.message.replace(/https?:\/\/\S+/g, "[url]").slice(0, 200) : "unknown");
+      session.state = "failed";
+    }
+  }
+
+  /**
+   * Each phone reports once. Only the door holds its token, and only the holder's wallet can sign,
+   * so neither side can send the other's measurement.
+   */
+  async function report(
+    id: string,
+    input: Partial<Signed> & { role?: string; elapsedSeconds?: number | null; doorToken?: string },
+  ): Promise<{ status: 200 } | Failure> {
+    const session = sessions.get(id);
+    if (!session) return { status: 404, error: "session_not_found" };
+    if (refresh(session).state !== "running") return { status: 409, error: "session_not_running" };
+    const { role, elapsedSeconds } = input;
+    const heard = typeof elapsedSeconds === "number" && Number.isFinite(elapsedSeconds);
+    if (!heard && elapsedSeconds !== null) return { status: 400, error: "invalid_report" };
+
+    if (role === "door") {
+      if (!session.doorToken || !sameSecret(String(input.doorToken ?? ""), session.doorToken)) return { status: 403, error: "bad_door_token" };
+    } else if (role === "holder") {
+      const signedFor = input.wallet?.toLowerCase() === session.ticket.holder;
+      if (!signedFor || !(await isWalletOwner(`checkin-report:${id}:${elapsedSeconds}`, input))) return { status: 401, error: "bad_signature" };
+    } else {
+      return { status: 400, error: "invalid_report" };
+    }
+    if (session[role] !== undefined) return { status: 409, error: "already_reported" };
+    if (!heard) {
+      session.state = "no_sound";
+      return { status: 200 };
+    }
+    session[role] = elapsedSeconds;
+    if (session.door !== undefined && session.holder !== undefined) await finish(session);
+    return { status: 200 };
+  }
+
+  return { start, join, status, report };
+}

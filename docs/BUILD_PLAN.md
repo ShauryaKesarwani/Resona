@@ -146,7 +146,7 @@ Someone who didn't build it can issue a ticket and check in on the deployed URL,
 | Who | Task | Done when |
 |---|---|---|
 | **Person 3** | Add the IDKit widget to a Claim button in the wallet, using the [simulator](https://simulator.worldcoin.org/) to test | A verified proof reaches the server |
-| **Person 2** | Add `POST /api/world/sign` and `POST /api/claim`. Verify the proof, then write a `resona.claim` holding the hashed nullifier. Process one claim at a time, and reject repeats | The same person's second claim is rejected |
+| **Person 2** | Add `POST /api/world/sign` and `POST /api/claim`. Verify the proof at sign-up and store the hashed nullifier on `resona.account`, then write a `resona.claim` holding the hashed user ID. Process one claim at a time, and reject repeats | The same person's second claim is rejected |
 | **Person 1** | Keep improving sonar reliability, and require the door to accept only claimed tickets | An unclaimed ticket can't check in |
 | **Half person** | Time the first successful verification, and write the World debrief | Debrief drafted |
 

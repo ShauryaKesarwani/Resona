@@ -6,7 +6,7 @@ import { addr, defineSchema, key, str } from "@arkiv-network/sdk/schema";
 import { getAddress, http, isAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createQueue } from "../utils/queue.ts";
-import { EventSchema } from "./records.ts";
+import { CheckinSchema, EventSchema, PaymentSchema } from "./records.ts";
 import { gasFor, journal, organizerWrites } from "./writes.ts";
 
 export type TicketStatus = "issued" | "claimed" | "skipped" | "checked_in" | "revoked";
@@ -28,7 +28,19 @@ export type TicketStore = {
 };
 
 const notConfigured = async () => { throw new Error("Arkiv is not configured"); };
-export const unconfiguredTickets: TicketStore = {
+export type DoorTicket = Ticket & { bought: boolean };
+export type Admission = { ordinal: number; transactionHash: Hex; entityKey: Hex };
+export type CheckinStore = {
+  /** The ticket for this holder, whether the organizer issued it or the holder's own wallet bought it. */
+  doorTicket(passId: string, holder: string): Promise<DoorTicket | undefined>;
+  /** A bought ticket is written by its buyer, so it only counts if the payment is really on chain. */
+  paymentIsValid(ticket: DoorTicket): Promise<boolean>;
+  eventEnded(eventId: string): Promise<boolean>;
+  hasCheckedIn(eventId: string, holder: string): Promise<boolean>;
+  commitCheckin(ticket: DoorTicket, distanceCm: number): Promise<Admission>;
+};
+
+export const unconfiguredTickets: TicketStore & CheckinStore = {
   ready: false,
   issue: notConfigured,
   ticket: async () => undefined,
@@ -37,6 +49,11 @@ export const unconfiguredTickets: TicketStore = {
   setStatus: notConfigured,
   commitClaim: notConfigured,
   fund: notConfigured,
+  doorTicket: async () => undefined,
+  paymentIsValid: async () => false,
+  eventEnded: async () => false,
+  hasCheckedIn: async () => false,
+  commitCheckin: notConfigured,
 };
 
 export const TicketSchema = defineSchema("resona.ticket", {
@@ -73,6 +90,8 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
   const writer = createWalletClient({ chain, transport, account });
   const exclusive = createQueue();
   const claimed = new Set<string>();
+  const admitted = new Set<string>();
+  const lastOrdinal = new Map<string, number>();
 
   /** One write at a time, with a fresh nonce and explicit gas. An error here is never retried automatically. */
   const write = <T extends { txHash: Hex }>(label: string, operations: number, send: (tx: { nonce: number; gas: bigint; gasPrice: bigint }) => Promise<T>) =>
@@ -105,6 +124,19 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
     const { entities } = await reader.select({ operationId: true }).from(ClaimSchema, { onMismatch: "throw" }).createdBy(account.address)
       .where(eq("eventId", eventId)).where(eq("userId", userId)).limit(1).fetch();
     if (entities.length > 0) claimed.add(id);
+    return entities.length > 0;
+  }
+
+  async function event(eventId: string) {
+    const { entities } = await reader.select({ eventDate: true, priceWei: true, organiser: true })
+      .from(EventSchema, { onMismatch: "throw" }).createdBy(account.address).where(eq("eventId", eventId)).limit(1).fetch();
+    return entities[0];
+  }
+
+  async function hasCheckedIn(eventId: string, holder: string): Promise<boolean> {
+    if (admitted.has(`${eventId}:${holder}`)) return true;
+    const { entities } = await reader.select({ passId: true }).from(CheckinSchema, { onMismatch: "throw" }).createdBy(account.address)
+      .where(eq("eventId", eventId)).where(eq("holder", addr(getAddress(holder)))).limit(1).fetch();
     return entities.length > 0;
   }
 
@@ -158,6 +190,61 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       const result = await write(`event ${values.eventId}`, 1, (tx) => writer.createEntity(EventSchema, values, { ...keep, flags: { readonly: true } }, tx));
       return { eventId: values.eventId, entityKey: result.entityKey, transactionHash: result.txHash };
     },
+    doorTicket: async (passId: string, holder: string): Promise<DoorTicket | undefined> => {
+      const issued = await ticket(passId);
+      if (issued) return { ...issued, bought: false };
+      const { entities } = await reader.select(TICKET_FIELDS).from(TicketSchema, { onMismatch: "throw" })
+        .createdBy(getAddress(holder)).where(eq("passId", passId)).limit(1).fetch();
+      return entities[0] ? { ...toTicket(entities[0]), bought: true } : undefined;
+    },
+    paymentIsValid: async (bought: DoorTicket): Promise<boolean> => {
+      const buyer = getAddress(bought.holder);
+      const { entities } = await reader.select({ txnHash: true, eventId: true }).from(PaymentSchema, { onMismatch: "throw" })
+        .createdBy(buyer).where(eq("passId", bought.passId)).limit(1).fetch();
+      const payment = entities[0];
+      if (!payment || payment.eventId.value !== bought.eventId) return false;
+      const txnHash = payment.txnHash.value;
+      // One payment can only back one ticket.
+      const { entities: uses } = await reader.select({ passId: true }).from(PaymentSchema, { onMismatch: "throw" })
+        .createdBy(buyer).where(eq("txnHash", txnHash)).limit(2).fetch();
+      if (uses.length !== 1) return false;
+      const details = await event(bought.eventId);
+      if (!details) return false;
+      const [transaction, receipt] = await Promise.all([
+        reader.getTransaction({ hash: txnHash as Hex }),
+        reader.getTransactionReceipt({ hash: txnHash as Hex }),
+      ]).catch(() => [null, null] as const);
+      return !!transaction && !!receipt && receipt.status === "success"
+        && getAddress(transaction.from) === buyer
+        && !!transaction.to && getAddress(transaction.to) === account.address
+        && transaction.value >= BigInt(details.priceWei.value);
+    },
+    eventEnded: async (eventId: string) => {
+      const details = await event(eventId);
+      return !!details && details.eventDate.value < new Date().toISOString().slice(0, 10);
+    },
+    hasCheckedIn,
+    /** The admission and the ticket's new status land together. A failure here is never written twice. */
+    commitCheckin: (door: DoorTicket, distanceCm: number) => exclusive(async (): Promise<Admission> => {
+      if (await hasCheckedIn(door.eventId, door.holder)) throw new Error("Already checked in");
+      const page = await reader.select({ passId: true }).from(CheckinSchema, { onMismatch: "throw" }).createdBy(account.address)
+        .where(eq("eventId", door.eventId)).limit(1).withCount().fetch();
+      // Arkiv's index can lag behind a write that just landed, so the count never goes backwards.
+      const ordinal = Math.max(Number(page.count), lastOrdinal.get(door.eventId) ?? 0) + 1;
+      const values = {
+        eventId: door.eventId, passId: door.passId, holder: addr(getAddress(door.holder)), ordinal: String(ordinal),
+        distanceCm: String(Math.round(distanceCm)), checkedInAt: new Date().toISOString(),
+      };
+      const creates = [{ schema: CheckinSchema, values, ...keep, flags: { readonly: true } }];
+      const result = door.bought
+        ? await write(`checkin ${door.passId}`, 1, (tx) => writer.executeBatch({ creates }, tx))
+        : await write(`checkin ${door.passId}`, 2, (tx) => writer.executeBatch({
+          creates, patches: [{ schema: TicketSchema, entityKey: door.entityKey, set: { status: "checked_in" } }],
+        }, tx));
+      admitted.add(`${door.eventId}:${door.holder}`);
+      lastOrdinal.set(door.eventId, ordinal);
+      return { ordinal, transactionHash: result.txHash, entityKey: result.createdEntities[0] };
+    }),
     fund: (wallet: string) => organizerWrites(async () => {
       const balance = await reader.getBalance({ address: wallet as Hex });
       if (balance >= FUND_WEI / 2n) return;

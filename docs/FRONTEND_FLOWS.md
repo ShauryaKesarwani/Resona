@@ -149,4 +149,4 @@ Ticket screen buttons by status:
 - Which testnet token pays for tickets, and who pays gas.
 - Whether the door scans a QR code or the camera reads a signed session hint.
 - The server has no list all tickets route, so the organizer page shows what it issued in this session and lets you look up one wallet.
-- There are no check in routes on `main` yet, so the door and holder check in stay simulated.
+- The door runs on one page, `/door`, so `/door/checking`, `/door/result` and `/door/manual` no longer exist. The tables above still need updating.

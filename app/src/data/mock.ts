@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react'
-import { allEvents, myTickets } from '../services/arkiv'
+import { allEvents, myCheckedInPasses, myTickets } from '../services/arkiv'
 import { walletAddress } from '../utils/wallet'
 
 /**
- * Tickets are real and read from Arkiv. Check ins are still simulated until the door is wired up.
+ * This wallet's tickets, read from Arkiv and held for the screens. Nothing here is simulated.
  */
 export type Status = 'issued' | 'claimed' | 'skipped' | 'checked_in' | 'revoked'
 export type Level = 'Orb verified' | 'Camera verified' | 'Government ID' | 'Not verified'
@@ -53,12 +53,12 @@ const tierNames: Record<string, string> = { general: 'General admission', partne
 
 let refreshing: Promise<void> | undefined
 
-/** Reads this wallet's tickets from Arkiv, once at a time. A check in stays on this phone until the door is real. */
+/** Reads this wallet's tickets from Arkiv, once at a time. */
 export const refreshTickets = () => (refreshing ??= loadTickets().finally(() => (refreshing = undefined)))
 
 async function loadTickets() {
   try {
-    const [rows, events] = await Promise.all([myTickets(), allEvents()])
+    const [rows, events, entered] = await Promise.all([myTickets(), allEvents(), myCheckedInPasses()])
     const today = new Date().toISOString().slice(0, 10)
     tickets = rows.map((row, index) => {
       const event = events.find((e) => e.eventId === row.eventId)
@@ -70,7 +70,7 @@ async function loadTickets() {
         event: event?.eventName ?? 'Event details not published',
         tier: tierNames[row.tier] ?? row.tier,
         level: row.status === 'claimed' || row.status === 'checked_in' ? 'Orb verified' : 'Not verified',
-        status: local?.status === 'checked_in' ? 'checked_in' : (row.status as Status),
+        status: entered.has(row.passId) ? 'checked_in' : (row.status as Status),
         past: event ? event.eventDate < today : false,
         transferExpires: local?.transferExpires,
       }
@@ -84,44 +84,8 @@ async function loadTickets() {
 
 refreshTickets()
 
-/** Door side. A check in is a sound pass or a manual entry by staff. */
-export type Checkin = {
-  id: string
-  pass: number
-  name: string
-  at: number
-  method: 'sound' | 'manual'
-  cm?: number
-  reason?: string
-  ordinal: number
-}
-
-export const doorStaff = 'Door A'
-const min = 60000
-
-let checkins: Checkin[] = []
-
-export const useCheckins = () => useSyncExternalStore(subscribe, () => checkins)
-
-export const findPass = (pass: string | null) => tickets.find((t) => String(t.pass) === (pass ?? '').trim())
-
-export function recordCheckin(pass: number, method: 'sound' | 'manual', extra: { cm?: number; reason?: string }) {
-  const t = tickets.find((x) => x.pass === pass)
-  checkins = [
-    { id: `c${Date.now()}`, pass, name: wallet.name, at: Date.now(), method, ordinal: checkins.length + 1, ...extra },
-    ...checkins,
-  ]
-  if (t) tickets = tickets.map((x) => (x.id === t.id ? { ...x, status: 'checked_in' } : x))
-  subs.forEach((f) => f())
-}
-
 export const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd']
   const v = n % 100
   return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
-
-export const ago = (at: number) => {
-  const m = Math.max(0, Math.round((Date.now() - at) / min))
-  return m < 1 ? 'Just now' : m === 1 ? '1\u00a0min ago' : `${m}\u00a0min ago`
 }

@@ -120,38 +120,28 @@ Binding the pass to the wallet also keeps the earlier rule: selling a personal E
 
 ## Arkiv: the ticket database
 
-Target: [Build on Arkiv (from scratch)](TRACKS.md#arkiv). The current testnet is Rabdi, chain ID 7794095, with `@arkiv-network/sdk` and viem. The [docs](https://docs.arkiv.network) give Node 22.10+ or Bun as the runtime. **Write from the server,** because that's where the organizer's key lives. The PWA can read directly, since [a public client holds no account and is safe in the browser](https://docs.arkiv.network/start-here/clients/).
+Target: [Build on Arkiv (from scratch)](TRACKS.md#arkiv). The current testnet is Rabdi, chain ID 7794095, with `@arkiv-network/sdk` and viem. The [docs](https://docs.arkiv.network) give Node 22.10+ or Bun as the runtime. **Write organizer records from the server,** because that's where the organizer's key lives; a buyer's wallet writes its own ticket and payment records. The PWA can read directly, since [a public client holds no account and is safe in the browser](https://docs.arkiv.network/start-here/clients/).
 
 Facts that shape the design:
 
-- **Anyone can write entities with any attributes.** Every read must filter with `.ownedBy(organizerAddress)`, or an attacker could plant a fake ticket.
+- **Anyone can write entities with any attributes.** Every read must filter by a trusted address, or an attacker could plant a fake ticket. Use `createdBy`, because an ownership transfer needs no recipient consent, so `ownedBy` alone can be spoofed.
 - **Only the owner can patch, extend or delete,** and [the node enforces this](https://docs.arkiv.network/writing/change/).
 - **Everything is public,** so no real names, emails, audio or raw nullifiers.
 - **Lifetime is capped at about 182.5 days per extension,** and [expired entities stop appearing in queries](https://docs.arkiv.network/writing/expiration/). Trophies need extending, so test the `permissionlessExtension` flag, which would let holders keep theirs alive.
 - **`readonly` entities can't be patched,** which suits check-in records.
 
-| Entity | Queried by | Owner | Expiry | What the user sees |
-|---|---|---|---|---|
-| `resona.event` | `eventId`, `ensName` | Organizer | Event end + 30 days | Event and tier details |
-| `resona.ticket` | `eventId`, `holder`, `status`, `tier` | Organizer | Event end + 30 days | Tickets in the wallet; the door's ticket lookup |
-| `resona.transfer` | `passId`, `status` | Organizer | 24 hours | Pending request; lapses if nobody decides |
-| `resona.checkin` | `eventId`, `holder`, `ordinal` | Organizer, `readonly` | Maximum, then extended | A link to the record after a pass, and repeat check-ins rejected. Later, the trophy and ordinal |
-| `resona.claim` (stage 2) | `eventId`, `nullifierHash` | Organizer | Event end + 30 days | "Already claimed" when the same person tries again |
+[arkiv/schema.md](../arkiv/schema.md) has every field, trust rule and known gap. In summary, all of these currently use Arkiv's maximum lifetime, about six months:
 
-Proposed ticket schema, using the [documented `defineSchema` format](https://docs.arkiv.network/start-here/first-entity/):
+| Entity | Queried by | Written by | What the user sees |
+|---|---|---|---|
+| `resona.account` | `wallet`, `nullifierHash` | Organizer, `readonly` | Sign-in, and "this human already has an account" |
+| `resona.event` | `eventId` | Organizer, `readonly` | Events to buy tickets for |
+| `resona.ticket` | `passId`, `holder` | Organizer, or the buyer's wallet for a bought ticket | Tickets in the wallet; the door's ticket lookup |
+| `resona.claim` | `eventId`, `userId` | Organizer, `readonly` | "Already claimed" when the same person tries again |
+| `resona.payment` | `passId`, `txnHash` | Buyer's wallet, `readonly` | Purchase history; the door's payment check |
+| `resona.checkin` | `eventId`, `holder` | Organizer, `readonly` | A link to the record after a pass, and repeat check-ins rejected |
 
-```ts
-const Ticket = defineSchema("resona.ticket", {
-  passId: str().indexed(),
-  eventId: str().indexed(),
-  tier: str().indexed(),
-  holder: addr().indexed(),
-  status: str().indexed(),   // issued | claimed | skipped | checked_in | revoked
-  ensName: str(),            // for example 7.ethglobal-mumbai.eth
-  deviceKeyHash: str(),
-  serial: str(),
-})
-```
+`resona.transfer` is planned and not built. It would hold a pending request with a 24-hour expiry. Event-end-plus-30-days expiry is also planned.
 
 Arkiv's reads power real features: the attendee's ticket view and the door lookup. The track doesn't count logging that nothing reads. Trophy pages are deferred from the demo.
 

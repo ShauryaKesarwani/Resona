@@ -8,8 +8,8 @@ The current code is the source for implementation status; planned behavior and s
 
 - [x] React/Vite app, web manifest, and Node server that serves the built app exist.
 - [~] Browser wallet and wallet-signature sign-in are implemented; verify the full flow on the demo phones and clarify the security and recovery limits.
-- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. Door screens, check-in, the claim's phone-lock step and door history are still simulated; `/privacy`, `/terms` and `/u/:name` are stubs.
-- [~] The organizer page calls the real issue and lookup APIs, and wallet tickets, events and purchases read Arkiv in code; `data/mock.ts` no longer invents tickets but still holds simulated check-ins. Not yet verified end to end against live Arkiv in the app.
+- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. The door, wallet check-in and door history screens now call the real check-in API and Arkiv in code, unverified on phones; the claim's phone-lock step is still simulated; `/privacy`, `/terms` and `/u/:name` are stubs.
+- [~] The organizer page calls the real issue and lookup APIs, and wallet tickets, events and purchases read Arkiv in code; `data/mock.ts` no longer simulates tickets or check-ins. Not yet verified end to end against live Arkiv in the app.
 - [ ] Require organizer authorization on `POST /issue`; any caller can currently make the server's signer write a ticket.
 - [ ] Deploy a single public HTTPS URL and verify installation and microphone access on both Android phones.
 - [ ] Choose and add an open-source license, if approved by the repo owner. The GitHub repo is public and has no license yet, which the Arkiv track requires.
@@ -18,18 +18,20 @@ The current code is the source for implementation status; planned behavior and s
 
 - [~] Sonar lab, audio processing and lab server routes exist; the build plan reports a two-phone pass, but full reliability and check-in integration are not established.
 - [ ] Test near/far results, noise, dropped audio blocks, and the Google Meet relay on the actual demo devices; record results.
-- [ ] Implement check-in sessions and polling, fresh challenges, and holder-signed reports verified against the ticket wallet.
-- [ ] Connect the door and wallet screens to real sonar and check-in results; reject repeat check-ins and require the configured claim policy.
-- [ ] Atomically and safely record successful check-ins and ticket status in Arkiv; determine arrival ordinals and handle retries or interrupted writes.
+- [~] Check-in sessions, polling, fresh seeds, a door PIN and token, and holder-signed reports verified against the ticket wallet exist in `server/src/services/checkin.service.ts`, with unit tests on a fake store. Sessions live in server memory. Not verified on live Arkiv or the demo phones.
+- [~] The door and wallet screens use real sonar and check-in results in code; the server rejects repeat check-ins and applies the claim and skip policy to issued tickets. Bought tickets are not held to the World policy at the door. Not run on the demo phones.
+- [~] An issued ticket's check-in and `checked_in` status land in one Arkiv batch, and a bought ticket gets the check-in record only. Ordinals and duplicate checks are a query then a write in one process, so a restart during indexing lag can repeat them, and a failed write is not reconciled.
 - [ ] Rehearse the complete issue-to-door journey and document the browser demo's security limits.
 
 ## Arkiv
 
 - [x] Testnet setup and lifecycle spike exist; a ticket write/read/patch and read-only spike record were previously tested on Rabdi.
-- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. The 24 server tests pass, but the live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
+- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. The removal is confirmed: no SQL code or dependency remains in the server or app, and all 54 server tests pass on the current working tree. The live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
 - [~] `resona.account` storage and owner/creator-filtered account lookups are implemented; verify signup, uniqueness, write recovery and expiration against the data contract. Its query-then-create flow and in-process queue do not establish multi-instance uniqueness.
-- [ ] Reconcile `arkiv/schema.md` and `arkiv/world-claim-design.md` with the current implementation before changing it; both still describe SQLite as the durable World ID coordinator, and `schema.md` lacks `resona.account`, `resona.event` and `resona.payment`. Do not claim an earlier implementation is still active.
-- [ ] Implement event-end-plus-retention expiry and a plan for extending records; tickets, claims, payments and accounts currently use the maximum Arkiv lifetime, so the contract's configured 1–180 day expiry no longer matches. Protect public data and filter trusted reads appropriately.
+- [x] Reconcile `arkiv/schema.md`, `arkiv/world-claim-design.md` and `docs/ARCHITECTURE.md` with the Arkiv-only implementation: all six entities are documented from the code, and SQLite is no longer described as active.
+- [ ] Decide what to do with the leftover gitignored `server/resona.db` (7 tickets, 1 nullifier for a retired action). No code reads it. Check other deployments or backups before discarding anything.
+- [ ] Add `createdBy(organizer)` to trusted ticket reads, in the server and `myTickets`. They use `ownedBy` alone, and an Arkiv ownership transfer needs no recipient consent, so a forged ticket transferred to the organizer would read as issued and skip the payment check. Not yet tested live.
+- [ ] Implement event-end-plus-retention expiry and a plan for extending records; tickets, claims, payments and accounts currently use the maximum Arkiv lifetime, and check-ins and events do too; the contract now records this. Protect public data and filter trusted reads appropriately.
 - [ ] Add Arkiv track files: friction, reach, why Arkiv, and how Arkiv is used; complete schema details as implemented.
 - [ ] Add writer addresses and a runnable query to the README.
 - [~] Show an actual Arkiv read in the app: the wallet ticket, event and purchase screens read through the `/api/arkiv` read proxy in code, but this has not been confirmed on a running app with live data.
@@ -47,7 +49,7 @@ The current code is the source for implementation status; planned behavior and s
 - [~] Standalone CLI supports deploying and linking a Sepolia event UserRegistry with the documented restricted root roles; configure real names and verify a live deployment and roles.
 - [~] Standalone CLI issues non-transferable pass subnames and inspects owners; ASCII label and expiry checks have offline tests. It does not yet populate public metadata or store ENS references on Arkiv tickets.
 - [x] Add an optional server-side ENSv2 read path: check the event registry link, pass owner, expiry and ticket-holder match; simulate a direct transfer and accept only the expected `TransferDisallowed` revert. The wallet shows the result, and the transfer screen no longer invents a transaction hash. The API-to-RPC integration test passes against a local Sepolia RPC fixture.
-- [ ] Verify the actual ENS pass owner matches the assigned ticket wallet before check-in; reconcile failed ENS/Arkiv writes.
+- [ ] Enforce the ENS pass owner check at the door: `/api/checkin/start` does not call it yet. Reconcile failed ENS/Arkiv writes.
 - [~] The wallet transfer demo now runs a real read-only transfer simulation when ENS is configured. Still verify the result on a live Sepolia pass and implement organizer-approved reassignment.
 - [ ] Resolve and display names and profiles in the organizer, wallet and door flows.
 
@@ -55,7 +57,7 @@ The current code is the source for implementation status; planned behavior and s
 
 - [~] Add event pages, attendee profiles, attendance trophies and POAPs when the core journey is working. `/wallet/events` lists events; public `/e/:name` pages, `/u/:name` profiles, trophies and POAPs are not built.
 - [~] Testnet purchases exist in code: `/wallet/events` pays the organizer and `/wallet/purchases` shows history, with resume handling for interrupted payments. A live purchase has not been verified here.
-- [ ] Make purchased tickets trustworthy before any door relies on them. The buyer's wallet writes its own ticket with status `claimed` and its payment record, so a wallet can create one without paying or a claim check; the one-ticket-per-human check runs only in the browser; and the server reads only organizer-owned tickets, so it cannot see purchased ones.
+- [~] Make purchased tickets trustworthy before any door relies on them. The door now reads bought tickets and confirms the payment on chain, with unit tests on a fake store and no live check. It does not require a World account or claim, so a wallet with no World ID can pay and be admitted, and the one-ticket-per-human check still runs only in the browser.
 - [ ] Add company distribution only after the earlier stages.
 - [ ] Complete the [track checklists](docs/TRACKS.md), including the World debrief, AI-use statement, prior-work credit, public repo and demo video.
 - [ ] Confirm the public demo works from a fresh device, contains no committed secrets, and is rehearsed in a noisy room.

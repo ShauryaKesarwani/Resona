@@ -20,8 +20,13 @@ const Payments = defineSchema('resona.payment', {
   txnHash: str().indexed(), eventId: str().indexed(), userId: str().indexed(), passId: str().indexed(), amountWei: str(), createdAt: str().indexed(),
 })
 
+const Checkins = defineSchema('resona.checkin', {
+  eventId: str().indexed(), passId: str().indexed(), holder: addr().indexed(), ordinal: str(), distanceCm: str(), checkedInAt: str(),
+})
+
 export type ArkivEvent = { eventId: string; eventName: string; eventDate: string; priceWei: string; organiser: string }
 export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }
+export type ArkivCheckin = { passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
 export type ArkivPayment = { txnHash: string; eventId: string; passId: string; amountWei: string; createdAt: string }
 
 // The access key can't ship in a browser. Reads go through a small server relay that adds it, because
@@ -74,6 +79,31 @@ export async function myTickets(): Promise<ArkivTicket[]> {
       ensName: t.ensName?.value, createdAt: Number(t.$createdAt),
     }))
     .sort((a, b) => a.createdAt - b.createdAt)
+}
+
+// The query builder is awaitable, so this must stay a plain function: awaiting it would run the query early.
+const checkinQuery = (organizerAddress: Hex) =>
+  reader
+    .select({ passId: true, holder: true, ordinal: true, distanceCm: true, checkedInAt: true })
+    .from(Checkins)
+    .createdBy(organizerAddress)
+    .limit(100) // The most Arkiv returns in one query.
+
+/** Everyone through the door, newest first. Only the organizer's records count. */
+export async function recentCheckins(): Promise<ArkivCheckin[]> {
+  const { entities } = await checkinQuery(await organizer()).fetch()
+  return entities
+    .map((c) => ({
+      passId: c.passId.value, holder: String(c.holder.value), ordinal: Number(c.ordinal.value),
+      distanceCm: c.distanceCm.value, checkedInAt: c.checkedInAt.value,
+    }))
+    .sort((a, b) => b.checkedInAt.localeCompare(a.checkedInAt))
+}
+
+/** This wallet's passes that have been through the door. */
+export async function myCheckedInPasses(): Promise<Set<string>> {
+  const { entities } = await checkinQuery(await organizer()).where(eq('holder', addr(getAddress(walletAddress())))).fetch()
+  return new Set(entities.map((c) => c.passId.value))
 }
 
 /** This wallet's purchases, newest first. One human has one wallet, so this is their whole history. */

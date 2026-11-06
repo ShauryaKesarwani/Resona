@@ -6,11 +6,8 @@ import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
 import SignIn from './pages/SignIn'
 import { Stub } from './pages/Stub'
-import Checking from './pages/door/Checking'
-import Manual from './pages/door/Manual'
-import Ready from './pages/door/Ready'
+import Door from './pages/door/Door'
 import Recent from './pages/door/Recent'
-import Result from './pages/door/Result'
 import CheckIn from './pages/wallet/CheckIn'
 import Claim from './pages/wallet/Claim'
 import Events from './pages/wallet/Events'
@@ -51,10 +48,7 @@ export default function App() {
         <Route element={<RequireSignIn />}>
           <Route path="/enter" element={<Enter />} />
           <Route path="/organizer" element={<Organizer />} />
-          <Route path="/door" element={<Ready />} />
-          <Route path="/door/checking" element={<Checking />} />
-          <Route path="/door/result" element={<Result />} />
-          <Route path="/door/manual" element={<Manual />} />
+          <Route path="/door" element={<Door />} />
           <Route path="/door/recent" element={<Recent />} />
           <Route path="/wallet" element={<Tickets />} />
           <Route path="/wallet/events" element={<Events />} />

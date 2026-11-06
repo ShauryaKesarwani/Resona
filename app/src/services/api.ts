@@ -9,7 +9,9 @@ export type WorldConfig = {
   environment: 'production' | 'staging'
   allowSkip: boolean
   organizer?: string
+  doorPinRequired?: boolean
 }
+export type CheckinResult = { state: string; cm?: number; ordinal?: number; transactionHash?: string }
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
@@ -35,4 +37,34 @@ export const api = {
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),
   fund: (signed: Signed) => request<{ wallet: string }>('/api/fund', signed),
+  checkinStart: (passId: string, signed: Signed) => request<{ id: string; code: string; seed: string }>('/api/checkin/start', { passId, ...signed }),
+  checkinJoin: (code: string, pin: string) =>
+    request<{ id: string; seed: string; doorToken: string; holder: string; tier: string }>('/api/checkin/join', { code, pin }),
+  checkinStatus: (id: string) => request<CheckinResult>(`/api/checkin/${id}`),
+  checkinReport: (id: string, report: Record<string, unknown>) => request<object>(`/api/checkin/${id}/report`, report),
+}
+
+const POLL_MS = 250
+const RESULT_WAIT_MS = 30_000
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+/** The holder's phone waits here until the door joins, and both start recording. */
+export async function waitUntilRunning(id: string, keepGoing: () => boolean) {
+  while (keepGoing()) {
+    const { state } = await api.checkinStatus(id).catch(() => ({ state: 'waiting' }))
+    if (state !== 'waiting') return state
+    await sleep(POLL_MS)
+  }
+  return 'expired'
+}
+
+/** Both phones wait here for the server's decision. */
+export async function waitForResult(id: string): Promise<CheckinResult> {
+  const deadline = Date.now() + RESULT_WAIT_MS
+  while (Date.now() < deadline) {
+    const result = await api.checkinStatus(id).catch(() => null)
+    if (result && result.state !== 'running' && result.state !== 'saving') return result
+    await sleep(POLL_MS)
+  }
+  return { state: 'expired' }
 }

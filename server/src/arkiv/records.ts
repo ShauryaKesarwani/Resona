@@ -9,6 +9,16 @@ export const EventSchema = defineSchema("resona.event", {
   priceWei: str(),
 });
 
+/** One admission through the door. It can't be edited, and a repeat is refused for the same holder and event. */
+export const CheckinSchema = defineSchema("resona.checkin", {
+  eventId: str().indexed(),
+  passId: str().indexed(),
+  holder: addr().indexed(),
+  ordinal: str(),
+  distanceCm: str(),
+  checkedInAt: str(),
+});
+
 /** One payment per transaction, with hashed event and user IDs. Reading by userId gives a person's purchase history. */
 export const PaymentSchema = defineSchema("resona.payment", {
   txnHash: str().indexed(),

@@ -1,16 +1,17 @@
 import path from "node:path";
 import express from "express";
 import type { AccountRegistry } from "./arkiv/accounts.ts";
-import type { TicketStore } from "./arkiv/tickets.ts";
+import type { CheckinStore, TicketStore } from "./arkiv/tickets.ts";
 import { arkivRoutes } from "./routes/arkiv.routes.ts";
 import { authRoutes } from "./routes/auth.routes.ts";
+import { checkinRoutes } from "./routes/checkin.routes.ts";
 import { labRoutes } from "./routes/lab.routes.ts";
 import { ticketRoutes } from "./routes/tickets.routes.ts";
 import { worldRoutes } from "./routes/world.routes.ts";
 import { createEnsService } from "./ens/service.ts";
 import { env } from "./config/env.ts";
 
-export function createApp(tickets: TicketStore, registry: AccountRegistry) {
+export function createApp(tickets: TicketStore & CheckinStore, registry: AccountRegistry) {
   const app = express();
   app.use(express.json({ limit: "256kb" }));
   app.use("/api", worldRoutes);
@@ -18,6 +19,7 @@ export function createApp(tickets: TicketStore, registry: AccountRegistry) {
   app.use("/api", ticketRoutes(tickets, registry, createEnsService(env.ens)));
   app.use("/api", authRoutes(registry));
   app.use("/api", arkivRoutes());
+  app.use("/api", checkinRoutes(tickets));
 
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
   app.use(express.static(dist));
