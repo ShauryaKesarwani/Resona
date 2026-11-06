@@ -8,10 +8,11 @@ The current code is the source for implementation status; planned behavior and s
 
 - [x] React/Vite app, web manifest, and Node server that serves the built app exist.
 - [~] Browser wallet and wallet-signature sign-in are implemented; verify the full flow on the demo phones and clarify the security and recovery limits.
-- [~] Wallet, claim, door, sign-in and landing screens exist; wallet/door flows still use simulated data, and organizer pages are stubs.
-- [ ] Connect organizer issuance and wallet ticket views to real records; remove implicit mock-ticket creation from normal flows.
+- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. Door screens, check-in, the claim's phone-lock step and door history are still simulated; `/privacy`, `/terms` and `/u/:name` are stubs.
+- [~] The organizer page calls the real issue and lookup APIs, and wallet tickets, events and purchases read Arkiv in code; `data/mock.ts` no longer invents tickets but still holds simulated check-ins. Not yet verified end to end against live Arkiv in the app.
+- [ ] Require organizer authorization on `POST /issue`; any caller can currently make the server's signer write a ticket.
 - [ ] Deploy a single public HTTPS URL and verify installation and microphone access on both Android phones.
-- [ ] Choose and add an open-source license, if approved by the repo owner.
+- [ ] Choose and add an open-source license, if approved by the repo owner. The GitHub repo is public and has no license yet, which the Arkiv track requires.
 
 ## Sonar and check-in
 
@@ -25,18 +26,19 @@ The current code is the source for implementation status; planned behavior and s
 ## Arkiv
 
 - [x] Testnet setup and lifecycle spike exist; a ticket write/read/patch and read-only spike record were previously tested on Rabdi.
-- [~] Arkiv ticket repository and demo schema exist, and `server/src` no longer references SQLite after the pulled migration commits; the 24 server tests pass, but the live API has not been verified against Arkiv.
+- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. The 24 server tests pass, but the live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
 - [~] `resona.account` storage and owner/creator-filtered account lookups are implemented; verify signup, uniqueness, write recovery and expiration against the data contract. Its query-then-create flow and in-process queue do not establish multi-instance uniqueness.
-- [ ] Reconcile `arkiv/schema.md` and `arkiv/world-claim-design.md` with the current account and ticket implementation before changing it; both still describe SQLite as the durable World ID coordinator, which no longer matches `server/src`. Do not claim an earlier implementation is still active.
-- [ ] Implement event-end-plus-retention expiry and a plan for extending records; protect public data and filter trusted reads appropriately.
+- [ ] Reconcile `arkiv/schema.md` and `arkiv/world-claim-design.md` with the current implementation before changing it; both still describe SQLite as the durable World ID coordinator, and `schema.md` lacks `resona.account`, `resona.event` and `resona.payment`. Do not claim an earlier implementation is still active.
+- [ ] Implement event-end-plus-retention expiry and a plan for extending records; tickets, claims, payments and accounts currently use the maximum Arkiv lifetime, so the contract's configured 1–180 day expiry no longer matches. Protect public data and filter trusted reads appropriately.
 - [ ] Add Arkiv track files: friction, reach, why Arkiv, and how Arkiv is used; complete schema details as implemented.
-- [ ] Add writer addresses and a runnable query to the README, and show an actual Arkiv read in the app.
+- [ ] Add writer addresses and a runnable query to the README.
+- [~] Show an actual Arkiv read in the app: the wallet ticket, event and purchase screens read through the `/api/arkiv` read proxy in code, but this has not been confirmed on a running app with live data.
 
 ## World ID
 
 - [~] IDKit sign-in, server-side proof verification, wallet signal binding, signed wallet login and demo guest path exist; a successful real simulator flow is not yet confirmed here.
 - [ ] Verify action, RP and environment match; test successful verification and repeat-human rejection end to end with the simulator.
-- [ ] Resolve durable uniqueness, claim recovery, concurrency and crash gaps without relying on a query-then-create check as an atomic constraint; see [arkiv/world-claim-design.md](arkiv/world-claim-design.md).
+- [ ] Resolve durable uniqueness, claim recovery, concurrency and crash gaps without relying on a query-then-create check as an atomic constraint. With SQLite gone, sign-up and claims rely on Arkiv queries plus in-process queues, and a verified World proof can be spent before an Arkiv account write fails, with no recovery path; see [arkiv/world-claim-design.md](arkiv/world-claim-design.md).
 - [ ] Confirm the demo skip policy is clearly labelled and enforced at the door; record the World integration debrief.
 
 ## ENSv2
@@ -49,8 +51,10 @@ The current code is the source for implementation status; planned behavior and s
 
 ## Later stages and submission
 
-- [ ] Add event pages, attendee profiles, attendance trophies and POAPs when the core journey is working.
-- [ ] Add testnet ticket purchases and company distribution only after the earlier stages.
+- [~] Add event pages, attendee profiles, attendance trophies and POAPs when the core journey is working. `/wallet/events` lists events; public `/e/:name` pages, `/u/:name` profiles, trophies and POAPs are not built.
+- [~] Testnet purchases exist in code: `/wallet/events` pays the organizer and `/wallet/purchases` shows history, with resume handling for interrupted payments. A live purchase has not been verified here.
+- [ ] Make purchased tickets trustworthy before any door relies on them. The buyer's wallet writes its own ticket with status `claimed` and its payment record, so a wallet can create one without paying or a claim check; the one-ticket-per-human check runs only in the browser; and the server reads only organizer-owned tickets, so it cannot see purchased ones.
+- [ ] Add company distribution only after the earlier stages.
 - [ ] Complete the [track checklists](docs/TRACKS.md), including the World debrief, AI-use statement, prior-work credit, public repo and demo video.
 - [ ] Confirm the public demo works from a fresh device, contains no committed secrets, and is rehearsed in a noisy room.
 
