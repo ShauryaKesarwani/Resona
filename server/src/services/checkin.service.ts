@@ -5,12 +5,13 @@ import { isWalletOwner, type Signed } from "../utils/signature.ts";
 
 export type CheckinState = "waiting" | "running" | "saving" | "pass" | "too_far" | "no_sound" | "invalid" | "expired" | "failed";
 type Failure = { status: 400 | 401 | 402 | 403 | 404 | 409 | 410; error: string };
-type Started = { status: 200; id: string; code: string; seed: string };
-type Joined = { status: 200; id: string; seed: string; doorToken: string; holder: string; tier: string };
+type Started = { status: 200; id: string; code: string; seed: string; attempt: number };
+type Joined = { status: 200; id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string };
 
 type Session = {
   id: string; code: string; seed: string; ticket: DoorTicket; state: CheckinState;
   createdAt: number; runningAt?: number; doorToken?: string;
+  attempt: number; problem?: string;
   door?: number; holder?: number; cm?: number;
   ordinal?: number; transactionHash?: string; entityKey?: string;
 };
@@ -21,6 +22,10 @@ const CODE_TTL_MS = 2 * 60 * 1000;
 const RUN_TTL_MS = 25 * 1000;
 const MAX_SESSIONS = 200;
 const FINISHED: CheckinState[] = ["pass", "too_far", "no_sound", "invalid", "expired", "failed"];
+/** A failed write is left alone: it may have landed, so it is never run again. */
+const RETRYABLE: CheckinState[] = ["too_far", "no_sound", "invalid", "expired"];
+const MAX_ATTEMPTS = 20;
+const PROBLEMS = ["no-door-sound", "no-holder-sound", "overlap", "dropout"];
 
 const sameSecret = (a: string, b: string) => {
   const left = Buffer.from(a);
@@ -64,9 +69,9 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     const taken = new Set([...sessions.values()].map((item) => item.code));
     let code: string;
     do code = String(randomInt(100_000, 1_000_000)); while (taken.has(code));
-    const session: Session = { id: randomUUID(), code, seed: randomBytes(16).toString("hex"), ticket, state: "waiting", createdAt: now() };
+    const session: Session = { id: randomUUID(), code, seed: randomBytes(16).toString("hex"), ticket, state: "waiting", createdAt: now(), attempt: 1 };
     sessions.set(session.id, session);
-    return { status: 200, id: session.id, code, seed: session.seed };
+    return { status: 200, id: session.id, code, seed: session.seed, attempt: session.attempt };
   }
 
   /** The door joins with the holder's code. That is the moment both phones start recording. */
@@ -77,14 +82,14 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     session.state = "running";
     session.runningAt = now();
     session.doorToken = randomBytes(16).toString("hex");
-    return { status: 200, id: session.id, seed: session.seed, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
+    return { status: 200, id: session.id, seed: session.seed, attempt: session.attempt, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
   }
 
   function status(id: string) {
     const session = sessions.get(id);
     if (!session) return null;
-    const { state, cm, ordinal, transactionHash, entityKey } = refresh(session);
-    return { state, cm, ordinal, transactionHash, entityKey };
+    const { state, cm, ordinal, transactionHash, entityKey, attempt, seed, problem } = refresh(session);
+    return { state, cm, ordinal, transactionHash, entityKey, attempt, seed, problem };
   }
 
   async function finish(session: Session) {
@@ -109,11 +114,12 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
    */
   async function report(
     id: string,
-    input: Partial<Signed> & { role?: string; elapsedSeconds?: number | null; doorToken?: string },
+    input: Partial<Signed> & { role?: string; elapsedSeconds?: number | null; doorToken?: string; attempt?: number; problem?: string },
   ): Promise<{ status: 200 } | Failure> {
     const session = sessions.get(id);
     if (!session) return { status: 404, error: "session_not_found" };
     if (refresh(session).state !== "running") return { status: 409, error: "session_not_running" };
+    if (input.attempt !== session.attempt) return { status: 409, error: "old_attempt" };
     const { role, elapsedSeconds } = input;
     const heard = typeof elapsedSeconds === "number" && Number.isFinite(elapsedSeconds);
     if (!heard && elapsedSeconds !== null) return { status: 400, error: "invalid_report" };
@@ -122,13 +128,14 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
       if (!session.doorToken || !sameSecret(String(input.doorToken ?? ""), session.doorToken)) return { status: 403, error: "bad_door_token" };
     } else if (role === "holder") {
       const signedFor = input.wallet?.toLowerCase() === session.ticket.holder;
-      if (!signedFor || !(await isWalletOwner(`checkin-report:${id}:${elapsedSeconds}`, input))) return { status: 401, error: "bad_signature" };
+      if (!signedFor || !(await isWalletOwner(`checkin-report:${id}:${session.attempt}:${elapsedSeconds}`, input))) return { status: 401, error: "bad_signature" };
     } else {
       return { status: 400, error: "invalid_report" };
     }
     if (session[role] !== undefined) return { status: 409, error: "already_reported" };
     if (!heard) {
       session.state = "no_sound";
+      if (PROBLEMS.includes(String(input.problem))) session.problem = `${role}:${input.problem}`;
       return { status: 200 };
     }
     session[role] = elapsedSeconds;
@@ -136,5 +143,29 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     return { status: 200 };
   }
 
-  return { start, join, status, report };
+  /**
+   * Starts another try without a new code. It gets a fresh seed, so a recording of the last try is
+   * useless, and only the two phones in this check can ask for it.
+   */
+  async function retry(id: string, input: Partial<Signed> & { doorToken?: string }): Promise<{ status: 200 } | Failure> {
+    const session = sessions.get(id);
+    if (!session) return { status: 404, error: "session_not_found" };
+    const isDoor = !!session.doorToken && sameSecret(String(input.doorToken ?? ""), session.doorToken);
+    const isHolder = !isDoor && input.wallet?.toLowerCase() === session.ticket.holder
+      && (await isWalletOwner(`checkin-retry:${id}:${session.attempt}`, input));
+    if (!isDoor && !isHolder) return { status: 403, error: "not_in_this_check" };
+    if (!RETRYABLE.includes(refresh(session).state) || !session.runningAt) return { status: 409, error: "cannot_retry" };
+    if (session.attempt >= MAX_ATTEMPTS) return { status: 409, error: "too_many_attempts" };
+    session.attempt += 1;
+    session.seed = randomBytes(16).toString("hex");
+    session.state = "running";
+    session.runningAt = now();
+    delete session.door;
+    delete session.holder;
+    delete session.cm;
+    delete session.problem;
+    return { status: 200 };
+  }
+
+  return { start, join, status, report, retry };
 }

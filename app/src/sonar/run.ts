@@ -16,11 +16,24 @@ export async function openMic() {
   return { audio, sampleRate: mic.sampleRate }
 }
 
-/** Records and plays this phone's sound. Returns the time between the two sounds, or null if they were not both heard. */
+/** Records and plays this phone's sound, then returns the time between the two sounds, or why it couldn't tell. */
 export async function measure(audio: SonarAudio, sampleRate: number, seed: string, role: Role) {
   const recording = await audio.run(makeCode(seed, role, sampleRate), PLAY_AT[role], RECORD_SECONDS)
   await new Promise((done) => setTimeout(done, 0))
-  return analyzeRecording(recording, seed).elapsedSeconds
+  const { elapsedSeconds, problem } = analyzeRecording(recording, seed)
+  return { elapsedSeconds, problem }
+}
+
+const SOUND_NAME: Record<string, string> = { 'no-door-sound': 'the door phone', 'no-holder-sound': 'the holder phone' }
+
+/** Says which phone failed to hear which sound, because that is what tells you what to fix. */
+export function problemText(problem?: string) {
+  if (!problem) return ''
+  const [phone, cause] = problem.split(':')
+  const who = phone === 'door' ? 'The door phone' : 'The holder phone'
+  if (SOUND_NAME[cause]) return `${who} could not hear ${SOUND_NAME[cause]}.`
+  if (cause === 'overlap') return 'The two sounds overlapped.'
+  return `${who} lost some audio during the check.`
 }
 
 export const micError = (err: unknown) =>

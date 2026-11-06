@@ -11,7 +11,7 @@ export type WorldConfig = {
   organizer?: string
   doorPinRequired?: boolean
 }
-export type CheckinResult = { state: string; cm?: number; ordinal?: number; transactionHash?: string }
+export type CheckinResult = { state: string; cm?: number; ordinal?: number; transactionHash?: string; attempt?: number; seed?: string; problem?: string }
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
@@ -37,11 +37,12 @@ export const api = {
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),
   fund: (signed: Signed) => request<{ wallet: string }>('/api/fund', signed),
-  checkinStart: (passId: string, signed: Signed) => request<{ id: string; code: string; seed: string }>('/api/checkin/start', { passId, ...signed }),
+  checkinStart: (passId: string, signed: Signed) => request<{ id: string; code: string; seed: string; attempt: number }>('/api/checkin/start', { passId, ...signed }),
   checkinJoin: (code: string, pin: string) =>
-    request<{ id: string; seed: string; doorToken: string; holder: string; tier: string }>('/api/checkin/join', { code, pin }),
+    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string }>('/api/checkin/join', { code, pin }),
   checkinStatus: (id: string) => request<CheckinResult>(`/api/checkin/${id}`),
   checkinReport: (id: string, report: Record<string, unknown>) => request<object>(`/api/checkin/${id}/report`, report),
+  checkinRetry: (id: string, proof: Record<string, unknown>) => request<object>(`/api/checkin/${id}/retry`, proof),
 }
 
 const POLL_MS = 250
@@ -56,6 +57,16 @@ export async function waitUntilRunning(id: string, keepGoing: () => boolean) {
     await sleep(POLL_MS)
   }
   return 'expired'
+}
+
+/** After a failed try, both phones wait here. Either phone tapping Try again starts the next try on both. */
+export async function waitForNextAttempt(id: string, attempt: number, keepGoing: () => boolean) {
+  while (keepGoing()) {
+    const result = await api.checkinStatus(id).catch(() => null)
+    if (result?.state === 'running' && (result.attempt ?? 0) > attempt && result.seed) return { attempt: result.attempt!, seed: result.seed }
+    await sleep(POLL_MS)
+  }
+  return null
 }
 
 /** Both phones wait here for the server's decision. */

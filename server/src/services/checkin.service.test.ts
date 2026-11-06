@@ -56,12 +56,12 @@ const joined = async () => {
   assert.equal(out.status, 200);
   return out as Extract<typeof out, { status: 200 }>;
 };
-const holderReport = async (id: string, elapsedSeconds: number | null, key = holderKey, as = wallet) =>
-  checkins.report(id, { role: "holder", elapsedSeconds, ...await sign(`checkin-report:${id}:${elapsedSeconds}`, key, as) });
+const holderReport = async (id: string, elapsedSeconds: number | null, key = holderKey, as = wallet, attempt = 1) =>
+  checkins.report(id, { role: "holder", attempt, elapsedSeconds, ...await sign(`checkin-report:${id}:${attempt}:${elapsedSeconds}`, key, as) });
 // 17150 cm/s x (door - holder): 0.00175 s apart is about 30 cm.
 const measure = async (door: number, holder: number) => {
   const session = await joined();
-  await checkins.report(session.id, { role: "door", elapsedSeconds: door, doorToken: session.doorToken });
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: door, doorToken: session.doorToken });
   await holderReport(session.id, holder);
   return checkins.status(session.id)!;
 };
@@ -118,7 +118,7 @@ test("a ticket held by someone else can't be used", async () => {
 
 test("the holder can't send the door's measurement", async () => {
   const session = await joined();
-  const out = await checkins.report(session.id, { role: "door", elapsedSeconds: 1.5, doorToken: "guess" });
+  const out = await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.5, doorToken: "guess" });
   assert.deepEqual(out, { status: 403, error: "bad_door_token" });
 });
 
@@ -130,8 +130,8 @@ test("a report can't be changed after it is sent", async () => {
 
 test("a report signed for one reading can't carry another", async () => {
   const session = await joined();
-  const signed = await sign(`checkin-report:${session.id}:1.5`);
-  const out = await checkins.report(session.id, { role: "holder", elapsedSeconds: 1.502, ...signed });
+  const signed = await sign(`checkin-report:${session.id}:1:1.5`);
+  const out = await checkins.report(session.id, { role: "holder", attempt: 1, elapsedSeconds: 1.502, ...signed });
   assert.deepEqual(out, { status: 401, error: "bad_signature" });
 });
 
@@ -190,8 +190,55 @@ test("a run that never finishes expires", async () => {
 test("a failed Arkiv write fails the check and is never written again", async () => {
   writeFails = true;
   const session = await joined();
-  await checkins.report(session.id, { role: "door", elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.50175, doorToken: session.doorToken });
   await holderReport(session.id, 1.5);
   assert.equal(checkins.status(session.id)!.state, "failed");
+  assert.deepEqual(await checkins.retry(session.id, { doorToken: session.doorToken }), { status: 409, error: "cannot_retry" });
   assert.deepEqual(await holderReport(session.id, 1.5), { status: 409, error: "session_not_running" });
+});
+
+test("the door can try again with no new code, and the next try can pass", async () => {
+  const session = await joined();
+  await holderReport(session.id, null);
+  assert.deepEqual(await checkins.retry(session.id, { doorToken: session.doorToken }), { status: 200 });
+  const next = checkins.status(session.id)!;
+  assert.equal(next.state, "running");
+  assert.equal(next.attempt, 2);
+  assert.notEqual(next.seed, session.seed);
+  await checkins.report(session.id, { role: "door", attempt: 2, elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await holderReport(session.id, 1.5, holderKey, wallet, 2);
+  assert.equal(checkins.status(session.id)!.state, "pass");
+  assert.equal(written.length, 1);
+});
+
+test("the holder can also try again, but only with their own wallet", async () => {
+  const session = await joined();
+  await holderReport(session.id, null);
+  const forged = await checkins.retry(session.id, await sign(`checkin-retry:${session.id}:1`, strangerKey, wallet));
+  assert.deepEqual(forged, { status: 403, error: "not_in_this_check" });
+  assert.deepEqual(await checkins.retry(session.id, { doorToken: "guess" }), { status: 403, error: "not_in_this_check" });
+  assert.deepEqual(await checkins.retry(session.id, await sign(`checkin-retry:${session.id}:1`)), { status: 200 });
+});
+
+test("a reading from an earlier try can't count in the next one", async () => {
+  const session = await joined();
+  await holderReport(session.id, null);
+  await checkins.retry(session.id, { doorToken: session.doorToken });
+  const out = await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.5, doorToken: session.doorToken });
+  assert.deepEqual(out, { status: 409, error: "old_attempt" });
+  assert.deepEqual(await holderReport(session.id, 1.5), { status: 409, error: "old_attempt" });
+});
+
+test("a running or passed check can't be restarted", async () => {
+  const session = await joined();
+  assert.deepEqual(await checkins.retry(session.id, { doorToken: session.doorToken }), { status: 409, error: "cannot_retry" });
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await holderReport(session.id, 1.5);
+  assert.deepEqual(await checkins.retry(session.id, { doorToken: session.doorToken }), { status: 409, error: "cannot_retry" });
+});
+
+test("the failure says which phone heard what", async () => {
+  const session = await joined();
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: null, problem: "no-holder-sound", doorToken: session.doorToken });
+  assert.equal(checkins.status(session.id)!.problem, "door:no-holder-sound");
 });

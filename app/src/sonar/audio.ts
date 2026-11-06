@@ -70,6 +70,8 @@ export class SonarAudio {
 
     const sampleRate = context.sampleRate;
     const samples = new Float32Array(Math.round(recordSeconds * sampleRate));
+    // The mic may have been open for a while. Blocks from before this run are stale, not part of it.
+    const startFrame = Math.round(context.currentTime * sampleRate);
 
     const buffer = context.createBuffer(1, code.length, sampleRate);
     buffer.copyToChannel(new Float32Array(code), 0);
@@ -94,6 +96,7 @@ export class SonarAudio {
       }, recordSeconds * 1000 + RECORDING_TIMEOUT_MARGIN_MS);
 
       capture.port.onmessage = ({ data }: MessageEvent<{ frame: number; samples: Float32Array }>) => {
+        if (data.frame < startFrame) return;
         if (firstFrame < 0) {
           firstFrame = data.frame;
           player.start(context.currentTime + playAtSeconds);

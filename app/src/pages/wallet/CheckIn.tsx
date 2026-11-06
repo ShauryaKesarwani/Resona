@@ -5,10 +5,10 @@ import { CheckCircleIcon, DeviceMobileIcon, SpeakerHighIcon, WarningCircleIcon, 
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { ordinal, refreshTickets, updateTicket, useTickets } from '../../data/mock'
-import { api, waitForResult, waitUntilRunning, type CheckinResult } from '../../services/api'
+import { api, waitForNextAttempt, waitForResult, waitUntilRunning, type CheckinResult } from '../../services/api'
 import { explorerTx } from '../../services/arkiv'
 import { signedBy } from '../../services/auth'
-import { measure, micError, openMic } from '../../sonar/run'
+import { measure, micError, openMic, problemText } from '../../sonar/run'
 
 type Phase = { name: 'ready' } | { name: 'starting' } | { name: 'code'; code: string } | { name: 'running'; step: number } | { name: 'done'; result: CheckinResult }
 
@@ -35,7 +35,7 @@ const fails: Record<string, { title: string; body: string }> = {
   too_far: { title: 'Too far from the door phone', body: 'Move your phone to about 30 cm from the door phone and try again.' },
   no_sound: { title: 'The sound was not heard', body: 'Turn your volume up, move closer and try again.' },
   invalid: { title: 'That reading was not valid', body: 'Hold both phones still and try again.' },
-  expired: { title: 'The check took too long', body: 'Start again on both phones.' },
+  expired: { title: 'The check took too long', body: 'The other phone did not finish. Try again.' },
   failed: { title: 'Could not save your check in', body: 'The distance passed, but Arkiv did not confirm it. Ask the door staff.' },
 }
 
@@ -46,12 +46,14 @@ export default function CheckIn() {
   const [phase, setPhase] = useState<Phase>({ name: 'ready' })
   const [error, setError] = useState('')
   const alive = useRef(true)
+  const live = useRef<{ close: () => void; id: string; attempt: number } | null>(null)
   const back = `/wallet/ticket/${id}`
 
   useEffect(() => {
     alive.current = true
     return () => {
       alive.current = false
+      live.current?.close()
     }
   }, [])
 
@@ -72,25 +74,49 @@ export default function CheckIn() {
       setPhase({ name: 'code', code: session.code })
       const state = await waitUntilRunning(session.id, () => alive.current)
       if (!alive.current) return
-      if (state !== 'running') return setPhase({ name: 'done', result: { state: 'expired' } })
-
-      setPhase({ name: 'running', step: 0 })
-      const elapsedSeconds = await measure(mic.audio, mic.sampleRate, session.seed, 'holder')
-      setPhase({ name: 'running', step: 1 })
-      await api.checkinReport(session.id, { role: 'holder', elapsedSeconds, ...(await signedBy(`checkin-report:${session.id}:${elapsedSeconds}`)) }).catch(() => {})
-      const result = await waitForResult(session.id)
-      if (!alive.current) return
-      if (result.state === 'pass') {
-        updateTicket(passId, { status: 'checked_in' })
-        refreshTickets()
+      if (state !== 'running') {
+        await mic.audio.close()
+        return setPhase({ name: 'done', result: { state: 'expired' } })
       }
-      setPhase({ name: 'done', result })
+
+      let { seed, attempt } = session
+      const check = { close: () => void mic.audio.close(), id: session.id, attempt }
+      live.current = check
+      // The mic stays open between tries, so either phone can start the next one with a single tap.
+      while (alive.current) {
+        setPhase({ name: 'running', step: 0 })
+        const measured = await measure(mic.audio, mic.sampleRate, seed, 'holder')
+        setPhase({ name: 'running', step: 1 })
+        const signed = await signedBy(`checkin-report:${session.id}:${attempt}:${measured.elapsedSeconds}`)
+        await api.checkinReport(session.id, { role: 'holder', attempt, ...measured, ...signed }).catch(() => {})
+        const result = await waitForResult(session.id)
+        if (!alive.current) return
+        if (result.state === 'pass') {
+          updateTicket(passId, { status: 'checked_in' })
+          refreshTickets()
+        }
+        setPhase({ name: 'done', result })
+        if (result.state === 'pass' || result.state === 'failed') {
+          live.current = null
+          return void (await mic.audio.close())
+        }
+        const next = await waitForNextAttempt(session.id, attempt, () => alive.current)
+        if (!next) return
+        ;({ seed, attempt } = next)
+        check.attempt = attempt
+      }
     } catch (err) {
+      live.current = null
+      await mic.audio.close()
       setPhase({ name: 'ready' })
       setError(START_ERRORS[(err as Error).message] ?? 'The check did not finish. Try again.')
-    } finally {
-      await mic.audio.close()
     }
+  }
+
+  async function tryAgain() {
+    const check = live.current
+    if (!check) return setPhase({ name: 'ready' })
+    await api.checkinRetry(check.id, await signedBy(`checkin-retry:${check.id}:${check.attempt}`)).catch(() => setError('Could not start another try.'))
   }
 
   if (!ticket) {
@@ -129,7 +155,7 @@ export default function CheckIn() {
   }
 
   if (phase.name === 'done') {
-    const { state, cm } = phase.result
+    const { state, cm, problem } = phase.result
     const f = fails[state] ?? fails.expired
     return (
       <Screen>
@@ -138,9 +164,10 @@ export default function CheckIn() {
           <WarningCircleIcon size={64} className="text-danger" aria-hidden="true" />
           <h1 className="heading-3">{f.title}</h1>
           {state === 'too_far' && cm !== undefined && <p className="title-2 font-mono tabular-nums">{Math.round(cm)}&nbsp;cm</p>}
+          {state === 'no_sound' && <p className="title-3">{problemText(problem)}</p>}
           <p className="body-3 text-text-muted">{f.body}</p>
         </section>
-        <Button onClick={() => setPhase({ name: 'ready' })}>Try again</Button>
+        {state === 'failed' ? <Button to={back}>Back to ticket</Button> : <Button onClick={tryAgain}>Try again</Button>}
       </Screen>
     )
   }

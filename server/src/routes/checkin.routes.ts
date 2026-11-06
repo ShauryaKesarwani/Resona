@@ -28,5 +28,10 @@ export function checkinRoutes(store: CheckinStore) {
     res.status(status).json(body);
   });
 
+  router.post("/checkin/:id/retry", async (req, res) => {
+    const { status, ...body } = await checkins.retry(req.params.id, req.body ?? {});
+    res.status(status).json(body);
+  });
+
   return router;
 }

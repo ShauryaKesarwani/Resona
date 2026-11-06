@@ -7,9 +7,9 @@ import { Figure } from '../../components/Figure'
 import { QrScanner } from '../../components/QrScanner'
 import { Screen, TopBar } from '../../components/Screen'
 import { ordinal, short } from '../../data/mock'
-import { api, waitForResult, type CheckinResult } from '../../services/api'
+import { api, waitForNextAttempt, waitForResult, type CheckinResult } from '../../services/api'
 import { explorerTx } from '../../services/arkiv'
-import { measure, micError, openMic } from '../../sonar/run'
+import { measure, micError, openMic, problemText } from '../../sonar/run'
 
 const PIN_KEY = 'resona.doorPin'
 type Holder = { holder: string; tier: string }
@@ -23,10 +23,10 @@ const JOIN_ERRORS: Record<string, string> = {
 }
 
 const fails: Record<string, { title: string; body: string }> = {
-  too_far: { title: 'Too far away', body: 'Ask the holder to hold their phone about 30 cm from yours, then start again.' },
-  no_sound: { title: 'The sound was not heard', body: 'Ask the holder to turn the volume up. Hold the phones closer, then start again.' },
-  invalid: { title: 'That reading was not valid', body: 'Hold both phones still, then start again.' },
-  expired: { title: 'The check took too long', body: 'The other phone did not finish. Start again on both phones.' },
+  too_far: { title: 'Too far away', body: 'Ask the holder to hold their phone about 30 cm from yours, then try again.' },
+  no_sound: { title: 'The sound was not heard', body: 'Ask the holder to turn the volume up. Hold the phones closer, then try again.' },
+  invalid: { title: 'That reading was not valid', body: 'Hold both phones still, then try again.' },
+  expired: { title: 'The check took too long', body: 'The other phone did not finish. Try again.' },
   failed: { title: 'Could not save this check in', body: 'The distance passed, but Arkiv did not confirm it. Do not admit yet. Ask the organizer to check.' },
 }
 
@@ -38,12 +38,14 @@ export default function Door() {
   const [pinRequired, setPinRequired] = useState(false)
   const [error, setError] = useState('')
   const alive = useRef(true)
+  const live = useRef<{ close: () => void; id: string; doorToken: string; attempt: number } | null>(null)
 
   useEffect(() => {
     alive.current = true
     api.config().then((c) => setPinRequired(!!c.doorPinRequired)).catch(() => setError('Could not reach the Resona server.'))
     return () => {
       alive.current = false
+      live.current?.close()
     }
   }, [])
 
@@ -58,27 +60,42 @@ export default function Door() {
       return setError(micError(err))
     }
     try {
-      const pinNow = localStorage.getItem(PIN_KEY) ?? ''
-      const session = await api.checkinJoin(entered, pinNow)
-      if (!alive.current) return
-      setPhase({ name: 'running', step: 1 })
-      const elapsedSeconds = await measure(mic.audio, mic.sampleRate, session.seed, 'door')
-      setPhase({ name: 'running', step: 2 })
-      await api.checkinReport(session.id, { role: 'door', elapsedSeconds, doorToken: session.doorToken }).catch(() => {})
-      const result = await waitForResult(session.id)
-      if (alive.current) setPhase({ name: 'done', result, who: session })
+      const session = await api.checkinJoin(entered, localStorage.getItem(PIN_KEY) ?? '')
+      let { seed, attempt } = session
+      const check = { close: () => void mic.audio.close(), id: session.id, doorToken: session.doorToken, attempt }
+      live.current = check
+      // The mic stays open between tries, so a retry needs no new code and no new tap on the other phone.
+      while (alive.current && live.current === check) {
+        setPhase({ name: 'running', step: 1 })
+        const measured = await measure(mic.audio, mic.sampleRate, seed, 'door')
+        setPhase({ name: 'running', step: 2 })
+        await api.checkinReport(session.id, { role: 'door', attempt, doorToken: session.doorToken, ...measured }).catch(() => {})
+        const result = await waitForResult(session.id)
+        if (!alive.current || live.current !== check) return
+        setPhase({ name: 'done', result, who: session })
+        if (result.state === 'pass' || result.state === 'failed') return
+        const next = await waitForNextAttempt(session.id, attempt, () => alive.current && live.current === check)
+        if (!next) return
+        ;({ seed, attempt } = next)
+        check.attempt = attempt
+      }
     } catch (err) {
+      await mic.audio.close()
       setPhase({ name: 'ready' })
       setError(JOIN_ERRORS[(err as Error).message] ?? 'The check did not finish. Start again on both phones.')
-    } finally {
-      await mic.audio.close()
     }
   }, [])
 
   const savePin = () => localStorage.setItem(PIN_KEY, pin.trim())
   const next = () => {
+    live.current?.close()
+    live.current = null
     setCode('')
     setPhase({ name: 'ready' })
+  }
+  const tryAgain = () => {
+    const check = live.current
+    if (check) api.checkinRetry(check.id, { doorToken: check.doorToken }).catch(() => setError('Could not start another try.'))
   }
   const scanned = useCallback((value: string) => void check(value.trim()), [check])
   const noCamera = useCallback(() => {
@@ -142,9 +159,13 @@ export default function Door() {
           {result.cm !== undefined && result.state === 'too_far' && (
             <p className="title-2 font-mono tabular-nums">{Math.round(result.cm)}&nbsp;cm</p>
           )}
+          {result.state === 'no_sound' && <p className="title-3">{problemText(result.problem)}</p>}
           <p className="body-3 text-text-muted">{f.body}</p>
         </section>
-        <Button onClick={next}>Next person</Button>
+        {result.state !== 'failed' && <Button onClick={tryAgain}>Try again</Button>}
+        <Button variant={result.state === 'failed' ? 'primary' : 'secondary'} size={result.state === 'failed' ? 'lg' : 'md'} onClick={next}>
+          Next person
+        </Button>
       </Screen>
     )
   }
