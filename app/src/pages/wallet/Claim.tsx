@@ -5,20 +5,22 @@ import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { short, updateTicket, useTickets, wallet } from '../../data/mock'
+import { WorldVerify } from './WorldVerify'
 
 type Phase = 'idle' | 'busy' | 'rejected' | 'done'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** W3. Three steps: confirm name, verify with World ID, lock to this phone. All simulated for now. */
+/** W3. Three steps: confirm name, verify with World ID, lock to this phone. Only the World ID step is real. */
 export default function Claim() {
   const { id } = useParams()
   const ticket = useTickets().find((t) => t.id === id)
   const [step, setStep] = useState(1)
   const [phase, setPhase] = useState<Phase>('idle')
   const [gloss, setGloss] = useState(false)
+  const [verified, setVerified] = useState(false)
   const back = `/wallet/ticket/${id}`
 
-  if (!ticket || (ticket.status !== 'issued' && phase !== 'done')) {
+  if (!ticket || (ticket.status !== 'issued' && ticket.status !== 'skipped' && phase !== 'done')) {
     return (
       <Screen>
         <TopBar back={back} title="Claim ticket" />
@@ -41,7 +43,7 @@ export default function Claim() {
   async function lock() {
     setPhase('busy')
     await wait(900)
-    updateTicket(ticket!.id, { status: 'claimed' })
+    updateTicket(ticket!.id, { status: verified ? 'claimed' : 'skipped' })
     setPhase('done')
   }
 
@@ -55,7 +57,7 @@ export default function Claim() {
           <p className="body-3 text-text-muted">
             Pass {ticket.pass} is locked to this phone. Bring this phone to the door to check in.
           </p>
-          <SimTag>Simulated claim</SimTag>
+          <SimTag>Simulated phone lock</SimTag>
         </section>
         <Button to={back}>Back to ticket</Button>
       </Screen>
@@ -73,7 +75,6 @@ export default function Claim() {
             World ID shows a ticket for {ticket.event} was already claimed by this person. Each person can claim one
             ticket per event. Ask the organizer if you think this is a mistake.
           </p>
-          <SimTag>Simulated rejection</SimTag>
         </section>
         <Button variant="secondary" onClick={() => { setPhase('idle'); setStep(2) }}>
           Try again
@@ -137,7 +138,6 @@ export default function Claim() {
                 : 'Camera verified checks a live selfie against your World ID.'}
             </p>
           )}
-          <SimTag>Simulated verification, no World ID call</SimTag>
         </section>
       )}
 
@@ -159,14 +159,14 @@ export default function Claim() {
         </Button>
       )}
       {step === 2 && (
-        <>
-          <Button busy={busy} onClick={() => next(3, 1200)}>
-            {busy ? 'Verifying' : 'Verify with World ID'}
-          </Button>
-          <Button variant="secondary" size="md" disabled={busy} onClick={() => setPhase('rejected')}>
-            Demo control: simulate a repeat claim
-          </Button>
-        </>
+        <WorldVerify
+          onVerified={() => {
+            setVerified(true)
+            setStep(3)
+          }}
+          onSkipped={() => setStep(3)}
+          onRejected={() => setPhase('rejected')}
+        />
       )}
       {step === 3 && (
         <Button busy={busy} onClick={lock}>

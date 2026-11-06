@@ -65,17 +65,10 @@ flowchart LR
 
 | Layer | Holds | Why there |
 |---|---|---|
-<<<<<<< Updated upstream
-| **ENSv2** | Who owns a pass, and whether the holder can transfer it | The transfer rule is enforced by the contract |
+| **ENSv2** | Event domain and holder profile; later, pass ownership and transfer rules | The event page and wallet identity use ENS, and the contract enforces transfer rules once passes are subnames |
 | **Arkiv** | Tickets, check-ins and hashed World ID nullifiers. It's the only database | Anyone can verify and query it without trusting our server |
-| **World ID** | One claim per human per event | Stops bulk claiming without collecting identity |
+| **World ID** | One verified claim or purchase per human per event | Stops bulk claiming without collecting identity |
 | **Server environment only** | Signing keys | These must not be public. No personal details are stored at all |
-=======
-| **ENSv2** | Event domain and holder profile; pass ownership | The event page and wallet identity use ENS; transfer rules are later scope |
-| **Arkiv** | Event, ticket and check-in data | The attendee and door views read the ticket and check-in records |
-| **World ID** | One verified purchase per human per event | IDKit verification gates the testnet purchase |
-| **Backend only** | World ID nullifiers, signing keys, personal details | These must not be public |
->>>>>>> Stashed changes
 
 Once ENS is added, the door requires ENS and Arkiv to agree: the pass name's owner must match the Arkiv ticket's holder.
 
@@ -192,33 +185,6 @@ docs/
 
 ## Build plan
 
-<<<<<<< Updated upstream
 Phases, roles and the cut list are in [BUILD_PLAN.md](BUILD_PLAN.md).
-=======
-| Who | Job |
-|---|---|
-| **A: Sonar** | Audio capture, matched filter, distance, door and wallet check-in screens |
-| **B: Chain** | Node server, ENSv2 passes, Arkiv entities |
-| **C: App** | ENS event page, testnet purchase, IDKit verification and attendee/door views |
-| **0.5: Submission** | Arkiv files, friction log, World debrief, license, README, demo video, and being the second phone tester |
-
-| By hour | A: Sonar | B: Chain | C: App | Checkpoint |
-|---|---|---|---|---|
-| **2** | Two phones in Chrome give a distance | First Arkiv write and read | Deployed HTTPS shell; first World ID success in the simulator | **Go/no-go on sonar; preserve time for Arkiv** |
-| **5** | Sonar check-in over WebSocket | Ticket and check-in entities, ENS event and pass | ENS event page, IDKit purchase, attendee and door views | **Testnet purchase-to-check-in happy path works** |
-| **7** | Remote relay and noise tests; tune | Validate ENS ownership against Arkiv ticket; complete visible Arkiv reads | Duplicate verification rejection; refine profiles | **Feature freeze** |
-| **8** | Rehearse on the real phones | Fix demo blockers | Fix demo blockers | **Video recorded** |
-| **9** | Buffer | Buffer | Buffer | **Submit with time to spare** |
-
-**If behind, cut in this order:** trophy page, transfer flow, purchase page styling, then optional device-key signature. Keep a basic ENS event page and testnet purchase in the happy path.
-
-**Never cut:** the sonar check-in, the specific-wallet check at the door, an Arkiv read visible to users, the ENS event page, IDKit verification in the testnet purchase flow, the track files and the video.
 
 **Demo scope:** false sonar rejections and manual overrides are not modeled in the demo. Phone lending is also out of scope; the stated claim is proximity plus presence of the ticket's assigned wallet, not proof of the person holding the phone.
-
-**Technical contingencies:**
-
-- **Two phones won't range in Chrome by hour 2:** use a laptop as the door device, which is the pairing enconomy tested. A laptop at the door also looks natural.
-- **Reading is unstable:** show the median of up to 3 attempts, and hold the phones closer.
-- **Meet removes the signal entirely:** the relay still fails, and the screen shows "partner sound not found" instead of a large distance. Both results are fine for the demo.
->>>>>>> Stashed changes

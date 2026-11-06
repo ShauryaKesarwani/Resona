@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { hashSignal } from "@worldcoin/idkit-core/hashing";
-import { claim, skip, type Verifier, type WorldConfig } from "./claim.ts";
-import { openStore, type Store } from "./store.ts";
+import { openStore, type Store } from "../db/store.ts";
+import { claim, skip, type ClaimConfig } from "./claim.service.ts";
+import type { Verifier } from "./world.service.ts";
 
-const config: WorldConfig = { rpId: "rp_test", action: "claim-test", environment: "staging", allowSkip: true };
+const config: ClaimConfig = { rpId: "rp_test", action: "claim-test", environment: "staging", allowSkip: true };
 const alice = "0xAAaa000000000000000000000000000000000001";
 const aliceAlt = "0xaaaa000000000000000000000000000000000002";
 const passes: Verifier = async () => ({ ok: true, body: { success: true, environment: "staging" } });

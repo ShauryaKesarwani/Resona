@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
-import { CheckCircleIcon, CircleDashedIcon, FlaskIcon, SealCheckIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, CircleDashedIcon, FlaskIcon, SealCheckIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { short, wallet, type Status } from '../data/mock'
 
 const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: string }> = {
   issued: { label: 'Ready to claim', icon: CircleDashedIcon, cls: 'text-text' },
   claimed: { label: 'Claimed', icon: SealCheckIcon, cls: 'text-accent' },
+  skipped: { label: 'Not verified', icon: WarningCircleIcon, cls: 'text-text-muted' },
   checked_in: { label: 'Checked in', icon: CheckCircleIcon, cls: 'text-success' },
 }
 

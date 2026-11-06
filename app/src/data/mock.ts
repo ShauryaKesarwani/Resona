@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react'
+import { api } from '../services/api'
+import { walletAddress } from '../utils/wallet'
 
 /**
  * Simulated data. Everything here is fake and shown with a "Simulated" tag in the UI.
  * The shapes follow docs/ARCHITECTURE.md (resona.ticket) so the server or Arkiv can replace this file.
  */
-export type Status = 'issued' | 'claimed' | 'checked_in'
+export type Status = 'issued' | 'claimed' | 'skipped' | 'checked_in'
 export type Level = 'Orb verified' | 'Camera verified' | 'Government ID'
 
 export type Ticket = {
@@ -21,7 +23,7 @@ export type Ticket = {
 
 export const wallet = {
   name: 'skes.eth',
-  address: '0x7a3f2b41c9d8e5f60718a2b3c4d5e6f7a8b9c91E',
+  address: walletAddress(),
   network: 'Sepolia',
 }
 
@@ -47,3 +49,24 @@ export function updateTicket(id: string, patch: Partial<Ticket>) {
 }
 
 export const transferWindowMs = 24 * 60 * 60 * 1000
+
+/** Pass 7 is real: each browser wallet gets its own server ticket behind it. The other passes stay simulated. */
+const REAL_PASS = '7'
+let realPass: Promise<string> | undefined
+
+async function loadRealPass() {
+  const rows = await api.tickets(wallet.address)
+  const row = rows[0] ?? (await api.issue(wallet.address, 'general'))
+  updateTicket(REAL_PASS, { status: row.status })
+  return row.passId
+}
+
+export function serverPass() {
+  realPass ??= loadRealPass().catch((err) => {
+    realPass = undefined
+    throw err
+  })
+  return realPass
+}
+
+serverPass().catch(() => {})

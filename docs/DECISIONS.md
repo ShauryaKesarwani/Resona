@@ -40,6 +40,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 | First World ID credential | Proof of Human, before levels are added | **Proposed, needs team sign-off** |
 | Security additions | Sound challenge with a deadline, attestation, hardware device key | **Proposed for the real product;** not in the demo |
 | Timing method | Matched filter for timing; spectrogram only for visuals and optional same-room check | **Proposed, needs team sign-off** |
+| Backend use | Keep the current Node server, but only for what must be server-side: World ID signing and verification, and writes that need the organizer's key. Everything else, including Arkiv reads, runs in the browser | Decided by team |
 | World ID skip | Demo-only Skip button on the claim page, in case verification is slow. The ticket is marked `skipped`, not verified, and can be verified later. Turn off with `ALLOW_WORLD_SKIP=false` | Decided by team, demo only |
 | POAP | Stage 4, on attendee profiles | Decided by team |
 
@@ -52,27 +53,22 @@ The living record of what is settled and what isn't. Update it whenever the team
 
 ### Product
 
-<<<<<<< Updated upstream
-3. **Which testnet token pays for tickets in stage 5,** and who pays the gas? MockUSDC and Sepolia ETH are both options. Decide this when stage 5 starts.
-4. **Which verification level should the first event use?** Proof of Human is the proposed start, but it needs an Orb-verified World ID. For the demo, the simulator avoids this.
-5. **How much of the attendee list should be public?** Arkiv and ENS are public, so a pass reveals its holder's wallet. Encrypting holder fields protects privacy but limits queries.
-6. **Can a company reassign a ticket** if an employee leaves before the event?
-7. **Does the trophy ordinal count purchases or check-ins?** The brief mentions both. We've assumed check-ins, since that better proves attendance.
-8. **Who keeps the organizer's key?** The hackathon backend can hold it, but a real product would need something stronger.
-=======
-3. **What event data should be public?** Arkiv and ENS are public, so a pass may reveal its holder's wallet and attendance. Decide which fields to publish or encrypt before implementation.
-4. **What happens to attendees who cannot complete World ID verification?** The demo currently requires IDKit verification for purchase; decide whether a real product needs an alternate purchase path.
-5. **Who keeps the organizer's key in a real product?** The hackathon backend can hold it, but a real product would need stronger key management.
-6. **What pricing range will organizers accept?** The model is per event based on ticket volume, with rate negotiated; validate through organizer conversations.
-7. **Which technical choices remain for wallet presence verification?** Bind the ticket to its assigned wallet, then finalize the proof and recovery flow during implementation.
->>>>>>> Stashed changes
+3. **Which testnet token pays for tickets,** and who pays the gas? MockUSDC and Sepolia ETH are both options. Decide this when purchase work starts.
+4. **Which verification level should the first event use?** Proof of Human is the proposed start. It needs an Orb-verified World ID, which everyone on the team has.
+5. **What event data should be public?** Arkiv and ENS are public, so a pass may reveal its holder's wallet and attendance. Decide which fields to publish or encrypt before implementation. Encrypting holder fields protects privacy but limits queries.
+6. **What happens to attendees who cannot complete World ID verification?** The demo requires it; decide whether a real product needs an alternate path.
+7. **Can a company reassign a ticket** if an employee leaves before the event?
+8. **Does the trophy ordinal count purchases or check-ins?** The brief mentions both. We've assumed check-ins, since that better proves attendance.
+9. **Who keeps the organizer's key in a real product?** The hackathon backend can hold it, but a real product would need stronger key management.
+10. **What pricing range will organizers accept?** The model is per event based on ticket volume, with rate negotiated; validate through organizer conversations.
+11. **Which technical choices remain for wallet presence verification?** Bind the ticket to its assigned wallet, then finalize the proof and recovery flow during implementation.
 
 ### Technical
 
-9. **What does a Meet or Discord relay do to the signal?** It might add delay, or remove the signal entirely. Answered by the relay test.
-10. **How well does ranging hold up in noise?** Answered by the noise test.
-11. **How does the organizer get registrar and unregister roles on a new ENSv2 registry?** Answered by the ENS test and the unread `/ensv2/subnames` docs.
-12. **Does ranging work between two Android phones in Chrome?** enconomy's published browser result used a laptop and a phone. Answered by 2:30 in the build plan.
+12. **What does a Meet or Discord relay do to the signal?** It might add delay, or remove the signal entirely. Answered by the relay test.
+13. **How well does ranging hold up in noise?** Answered by the noise test.
+14. **How does the organizer get registrar and unregister roles on a new ENSv2 registry?** Answered by the ENS test and the unread `/ensv2/subnames` docs.
+15. **Does ranging work between two Android phones in Chrome?** enconomy's published browser result used a laptop and a phone. Answered by 2:30 in the build plan.
 
 ## Interpretation of the brief
 

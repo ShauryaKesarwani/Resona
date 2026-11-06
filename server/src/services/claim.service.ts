@@ -1,23 +1,15 @@
 import { hashSignal } from "@worldcoin/idkit-core/hashing";
-import type { Store, Ticket } from "./store.ts";
+import type { WorldEnv } from "../config/env.ts";
+import type { Store, Ticket } from "../db/store.ts";
+import { sameField, toDecimal } from "../utils/field.ts";
+import type { Verifier } from "./world.service.ts";
 
-export type WorldConfig = { rpId: string; action: string; environment: string; allowSkip: boolean };
-export type VerifyResult = { ok: boolean; body: any };
-export type Verifier = (rpId: string, idkitResponse: unknown) => Promise<VerifyResult>;
+export type ClaimConfig = Pick<WorldEnv, "rpId" | "action" | "environment" | "allowSkip">;
 export type Outcome =
   | { status: 200; ticket: Ticket }
   | { status: 400 | 403 | 404 | 409; error: string };
 
 const REPLAY_CODES = new Set(["nullifier_replayed", "max_verifications_reached"]);
-
-export const portalVerifier: Verifier = async (rpId, idkitResponse) => {
-  const res = await fetch(`https://developer.world.org/api/v4/verify/${rpId}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(idkitResponse),
-  });
-  return { ok: res.ok, body: await res.json().catch(() => null) };
-};
 
 function holderTicket(store: Store, passId: string, wallet: string) {
   const ticket = store.ticket(passId);
@@ -27,11 +19,9 @@ function holderTicket(store: Store, passId: string, wallet: string) {
   return ticket;
 }
 
-const sameField = (a: string, b: string) => BigInt(a) === BigInt(b);
-
 export async function claim(
   store: Store,
-  config: WorldConfig,
+  config: ClaimConfig,
   verify: Verifier,
   input: { passId: string; wallet: string; idkitResponse: any },
 ): Promise<Outcome> {
@@ -54,8 +44,7 @@ export async function claim(
     return { status: 400, error: "verification_failed" };
   }
 
-  // Stored as a decimal string so hex casing can't create a second "unique" value.
-  if (!store.useNullifier(BigInt(item.nullifier).toString(), config.action)) {
+  if (!store.useNullifier(toDecimal(item.nullifier), config.action)) {
     return { status: 409, error: "human_already_claimed" };
   }
   store.setStatus(ticket.passId, "claimed");
@@ -63,7 +52,7 @@ export async function claim(
 }
 
 /** Demo only. A skipped ticket can still be verified later. */
-export function skip(store: Store, config: WorldConfig, input: { passId: string; wallet: string }): Outcome {
+export function skip(store: Store, config: ClaimConfig, input: { passId: string; wallet: string }): Outcome {
   if (!config.allowSkip) return { status: 403, error: "skip_disabled" };
   const ticket = holderTicket(store, input.passId, input.wallet);
   if ("error" in ticket) return ticket;

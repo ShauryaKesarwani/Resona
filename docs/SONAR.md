@@ -12,23 +12,14 @@ This is the core of the project. All numbers here are calculated or proposed, an
 This is simpler than the full protocol below. It has no response deadline and no attestation, so it stops relays through the real app but not a modified client.
 
 1. The holder's phone shows a QR code that identifies the ticket, and the door scans it.
-<<<<<<< Updated upstream
 2. The server checks the ticket on Arkiv, and creates a session with a fresh random seed. The holder's wallet finds the session by polling.
 3. Both phones derive two 250 ms signals from the seed, one per role, so old recordings can't be replayed.
 4. The server tells both phones to start. Both are already recording.
 5. The door plays its signal 1.5 s later, and the holder plays at 3 s. Exact timing doesn't matter, because the recordings are searched for both sounds. Record for about 6 s, to leave room for relay delay.
 6. Each phone finds both arrivals with a matched filter, and sends its elapsed time to the server. The holder signs its report with its wallet key, and the server checks that it matches the ticket, so a streamed QR code alone can't pass.
-7. The server computes the distance. **Pass** means under 60 cm. The ticket is updated on Arkiv and a read-only check-in record is created, so the same ticket can't check in twice.
-=======
-2. The server looks up the ticket in Arkiv and its ENS pass, then creates a session with a fresh random seed.
-3. Both phones derive two 250 ms signals from the seed, one per role, so old recordings can't be replayed.
-4. The server tells both phones to start. Both are already recording.
-5. The door plays its signal about 0.5 s later, and the holder plays about 1.5 s later. Exact timing doesn't matter, because the recordings are searched for both sounds. Record for about 5 s, to leave room for relay delay.
-6. Each phone finds both arrivals with a matched filter, and sends its elapsed time to the server. The holder signs its report.
-7. The server computes the distance. **Pass** means under 60 cm. After sonar passes, the door verifies that the ticket's assigned wallet is present and that the ENS pass and Arkiv ticket agree. The door shows the holder's ENS profile, and the successful check-in is written to Arkiv.
+7. The server computes the distance. **Pass** means under 60 cm. The ticket is updated on Arkiv and a read-only check-in record is created, so the same ticket can't check in twice. Once passes are on ENS, the door also checks that the ENS pass and Arkiv ticket agree, and shows the holder's ENS profile.
 
 For the hackathon demo, false sonar rejections and staff overrides are out of scope. Phone lending is also out of scope; the demo claim is that the ticket's phone is nearby and its assigned wallet is present, not that the phone's carrier has been personally identified.
->>>>>>> Stashed changes
 
 Demo at about **30 cm**, not arm's length. enconomy's data shows [handheld phones at 60 cm reading 60–90 cm](https://github.com/tawago/enconomy#limitations), so a real 60 cm would often fail. Touching phones read about 8 cm rather than zero, because of speaker-to-mic spacing. Its evidence is still limited to quiet-room sessions, so our own noise test matters.
 

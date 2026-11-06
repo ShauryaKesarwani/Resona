@@ -72,13 +72,16 @@ export default function Ticket() {
       <div className="flex-1" />
 
       {ticket.status === 'issued' && <Button to={`/wallet/claim/${ticket.id}`}>Claim ticket</Button>}
-      {ticket.status === 'claimed' && (
+      {ticket.status === 'skipped' && <Button to={`/wallet/claim/${ticket.id}`}>Verify with World ID</Button>}
+      {(ticket.status === 'claimed' || ticket.status === 'skipped') && (
         <>
           <Button to={`/wallet/checkin/${ticket.id}`}>Check in</Button>
-          <Button variant="secondary" size="md" to={`/wallet/transfer/${ticket.id}`}>
-            <ArrowsLeftRightIcon size={20} aria-hidden="true" />
-            {pending ? 'See transfer request' : 'Send to someone'}
-          </Button>
+          {ticket.status === 'claimed' && (
+            <Button variant="secondary" size="md" to={`/wallet/transfer/${ticket.id}`}>
+              <ArrowsLeftRightIcon size={20} aria-hidden="true" />
+              {pending ? 'See transfer request' : 'Send to someone'}
+            </Button>
+          )}
         </>
       )}
       {ticket.status === 'checked_in' && <Button to={`/u/${wallet.name}`}>View your trophy</Button>}
