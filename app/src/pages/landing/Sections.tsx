@@ -5,27 +5,29 @@ import {
   WaveformIcon,
 } from '@phosphor-icons/react'
 import { Button } from '../../components/Button'
-import { Figure } from '../../components/Figure'
+import { FigurePair } from '../../components/Figure'
 import { Panel, Section } from './Section'
 
 export function Hero() {
   return (
-    <header className="px-4 pt-[calc(max(8px,env(safe-area-inset-top))+80px)] pb-8 sm:px-6 lg:px-8 lg:pt-32 lg:pb-16">
-      <div className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-2 lg:items-center lg:gap-12">
-        <div className="order-2 flex flex-col gap-4 lg:order-1">
-          <h1 className="heading-3 sm:heading-2 lg:heading-1 text-hero max-w-[680px]">
+    <header className="px-4 pt-[calc(max(8px,env(safe-area-inset-top))+80px)] pb-8 sm:px-6 lg:px-8 lg:pb-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 lg:gap-8">
+        <FigurePair className="aspect-[16/9] lg:aspect-[3/1]" />
+        <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] lg:items-end lg:gap-12">
+          <h1 className="heading-3 sm:heading-2 text-hero max-w-[680px]">
             Tickets that only work when you are at the door
           </h1>
-          <p className="body-3 max-w-[680px] text-text-muted">
-            Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late, and
-            organizers decide who can hold each ticket.
-          </p>
-          <div className="mt-2 flex flex-col gap-2 lg:max-w-sm">
-            <Button to="/enter">Open your wallet</Button>
-            <p className="caption-2 text-center text-text-muted lg:text-left">Built on ENS, Arkiv and World ID</p>
+          <div className="flex flex-col gap-4">
+            <p className="body-3 max-w-[680px] text-text-muted">
+              Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late,
+              and organizers decide who can hold each ticket.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button to="/enter">Open your wallet</Button>
+              <p className="caption-2 text-center text-text-muted lg:text-left">Built on ENS, Arkiv and World ID</p>
+            </div>
           </div>
         </div>
-        <Figure ratio="3 / 2" position="50% 40%" className="order-1 lg:order-2 lg:aspect-[4/5]!" />
       </div>
     </header>
   )

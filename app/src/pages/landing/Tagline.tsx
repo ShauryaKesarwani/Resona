@@ -25,7 +25,7 @@ export function Tagline() {
   }, [reduce])
 
   return (
-    <section aria-label="Tagline" className="px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
+    <section aria-label="Tagline" className="px-4 py-24 sm:px-6 lg:px-8 lg:py-24">
       <p className="heading-3 sm:heading-2 lg:heading-1 mx-auto w-full max-w-[680px] lg:max-w-5xl">
         {words.map((w, i) => {
           const on = reduce || lit.has(i)
