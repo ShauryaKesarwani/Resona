@@ -2,11 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { CheckCircleIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
 import { api } from '../../services/api'
+import { signedBy } from '../../services/auth'
 
 const MESSAGES: Record<string, string> = {
   invalid_event_name: 'Give the event a name of 3 to 60 characters.',
   invalid_event_date: 'Pick today or a later date.',
   invalid_price: 'The price is a number from 0 to 100 test tokens.',
+  bad_signature: 'This wallet could not sign the request. Reload and try again.',
+  not_organizer: 'This wallet is not a listed organizer.',
   arkiv_not_configured: 'The server cannot reach Arkiv. Check its keys, then try again.',
 }
 
@@ -28,7 +31,7 @@ export function NewEvent() {
     setError('')
     setBusy(true)
     try {
-      const { eventId } = await api.createEvent(name.trim(), date, price.trim() || '0')
+      const { eventId } = await api.createEvent(name.trim(), date, price.trim() || '0', await signedBy(`event:${name.trim().toLowerCase()}:${date}`))
       setPublished({ eventId, name: name.trim() })
       setName('')
     } catch (err) {
