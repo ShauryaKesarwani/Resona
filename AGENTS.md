@@ -5,3 +5,7 @@ Before changing ticketing, Arkiv, ENS, World ID, check-in, related APIs or UI, r
 # Project checklist
 
 Read `TODO.md` before project work. For every user-requested change and every feature added, changed, or discovered, update the relevant checklist entries in `TODO.md` as part of the same work, including unfinished follow-ups and blockers. Use `[ ]` for not started, `[~]` for partially implemented or in progress, and `[x]` only for completed work with the required verification. Keep completed and remaining features visible, describe the actual state, and record new actionable requests without treating a proposal as implemented. Preserve unrelated entries.
+
+# Communication
+
+Explain things to the user in plain, everyday language. Prefer simple words to jargon; when a technical term is necessary, briefly explain what it means and why it matters. Keep responses natural and clear, while preserving important details, risks, and any technical specifics the user needs to act.

@@ -7,8 +7,9 @@ The current code is the source for implementation status; planned behavior and s
 ## Project and app
 
 - [x] React/Vite app, web manifest, and Node server that serves the built app exist.
+- [x] `GET /api/health` reports whether the server responds; it does not check Arkiv, World ID or ENS.
 - [~] Browser wallet and wallet-signature sign-in are implemented; verify the full flow on the demo phones and clarify the security and recovery limits.
-- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. The door, wallet check-in and door history screens now call the real check-in API and Arkiv in code, unverified on phones; the claim's phone-lock step is still simulated; `/privacy`, `/terms` and `/u/:name` are stubs.
+- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. The door, wallet check-in and door history screens call the check-in API and Arkiv in code, unverified on phones; the claim's phone-lock step is still simulated. `/privacy` and `/terms` are stubs; the public profile page exists but accepts wallet addresses, not ENS names.
 - [~] The organizer page calls the real issue and lookup APIs, and wallet tickets, events and purchases read Arkiv in code; `data/mock.ts` no longer simulates tickets or check-ins. Not yet verified end to end against live Arkiv in the app.
 - [x] Require organizer authorization on `POST /issue`: a fresh signature covering the holder and tier, from a wallet in `ORGANIZER_WALLETS`, failing closed when none is listed. Route tests pass, and a live server rejected unsigned and unlisted requests without writing.
 - [~] `ORGANIZER_WALLETS` is set in the local `server/.env`, and the organizer page refuses an unlisted wallet with the address to add. Still set it on the VPS, and confirm a listed wallet issues from the page.
@@ -28,7 +29,7 @@ The current code is the source for implementation status; planned behavior and s
 ## Arkiv
 
 - [x] Testnet setup and lifecycle spike exist; a ticket write/read/patch and read-only spike record were previously tested on Rabdi.
-- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. The removal is confirmed: no SQL code or dependency remains in the server or app, and all 54 server tests pass on the current working tree. The live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
+- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. All 68 server tests pass on the current working tree. The live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
 - [~] `resona.account` storage and owner/creator-filtered account lookups are implemented; verify signup, uniqueness, write recovery and expiration against the data contract. Its query-then-create flow and in-process queue do not establish multi-instance uniqueness.
 - [x] Reconcile `arkiv/schema.md`, `arkiv/world-claim-design.md` and `docs/ARCHITECTURE.md` with the Arkiv-only implementation: all six entities are documented from the code, and SQLite is no longer described as active.
 - [ ] Decide what to do with the leftover gitignored `server/resona.db` (7 tickets, 1 nullifier for a retired action). No code reads it. Check other deployments or backups before discarding anything.
@@ -37,7 +38,7 @@ The current code is the source for implementation status; planned behavior and s
 - [ ] Add the Arkiv track files; checked on 7 November: `arkiv/friction.md`, `reach.md`, `why-arkiv.md` and `how-you-use-arkiv.md` do not exist. `friction.md` needs the team's real notes on what broke.
 - [ ] Add writer addresses and a runnable query to the README.
 - [~] Show an actual Arkiv read in the app: the wallet ticket, event and purchase screens read through the `/api/arkiv` read proxy in code, but this has not been confirmed on a running app with live data.
-- [x] Restore the app build: a clean `npm ci` in `app/` resolves `@arkiv-network/sdk`; `npm run build` and the 20 app tests pass.
+- [x] Restore the app build: `npm run build` and all 20 app tests pass on the current working tree. The build warns that the main JavaScript bundle is large.
 
 ## World ID
 
@@ -59,11 +60,12 @@ Lower priority than sonar integration, Arkiv and World ID: the team wants it if 
 
 ## Later stages and submission
 
-- [~] Add event pages, attendee profiles, attendance trophies and POAPs when the core journey is working. `/wallet/events` lists events; public `/e/:name` pages, `/u/:name` profiles, trophies and POAPs are not built.
+- [~] Event listing and public `/e/:id` event pages read Arkiv in code. The public `/u/:name` profile displays attendance trophies from Arkiv but currently accepts a wallet address rather than an ENS name. Verify these pages with live data; ENS-based pages and profiles and POAPs remain to do.
 - [~] Testnet purchases exist in code: `/wallet/events` pays the organizer and `/wallet/purchases` shows history, with resume handling for interrupted payments. A live purchase has not been verified here.
 - [~] Make purchased tickets trustworthy before any door relies on them. The door reads bought tickets, confirms the payment on chain and, with skip off, requires an account; these have unit tests on a fake store and no live purchase check. The one-ticket-per-human check when buying still runs only in the browser.
 - [ ] Add company distribution only after the earlier stages.
 - [ ] Complete the [track checklists](docs/TRACKS.md), including the World debrief, AI-use statement, prior-work credit, public repo and demo video.
+- [ ] Update the README's implementation status: it still says ticket check-in and Arkiv check-in records do not exist, although both are implemented in code and need phone testing.
 - [ ] Confirm the public demo works from a fresh device, contains no committed secrets, and is rehearsed in a noisy room.
 
 ## Agent tooling
@@ -79,3 +81,4 @@ Lower priority than sonar integration, Arkiv and World ID: the team wants it if 
 ## Checklist maintenance
 
 - [x] Add `AGENTS.md` instructions to maintain this checklist when work or requests change.
+- [x] Add `AGENTS.md` guidance to explain responses in clear, everyday language and explain necessary technical terms.

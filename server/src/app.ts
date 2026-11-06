@@ -13,6 +13,8 @@ import { env } from "./config/env.ts";
 
 export function createApp(tickets: TicketStore & CheckinStore, registry: AccountRegistry) {
   const app = express();
+  // Liveness only: this does not check external services.
+  app.get("/api/health", (_req, res) => res.set("Cache-Control", "no-store").json({ status: "ok" }));
   app.use(express.json({ limit: "256kb" }));
   app.use("/api", worldRoutes);
   app.use("/api", labRoutes);
