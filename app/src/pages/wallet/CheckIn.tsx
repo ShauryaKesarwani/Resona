@@ -24,6 +24,7 @@ const START_ERRORS: Record<string, string> = {
   already_checked_in: 'You have already checked in for this event.',
   not_claimed: 'Claim this ticket first.',
   not_verified: 'Sign in with World ID before you check in.',
+  human_already_claimed: 'Your World account already has a ticket claimed for this event.',
   ticket_revoked: 'The organizer revoked this ticket.',
   event_ended: 'This event has ended.',
   payment_not_found: 'We could not find the payment for this ticket on chain. Ask the organizer.',
@@ -156,7 +157,9 @@ export default function CheckIn() {
 
   if (phase.name === 'done') {
     const { state, cm, problem } = phase.result
-    const f = fails[state] ?? fails.expired
+    const f = state === 'failed' && problem
+      ? { title: 'Ticket no longer eligible', body: START_ERRORS[problem] ?? 'This ticket changed during the check. Ask the organizer before trying again.' }
+      : fails[state] ?? fails.expired
     return (
       <Screen>
         <TopBar back={back} title="Check in" />

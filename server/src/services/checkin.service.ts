@@ -16,9 +16,7 @@ type Session = {
   door?: number; holder?: number; cm?: number;
   ordinal?: number; transactionHash?: string; entityKey?: string;
 };
-export type Options = {
-  store: CheckinStore; accounts: Pick<AccountRegistry, "findByWallet">; allowSkip: boolean; doorPin?: string; now?: () => number;
-};
+export type Options = { store: CheckinStore; registry: Pick<AccountRegistry, "ready" | "findByWallet">; allowSkip: boolean; doorPin?: string; now?: () => number };
 
 const CODE_TTL_MS = 2 * 60 * 1000;
 /** The phones record for 6 seconds and then analyse, so a run with no result by now has gone wrong. */
@@ -37,7 +35,9 @@ const sameSecret = (a: string, b: string) => {
 };
 
 /** Live check-ins, held in memory for a few minutes. Only a passed check-in is permanent, on Arkiv. */
-export function createCheckins({ store, accounts, allowSkip, doorPin, now = Date.now }: Options) {
+class EligibilityError extends Error {}
+
+export function createCheckins({ store, registry, allowSkip, doorPin, now = Date.now }: Options) {
   const sessions = new Map<string, Session>();
 
   function refresh(session: Session) {
@@ -47,12 +47,8 @@ export function createCheckins({ store, accounts, allowSkip, doorPin, now = Date
     return session;
   }
 
-  /** The holder's wallet proves it is here, and every rule about the ticket is checked before any sound plays. */
-  async function start(input: Partial<Signed> & { passId?: string }): Promise<Started | Failure> {
-    const passId = String(input.passId ?? "");
-    if (!(await isWalletOwner(`checkin:${passId}`, input))) return { status: 401, error: "bad_signature" };
-    const wallet = input.wallet!.toLowerCase();
-
+  /** Shared by session start and the serialized admission write; buyer status is not World evidence. */
+  async function eligible(passId: string, wallet: string): Promise<{ ticket: DoorTicket; userId?: string } | Failure> {
     const ticket = await store.doorTicket(passId, wallet);
     if (!ticket) return { status: 404, error: "ticket_not_found" };
     if (ticket.holder !== wallet) return { status: 403, error: "not_ticket_holder" };
@@ -60,11 +56,28 @@ export function createCheckins({ store, accounts, allowSkip, doorPin, now = Date
     if (ticket.status === "revoked") return { status: 403, error: "ticket_revoked" };
     if (ticket.status === "issued") return { status: 409, error: "not_claimed" };
     if (ticket.status === "skipped" && !allowSkip) return { status: 403, error: "not_verified" };
-    // A buyer writes its own ticket with status claimed, so only the account shows it passed World ID.
-    if (ticket.bought && !allowSkip && !(await accounts.findByWallet(wallet))) return { status: 403, error: "not_verified" };
     if (await store.eventEnded(ticket.eventId)) return { status: 410, error: "event_ended" };
     if (await store.hasCheckedIn(ticket.eventId, wallet)) return { status: 409, error: "already_checked_in" };
-    if (ticket.bought && !(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };
+    let userId: string | undefined;
+    if (ticket.bought) {
+      // Demo skip applies only to organizer-issued tickets, never to self-reported buyer status.
+      const account = registry.ready ? await registry.findByWallet(wallet) : null;
+      if (!account || account.wallet.toLowerCase() !== wallet || !account.userId) return { status: 403, error: "not_verified" };
+      userId = account.userId;
+      if (await store.hasClaimed(userId, ticket.eventId)) return { status: 409, error: "human_already_claimed" };
+      if (!(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };
+    }
+    return { ticket, userId };
+  }
+
+  /** The holder's wallet proves it is here before any sound plays. */
+  async function start(input: Partial<Signed> & { passId?: string }): Promise<Started | Failure> {
+    const passId = String(input.passId ?? "");
+    if (!(await isWalletOwner(`checkin:${passId}`, input))) return { status: 401, error: "bad_signature" };
+    const wallet = input.wallet!.toLowerCase();
+    const result = await eligible(passId, wallet);
+    if ("error" in result) return result;
+    const ticket = { ...result.ticket };
 
     for (const [id, old] of sessions) {
       if (old.ticket.passId === passId || FINISHED.includes(refresh(old).state)) sessions.delete(id);
@@ -123,11 +136,21 @@ export function createCheckins({ store, accounts, allowSkip, doorPin, now = Date
     if (verdict === "far") return void (session.state = "too_far");
     session.state = "saving";
     try {
-      Object.assign(session, await store.commitCheckin(session.ticket, cm));
+      Object.assign(session, await store.commitCheckin(session.ticket, cm, async () => {
+        const result = await eligible(session.ticket.passId, session.ticket.holder);
+        if ("error" in result) throw new EligibilityError(result.error);
+        const current = result.ticket;
+        if (current.passId !== session.ticket.passId || current.eventId !== session.ticket.eventId
+          || current.entityKey !== session.ticket.entityKey || current.bought !== session.ticket.bought) {
+          throw new EligibilityError("ticket_changed");
+        }
+        return result;
+      }));
       session.state = "pass";
     } catch (error) {
       console.error("Check-in write failed:", error instanceof Error ? error.message.replace(/https?:\/\/\S+/g, "[url]").slice(0, 200) : "unknown");
       session.state = "failed";
+      if (error instanceof EligibilityError) session.problem = error.message;
     }
   }
 

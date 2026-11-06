@@ -30,14 +30,16 @@ export type TicketStore = {
 const notConfigured = async () => { throw new Error("Arkiv is not configured"); };
 export type DoorTicket = Ticket & { bought: boolean };
 export type Admission = { ordinal: number; transactionHash: Hex; entityKey: Hex };
-export type CheckinStore = {
+export type AdmissionEligibility = { ticket: DoorTicket; userId?: string };
+export type CheckinStore = Pick<TicketStore, "hasClaimed"> & {
   /** The ticket for this holder, whether the organizer issued it or the holder's own wallet bought it. */
   doorTicket(passId: string, holder: string): Promise<DoorTicket | undefined>;
   /** A bought ticket is written by its buyer, so it only counts if the payment is really on chain. */
   paymentIsValid(ticket: DoorTicket): Promise<boolean>;
   eventEnded(eventId: string): Promise<boolean>;
   hasCheckedIn(eventId: string, holder: string): Promise<boolean>;
-  commitCheckin(ticket: DoorTicket, distanceCm: number): Promise<Admission>;
+  /** Revalidate inside the serialized write, not before waiting for its queue. */
+  commitCheckin(ticket: DoorTicket, distanceCm: number, revalidate: () => Promise<AdmissionEligibility>): Promise<Admission>;
 };
 
 export const unconfiguredTickets: TicketStore & CheckinStore = {
@@ -225,7 +227,7 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
     },
     hasCheckedIn,
     /** The admission and the ticket's new status land together. A failure here is never written twice. */
-    commitCheckin: (door: DoorTicket, distanceCm: number) => exclusive(async (): Promise<Admission> => {
+    commitCheckin: (door: DoorTicket, distanceCm: number, revalidate: () => Promise<AdmissionEligibility>) => exclusive(async (): Promise<Admission> => {
       if (await hasCheckedIn(door.eventId, door.holder)) throw new Error("Already checked in");
       const page = await reader.select({ passId: true }).from(CheckinSchema, { onMismatch: "throw" }).createdBy(account.address)
         .where(eq("eventId", door.eventId)).limit(1).withCount().fetch();
@@ -236,11 +238,26 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
         distanceCm: String(Math.round(distanceCm)), checkedInAt: new Date().toISOString(),
       };
       const creates = [{ schema: CheckinSchema, values, ...keep, flags: { readonly: true } }];
-      const result = door.bought
-        ? await write(`checkin ${door.passId}`, 1, (tx) => writer.executeBatch({ creates }, tx))
-        : await write(`checkin ${door.passId}`, 2, (tx) => writer.executeBatch({
-          creates, patches: [{ schema: TicketSchema, entityKey: door.entityKey, set: { status: "checked_in" } }],
-        }, tx));
+      let admittedUserId: string | undefined;
+      const result = await write(`checkin ${door.passId}`, 2, async (tx) => {
+        // Run after both the claim/check-in queue and signer queue have been acquired.
+        const current = await revalidate();
+        if (door.bought) {
+          if (!current.userId) throw new Error("A bought ticket requires a verified account");
+          admittedUserId = current.userId;
+          return writer.executeBatch({ creates: [
+            ...creates,
+            { schema: ClaimSchema, values: {
+              operationId: randomUUID(), eventId: door.eventId, passId: door.passId,
+              holder: addr(getAddress(door.holder)), userId: admittedUserId,
+            }, ...keep, flags: { readonly: true } },
+          ] }, tx);
+        }
+        return writer.executeBatch({
+          creates, patches: [{ schema: TicketSchema, entityKey: current.ticket.entityKey, set: { status: "checked_in" } }],
+        }, tx);
+      });
+      if (admittedUserId) claimed.add(`${door.eventId}:${admittedUserId}`);
       admitted.add(`${door.eventId}:${door.holder}`);
       lastOrdinal.set(door.eventId, ordinal);
       return { ordinal, transactionHash: result.txHash, entityKey: result.createdEntities[0] };

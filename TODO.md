@@ -9,7 +9,7 @@ The current code is the source for implementation status; planned behavior and s
 - [x] React/Vite app, web manifest, and Node server that serves the built app exist.
 - [x] `GET /api/health` reports whether the server responds; it does not check Arkiv, World ID or ENS.
 - [~] Browser wallet and wallet-signature sign-in are implemented; verify the full flow on the demo phones and clarify the security and recovery limits.
-- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. The door, wallet check-in and door history screens call the check-in API and Arkiv in code, unverified on phones; the claim's phone-lock step is still simulated. `/privacy` and `/terms` are stubs; the public profile page exists but accepts wallet addresses, not ENS names.
+- [~] Landing, sign-in, wallet, claim, door and organizer screens exist. The door, wallet check-in and door history screens now call the real check-in API and Arkiv in code, unverified on phones; the claim's phone-lock step is still simulated; `/privacy` and `/terms` are stubs. `/u/:name` now renders an Arkiv-backed attendance/trophy profile for wallet addresses; ENS-name profiles and live verification remain pending.
 - [~] The organizer page calls the real issue and lookup APIs, and wallet tickets, events and purchases read Arkiv in code; `data/mock.ts` no longer simulates tickets or check-ins. Not yet verified end to end against live Arkiv in the app.
 - [x] Require organizer authorization on `POST /issue`: a fresh signature covering the holder and tier, from a wallet in `ORGANIZER_WALLETS`, failing closed when none is listed. Route tests pass, and a live server rejected unsigned and unlisted requests without writing.
 - [~] `ORGANIZER_WALLETS` is set in the local `server/.env`, and the organizer page refuses an unlisted wallet with the address to add. Still set it on the VPS, and confirm a listed wallet issues from the page.
@@ -22,14 +22,14 @@ The current code is the source for implementation status; planned behavior and s
 - [~] Sonar measurement works in `/lab`, with a two-phone pass reported on 6 November, and the door and wallet screens now use it. Check-in has not been run with real sound on the demo phones after this integration, as far as this checklist can confirm, and repeat reliability is not established.
 - [ ] Test near/far results, noise, dropped audio blocks, and the Google Meet relay on the actual demo devices; record results.
 - [~] Check-in sessions, polling, fresh seeds, a door PIN and token, and holder-signed reports verified against the ticket wallet exist in `server/src/services/checkin.service.ts`. On 7 November a live server ran them on Rabdi using the real analyzer on synthesized recordings: 30 cm passed, 200 cm was refused, a retry with a new seed then passed, and wrong PINs, forged holder reports, old-attempt reports and repeats were rejected. Sessions live in server memory. `DOOR_PIN` is not set locally, so anyone can currently act as the door.
-- [~] The door and wallet screens use real sonar and check-in results in code, and load with live data in a browser; the mic path needs phones. The server rejects repeat check-ins and applies the claim and skip policy to issued tickets, and to bought tickets when skip is off. The door accepts tickets for any of the organizer's events, and its recent list mixes them.
-- [~] An issued ticket's check-in and `checked_in` status land in one Arkiv batch, verified live with a skipped ticket; a claimed ticket has not been run live. A bought ticket gets the check-in record only. Ordinals and duplicate checks are a query then a write in one process, so a restart during indexing lag can repeat them, and a failed write is not reconciled.
+- [~] The door and wallet screens use real sonar and check-in results in code, and load with live data in a browser; the mic path needs phones. The server rejects repeat check-ins and applies the claim and skip policy to issued tickets. Bought tickets now require a trusted World account and an unused human/event claim at session start and admission, even when skip is on; fake-store regression tests pass, but the updated policy has not been verified live. The door accepts tickets for any of the organizer's events, and its recent list mixes them.
+- [~] An issued ticket's check-in and `checked_in` status land in one Arkiv batch, verified live with a skipped ticket; a claimed ticket has not been run live. A bought ticket's human claim and check-in now land in one batch, not yet verified live. Ordinals and duplicate checks are a query then a write in one process, so a restart during indexing lag can repeat them, and a failed write is not reconciled.
 - [ ] Rehearse the complete issue-to-door journey and document the browser demo's security limits.
 
 ## Arkiv
 
 - [x] Testnet setup and lifecycle spike exist; a ticket write/read/patch and read-only spike record were previously tested on Rabdi.
-- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. All 68 server tests pass on the current working tree. The live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
+- [~] The server stores accounts, tickets and claims only on Arkiv, with no SQLite left in `server/src`; event and payment schemas and an `arkiv:event` script also exist. The removal is confirmed: no SQL code or dependency remains in the server or app, and all 83 server tests pass after the World-policy/eligibility changes; 20 synthetic sonar tests passed in the prior readiness review. The live API and `npm run arkiv:spike` have not been re-run against Arkiv after this migration.
 - [~] `resona.account` storage and owner/creator-filtered account lookups are implemented; verify signup, uniqueness, write recovery and expiration against the data contract. Its query-then-create flow and in-process queue do not establish multi-instance uniqueness.
 - [x] Reconcile `arkiv/schema.md`, `arkiv/world-claim-design.md` and `docs/ARCHITECTURE.md` with the Arkiv-only implementation: all six entities are documented from the code, and SQLite is no longer described as active.
 - [ ] Decide what to do with the leftover gitignored `server/resona.db` (7 tickets, 1 nullifier for a retired action). No code reads it. Check other deployments or backups before discarding anything.
@@ -38,7 +38,8 @@ The current code is the source for implementation status; planned behavior and s
 - [ ] Add the Arkiv track files; checked on 7 November: `arkiv/friction.md`, `reach.md`, `why-arkiv.md` and `how-you-use-arkiv.md` do not exist. `friction.md` needs the team's real notes on what broke.
 - [ ] Add writer addresses and a runnable query to the README.
 - [~] Show an actual Arkiv read in the app: the wallet ticket, event and purchase screens read through the `/api/arkiv` read proxy in code, but this has not been confirmed on a running app with live data.
-- [x] Restore the app build: `npm run build` and all 20 app tests pass on the current working tree. The build warns that the main JavaScript bundle is large.
+- [x] Restore the app build: a clean `npm ci` in `app/` resolves `@arkiv-network/sdk`; `npm run build` and the 20 app tests pass.
+- [ ] Reduce the frontend bundle if needed for demo-phone loading: the production build warns about a roughly 1.19 MB minified main JavaScript chunk (362 KB gzip); measure on phones and consider route-level code splitting.
 
 ## World ID
 
@@ -60,9 +61,9 @@ Lower priority than sonar integration, Arkiv and World ID: the team wants it if 
 
 ## Later stages and submission
 
-- [~] Event listing and public `/e/:id` event pages read Arkiv in code. The public `/u/:name` profile displays attendance trophies from Arkiv but currently accepts a wallet address rather than an ENS name. Verify these pages with live data; ENS-based pages and profiles and POAPs remain to do.
+- [~] Public `/events`, `/e/:id` event pages, signed-in `/e/:id/buy`, and `/u/:name` wallet-address profiles with Arkiv-backed attendance trophies now exist; `/wallet/events` redirects to `/events`. Build verified locally, but live data and phone flows remain unverified. ENS-name profiles and POAP issuance are not implemented.
 - [~] Testnet purchases exist in code: `/wallet/events` pays the organizer and `/wallet/purchases` shows history, with resume handling for interrupted payments. A live purchase has not been verified here.
-- [~] Make purchased tickets trustworthy before any door relies on them. The door reads bought tickets, confirms the payment on chain and, with skip off, requires an account; these have unit tests on a fake store and no live purchase check. The one-ticket-per-human check when buying still runs only in the browser.
+- [~] Make purchased tickets trustworthy before any door relies on them. The door now reads bought tickets and confirms the payment on chain, with unit tests on a fake store and no live purchase check. Server admission now requires the holder's trusted World account regardless of demo skip and no prior human/event claim, and atomically writes a claim with the check-in under the shared in-process claim/check-in queue. Purchase-time uniqueness still runs only in the browser, so bypassed clients can pay for tickets they cannot use. Live batch verification and durable uniqueness/recovery remain pending; trusted-creator filtering is implemented as recorded above.
 - [ ] Add company distribution only after the earlier stages.
 - [ ] Complete the [track checklists](docs/TRACKS.md), including the World debrief, AI-use statement, prior-work credit, public repo and demo video.
 - [ ] Update the README's implementation status: it still says ticket check-in and Arkiv check-in records do not exist, although both are implemented in code and need phone testing.
@@ -78,7 +79,14 @@ Lower priority than sonar integration, Arkiv and World ID: the team wants it if 
 - [x] Add the World Developer Portal MCP for this machine's Codex and Claude, in user-level config only; the Portal accepted the key and Claude reports it connected. Other teammates and OpenCode are not set up. Rotate this key after the event, since it was pasted into a chat.
 - [ ] After 10 November 2026, decide whether to move the Arkiv MCP from the Mumbai profile to the General one in all three MCP files.
 
+## Latest readiness review
+
+- [x] Recheck updated source and local baseline: 61 server tests, 20 synthetic sonar tests and the frontend production build pass. Check-in sessions/retries, public event pages and wallet-address trophy profiles now exist; live Arkiv, World simulator, Sepolia and two-phone verification remain pending.
+- [x] Revalidate ticket eligibility inside the serialized admission/signer queues immediately before the write: holder, status, event end, prior wallet admission, ticket identity and bought-ticket World account, human claim and payment. Add fake-store tests for changes during a session, delayed admission, concurrent same-human admissions and fail-closed reads. All 83 server tests and the frontend production build pass. These reads are not an atomic on-chain condition; live Arkiv verification remains pending.
+- [x] Enforce bought-ticket World policy at admission: require a trusted account even when demo skip is on, reject existing human/event claims, and atomically write the purchased pass's claim with its check-in. Existing schemas remain readable; prior check-ins are not backfilled. Verified by fake-store service tests, not a live Arkiv batch.
+- [ ] Enforce configured ENS ownership at the door; this remains separate from the implemented eligibility rechecks.
+
 ## Checklist maintenance
 
 - [x] Add `AGENTS.md` instructions to maintain this checklist when work or requests change.
-- [x] Add `AGENTS.md` guidance to explain responses in clear, everyday language and explain necessary technical terms.
+- [x] Resolve upstream/stashed conflicts while preserving organizer authorization, trusted-creator filters, live-test notes, purchased-ticket World policy and admission rechecks. Verification after resolution: 89 server tests, 20 app tests and the frontend production build pass; real-phone and purchased-ticket live batch verification remain pending.

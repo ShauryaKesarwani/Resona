@@ -72,7 +72,7 @@ An **issued** ticket is written by the organizer with status `issued`. Its allow
 - `issued` or `skipped` to `claimed`, when the wallet has an account, in one batch with the claim.
 - `claimed` to `checked_in`, or `skipped` to `checked_in` when skip is allowed, in one batch with the check-in.
 
-A **bought** ticket is written by the buyer's own wallet with status `claimed`, in one batch with its payment record. The buyer owns it, so its fields are self-reported and the organizer cannot patch it. Its status stays `claimed` after admission, which makes `resona.checkin`, not ticket status, the authority for whether a bought ticket was used.
+A **bought** ticket is written by the buyer's own wallet with status `claimed`, in one batch with its payment record. This self-reported status is not World verification. Admission requires an organizer-created account for the holder and no existing organizer-created claim for its server-derived `userId` and event. Demo skip never waives this requirement for bought tickets. The buyer owns the ticket, so the organizer cannot patch it. Its status stays `claimed` after admission, which makes `resona.checkin`, not ticket status, the authority for whether it was used. The organizer atomically creates the bought ticket's `resona.claim` and `resona.checkin` at admission.
 
 `revoked` is refused at the door, but nothing sets it: revocation is not implemented.
 
@@ -91,7 +91,7 @@ Written by the buyer's wallet from the browser, defined in `server/src/arkiv/rec
 | `amountWei` | string | Self-reported amount. The door uses the chain's value instead |
 | `createdAt`* | string | ISO timestamp |
 
-The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`. With `ALLOW_WORLD_SKIP` off, the buyer's wallet must also have an account.
+The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`. The buyer's wallet must also have a trusted account and an unused human/event claim, regardless of `ALLOW_WORLD_SKIP`.
 
 ## World ID uniqueness and claim — `resona.claim` (partially implemented)
 
@@ -99,7 +99,7 @@ One human per event is the target. The implementation has two steps, neither of 
 
 **Sign-up.** One World action, `WORLD_ACTION`, covers first sign-in for the whole app; it is not per event. The server verifies the proof server-side, binds its signal to the wallet, and refuses a nullifier hash or a wallet that already has an account. Later sign-ins prove the account's own World session from its wallet. World rejecting a replayed nullifier is the only external check.
 
-**Claim.** A claim needs no new proof: the wallet's account stands in for it, and `userId` plus `eventId` give one claim per human per event.
+**Claim.** A claim needs no new proof: the wallet's account stands in for it, and `userId` plus `eventId` give one claim per human per event. Organizer-issued tickets create the claim when claimed; bought tickets create it atomically with admission. An existing event claim (including one for an issued ticket) blocks a bought ticket. The payment record's self-reported `userId` is never used as identity evidence. Purchase-time uniqueness still runs only in the browser: the server enforces eligibility at admission, not before the buyer pays.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -109,7 +109,7 @@ One human per event is the target. The implementation has two steps, neither of 
 | `holder`* | address | The claiming wallet |
 | `userId`* | string | The account's user ID |
 
-The claim contains no nullifier or proof, but it is public and links the wallet and user ID to the event. The claim and the ticket's `claimed` status are written in one atomic Arkiv batch. Expiration, deletion, and ownership transfer mean it is not a permanent uniqueness authority.
+The claim contains no nullifier or proof, but it is public and links the wallet and user ID to the event. For an issued ticket, the claim and the ticket's `claimed` status are written in one atomic Arkiv batch; for a bought ticket, the claim and check-in are written in one atomic batch. Expiration, deletion, and ownership transfer mean it is not a permanent uniqueness authority.
 
 Duplicate protection is an Arkiv query followed by a write, inside an in-process queue, plus an in-memory set of recent claims. That covers concurrent requests in one process only, so **run exactly one server process.** It does not cover a second instance, or a restart combined with indexing lag. An error is never retried automatically. Claims written before `userId` was added are not found by the duplicate check.
 
@@ -135,15 +135,17 @@ Create a record only after every one of these holds:
 1. The holder's wallet signed the start request and owns the ticket.
 2. The ticket is `claimed`, or `skipped` when skip is allowed, and the event has not ended.
 3. This wallet has no check-in for the event.
-4. A bought ticket passes the payment check above.
+4. A bought ticket passes the payment check above, has a trusted World account for the holder, and has no existing event claim for that account's server-derived `userId`. `ALLOW_WORLD_SKIP` applies only to issued tickets.
 5. Each phone reported once for the current attempt, with a fresh random seed: the door with its session token, and the holder with a signature over the session and reading.
 6. The server computed the distance from both reports and it passed.
 
-Failed attempts write nothing. Either phone in the check can retry after a failed reading, up to 20 times, with a new seed; a report for an earlier attempt is refused, and a failed Arkiv write is never retried because it may have landed. Sessions live in server memory and expire. `DOOR_PIN` guards the door; if it is unset, anyone can act as the door. Never store audio.
+Ticket eligibility is checked at session start and re-read inside the serialized claim/check-in and signer queues immediately before the admission batch. The recheck covers holder, status, event end, prior wallet admission, and bought-ticket account, human claim and payment. Pass ID, entity key, event and issued/bought classification must still match the session snapshot. A changed or unreadable record fails closed with no admission attempt; a known eligibility rejection is exposed as the failed session's `problem`. These reads are not an atomic condition on the Arkiv write: external changes and indexing lag remain possible. ENS ownership enforcement is still pending.
 
-An issued ticket's check-in and its `checked_in` status land in one atomic batch; a bought ticket only gets the check-in record. Read-only attributes do not prevent owner deletion or ownership transfer.
+Failed sonar or eligibility attempts write nothing. Either phone in the check can retry after a failed reading, up to 20 times, with a new seed; a report for an earlier attempt is refused, and a failed Arkiv write is never retried because it may have landed. Sessions live in server memory and expire. `DOOR_PIN` guards the door; if it is unset, anyone can act as the door. Never store audio.
 
-Duplicate prevention and ordinals are not crash-safe. Both are a query followed by a write in one process, with in-memory floors for indexing lag, and the count reads at most 1,000 records. A restart during indexing lag can repeat an ordinal or allow a second admission. A failed write ends the session as `failed` and is never retried, even though it may have landed, so the organizer must check it before admitting the holder.
+An issued ticket's check-in and its `checked_in` status land in one atomic batch; a bought ticket gets its claim and check-in in one batch. Both use the same in-process queue as issued-ticket claims. Successful bought-ticket admission also updates the recent-claim guard. This is not a multi-instance lock. Read-only attributes do not prevent owner deletion or ownership transfer.
+
+Duplicate prevention and ordinals are not crash-safe. Both are a query followed by a write in one process, with in-memory floors for indexing lag; the ordinal uses Arkiv's query count rather than counting one result page. A restart during indexing lag can repeat an ordinal or allow a second admission. A failed write ends the session as `failed` and is never retried, even though it may have landed, so the organizer must check it before admitting the holder.
 
 ## ENS and door invariants (partially implemented)
 
@@ -153,12 +155,14 @@ The demo additionally requires a holder wallet signature and sonar pass. Neither
 
 ## Known gaps
 
-- **World ID and bought tickets.** With `ALLOW_WORLD_SKIP` off, the door requires an account for the buyer's wallet, and each account is one human with one wallet. With it on, a wallet with no World ID can pay, write its own ticket and be admitted, as a demo guest. The one-ticket-per-human check when buying still runs only in the browser.
+- **Purchase-time policy and durable identity.** The browser can still be bypassed to pay and create multiple tickets; server-side World policy is enforced at admission only. Account uniqueness/recovery and expiration gaps still limit one-human guarantees. Bought-ticket policy and eligibility rechecks have fake-store unit tests, not live Arkiv verification.
 - **The door is not tied to one event.** `/api/checkin/start` accepts a valid ticket for any event this organizer has, and the door's recent list shows all of them. Run one event at a time.
 - **Single process.** All uniqueness and ordering depends on one server process.
 
 ## Changes and migration
 
 Keep the current schema tags and optional fields readable unless a migration is explicitly implemented. New indexed fields must support a real query. For any schema or status change, update the server, the browser schema copies, API types, tests and this document together. Verify state transitions and reject claims/skips on `checked_in` or `revoked` tickets. Never infer safe concurrency or unique enforcement from a schema field alone.
+
+Existing Arkiv schemas and records remain readable; this change adds no required fields. Older bought-ticket check-ins are not backfilled with claims, and their existing wallet check-in records continue to block repeats while retained. Previously bought tickets now require a trusted account and an unused event claim to be admitted, regardless of their self-reported `claimed` status.
 
 SQLite data was not migrated. Old demo tickets and nullifiers do not carry over, so create fresh tickets through the Arkiv API.

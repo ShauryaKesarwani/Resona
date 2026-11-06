@@ -154,7 +154,9 @@ export default function Door() {
         </Screen>
       )
     }
-    const f = fails[result.state] ?? fails.expired
+    const f = result.state === 'failed' && result.problem
+      ? { title: 'Ticket no longer eligible', body: 'The ticket, World eligibility or payment changed during this check. Do not admit. Ask the organizer to check.' }
+      : fails[result.state] ?? fails.expired
     return (
       <Screen>
         <TopBar back="/enter" title="Result" />

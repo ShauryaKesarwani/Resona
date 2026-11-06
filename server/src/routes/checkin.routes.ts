@@ -5,9 +5,9 @@ import { env } from "../config/env.ts";
 import { createCheckins } from "../services/checkin.service.ts";
 
 /** Coordinates the two phones. It has to be here: a phone can't be trusted to judge its own distance. */
-export function checkinRoutes(store: CheckinStore, accounts: AccountRegistry) {
+export function checkinRoutes(store: CheckinStore, registry: AccountRegistry) {
   const router = Router();
-  const checkins = createCheckins({ store, accounts, allowSkip: env.world.allowSkip, doorPin: env.doorPin });
+  const checkins = createCheckins({ store, registry, allowSkip: env.world.allowSkip, doorPin: env.doorPin });
 
   router.post("/checkin/start", async (req, res) => {
     const { status, ...body } = await checkins.start(req.body ?? {});
