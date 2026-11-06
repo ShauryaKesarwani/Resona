@@ -121,6 +121,7 @@ Agree on these routes at the start of the phase, so Person 3 can build against t
 | `POST /api/issue` | Issue a ticket to a wallet address |
 | `GET /api/tickets?holder=` | List a wallet's tickets from Arkiv |
 | `POST /api/checkin/start` | Door starts a session from the scanned pass, and gets a fresh seed |
+| `POST /api/claim/skip` | Demo only: mark the ticket skipped when World ID is too slow |
 | `GET /api/checkin/active?passId=` | The holder's wallet polls this to find and join the session |
 | `GET /api/checkin/:id` | Both phones poll for state: waiting, recording, or result |
 | `POST /api/checkin/:id/report` | Each phone sends its elapsed time, and the holder's report is signed by its wallet key |

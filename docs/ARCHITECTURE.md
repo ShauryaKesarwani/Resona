@@ -146,7 +146,7 @@ const Ticket = defineSchema("resona.ticket", {
   eventId: str().indexed(),
   tier: str().indexed(),
   holder: addr().indexed(),
-  status: str().indexed(),   // issued | claimed | checked_in | revoked
+  status: str().indexed(),   // issued | claimed | skipped | checked_in | revoked
   ensName: str(),            // for example 7.ethglobal-mumbai.eth
   deviceKeyHash: str(),
   serial: str(),

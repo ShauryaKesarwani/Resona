@@ -34,6 +34,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 | First World ID credential | Proof of Human, before levels are added | **Proposed, needs team sign-off** |
 | Security additions | Sound challenge with a deadline, attestation, hardware device key | **Proposed for the real product;** not in the demo |
 | Timing method | Matched filter for timing; spectrogram only for visuals and optional same-room check | **Proposed, needs team sign-off** |
+| World ID skip | Demo-only Skip button on the claim page, in case verification is slow. The ticket is marked `skipped`, not verified, and can be verified later. Turn off with `ALLOW_WORLD_SKIP=false` | Decided by team, demo only |
 | POAP | Stage 4, on attendee profiles | Decided by team |
 
 ## Open questions
