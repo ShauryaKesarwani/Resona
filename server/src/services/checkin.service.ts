@@ -105,9 +105,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
   }
 
   /** The door joins with the holder's code. That is the moment both phones start recording. */
-  function join(input: { code?: string; pin?: string }): Joined | Failure {
-    if (doorPin && !sameSecret(String(input.pin ?? ""), doorPin)) return { status: 403, error: "bad_door_pin" };
-    const session = [...sessions.values()].find((item) => item.code === String(input.code ?? "").trim());
+  function joinSession(session: Session | undefined): Joined | Failure {
     if (!session) return { status: 404, error: "code_not_found" };
     const state = refresh(session).state;
     if (state === "running" || state === "saving") return { status: 409, error: "check_running" };
@@ -119,6 +117,19 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
     } else return { status: 404, error: "code_not_found" };
     session.doorToken = randomBytes(16).toString("hex");
     return { status: 200, id: session.id, seed: session.seed, attempt: session.attempt, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
+  }
+
+  function join(input: { code?: string; pin?: string }): Joined | Failure {
+    if (doorPin && !sameSecret(String(input.pin ?? ""), doorPin)) return { status: 403, error: "bad_door_pin" };
+    return joinSession([...sessions.values()].find((item) => item.code === String(input.code ?? "").trim()));
+  }
+
+  /** A public pass ID is not a secret, so joining by selection requires a configured door PIN. */
+  function joinSelected(input: { passId?: string; pin?: string }): Joined | Failure {
+    if (!doorPin) return { status: 403, error: "door_pin_not_configured" };
+    if (!sameSecret(String(input.pin ?? ""), doorPin)) return { status: 403, error: "bad_door_pin" };
+    if (typeof input.passId !== "string" || !input.passId) return { status: 400, error: "invalid_pass" };
+    return joinSession([...sessions.values()].find((item) => item.ticket.passId === input.passId));
   }
 
   function status(id: string) {
@@ -206,5 +217,5 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
     return { status: 200 };
   }
 
-  return { start, join, status, report, retry };
+  return { start, join, joinSelected, status, report, retry };
 }

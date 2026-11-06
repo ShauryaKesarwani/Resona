@@ -18,6 +18,7 @@ import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
 import Organizer from './pages/organizer/Organizer'
+import Attendees from './pages/organizer/Attendees'
 import Transfer from './pages/wallet/Transfer'
 
 /** Planned screens: route, title, parent route for the back button, and what the screen will hold. */
@@ -53,6 +54,7 @@ export default function App() {
         <Route element={<RequireSignIn />}>
           <Route path="/enter" element={<Enter />} />
           <Route path="/organizer" element={<Organizer />} />
+          <Route path="/organizer/attendees" element={<Attendees />} />
           <Route path="/door" element={<Door />} />
           <Route path="/door/recent" element={<Recent />} />
           <Route path="/wallet" element={<Tickets />} />

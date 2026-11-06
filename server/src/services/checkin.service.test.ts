@@ -111,6 +111,23 @@ test("the door can't be run without the PIN", async () => {
   assert.deepEqual(checkins.join({ code }), { status: 403, error: "bad_door_pin" });
 });
 
+test("selecting a ticket only joins an active holder session with the configured door PIN", async () => {
+  assert.deepEqual(checkins.joinSelected({ passId, pin: "1234" }), { status: 404, error: "code_not_found" });
+  const session = await started();
+  assert.deepEqual(checkins.joinSelected({ passId, pin: "wrong" }), { status: 403, error: "bad_door_pin" });
+  assert.deepEqual(checkins.joinSelected({ passId: "other", pin: "1234" }), { status: 404, error: "code_not_found" });
+  const joined = checkins.joinSelected({ passId, pin: "1234" });
+  assert.equal(joined.status, 200);
+  if (joined.status === 200) assert.equal(joined.id, session.id);
+  assert.deepEqual(checkins.joinSelected({ passId, pin: "1234" }), { status: 409, error: "check_running" });
+});
+
+test("selecting a ticket is disabled when no door PIN is configured", async () => {
+  checkins = createCheckins({ store, registry, allowSkip: false, now: () => clock });
+  await started();
+  assert.deepEqual(checkins.joinSelected({ passId }), { status: 403, error: "door_pin_not_configured" });
+});
+
 test("a stranger can't start a check-in, or sign the holder's report", async () => {
   const forged = await checkins.start({ passId, ...await sign(`checkin:${passId}`, strangerKey, wallet) });
   assert.deepEqual(forged, { status: 401, error: "bad_signature" });

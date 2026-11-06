@@ -19,6 +19,11 @@ export function checkinRoutes(store: CheckinStore, registry: AccountRegistry) {
     res.status(status).json(body);
   });
 
+  router.post("/checkin/join-selected", (req, res) => {
+    const { status, ...body } = checkins.joinSelected(req.body ?? {});
+    res.status(status).json(body);
+  });
+
   router.get("/checkin/:id", (req, res) => {
     const state = checkins.status(req.params.id);
     res.status(state ? 200 : 404).json(state ?? { error: "session_not_found" });

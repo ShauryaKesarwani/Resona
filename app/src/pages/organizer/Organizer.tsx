@@ -81,6 +81,7 @@ export default function Organizer() {
     <Screen>
       <TopBar back="/enter" />
       <h1 className="heading-4">Issue tickets</h1>
+      <Button to="/organizer/attendees" variant="secondary" size="md">View attendees and check-ins</Button>
 
       <div role="group" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-raised p-1">
         {(['issue', 'lookup'] as const).map((m) => (

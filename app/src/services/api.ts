@@ -40,6 +40,8 @@ export const api = {
   checkinStart: (passId: string, signed: Signed) => request<{ id: string; code: string; seed: string; attempt: number }>('/api/checkin/start', { passId, ...signed }),
   checkinJoin: (code: string, pin: string) =>
     request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string }>('/api/checkin/join', { code, pin }),
+  checkinJoinSelected: (passId: string, pin: string) =>
+    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string }>('/api/checkin/join-selected', { passId, pin }),
   checkinStatus: (id: string) => request<CheckinResult>(`/api/checkin/${id}`),
   checkinReport: (id: string, report: Record<string, unknown>) => request<object>(`/api/checkin/${id}/report`, report),
   checkinRetry: (id: string, proof: Record<string, unknown>) => request<object>(`/api/checkin/${id}/retry`, proof),

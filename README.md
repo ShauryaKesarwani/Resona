@@ -1,10 +1,10 @@
 # Resona
 
-Event tickets that require the ticket's specific wallet and phone to be present at the door.
+An experimental event-ticket demo that checks the assigned wallet and uses sound to estimate proximity at the door.
 
-Resona is a ticket wallet and check-in demo. Tickets and purchases are read from Arkiv; the ENSv2 CLI can issue non-transferable pass names, and an optional server read path checks their owner and transfer policy. The door journey is still simulated: sonar is on `/lab`, but there is no live ticket check-in route or Arkiv check-in record yet. See [TODO.md](TODO.md) and the [ENSv2 runbook](docs/ENSV2.md) for the verified implementation status.
+Resona is a ticket wallet and check-in demo. Tickets and purchases are read from Arkiv; the ENSv2 CLI can issue non-transferable pass names, and an optional server read path checks their owner and transfer policy. The door and wallet screens use the check-in API and sonar in code, and successful check-ins are written to Arkiv. The complete phone journey has not yet been verified. See [TODO.md](TODO.md), the [data contract](arkiv/schema.md), and the [ENSv2 runbook](docs/ENSV2.md) for implementation status and limits.
 
-> **Status:** early build. Sonar distance has worked between the team's two Android phones in Chrome, on the `/lab` page. Noise and Google Meet relay tests are still to do, and check-in isn't connected to tickets yet. False sonar rejections and phone lending are out of scope for the hackathon demo.
+> **Status:** early build, testnet only. Sonar worked between the team's two Android phones on `/lab`; the integrated check-in was tested with synthesized recordings, not yet with real sound on those phones. Noise and Google Meet relay tests remain. A browser cannot prove that its timing reports are genuine, and phone lending is out of scope.
 
 ## Run it
 
@@ -36,6 +36,14 @@ Rebuild the app after changing it, then reload the page. Avoid tunnelling `npm r
 
 To test sonar, open `/lab` on both phones, use the same room, pick different roles, and tap Start on both within a second. Run tests with `npm test` in `app` or `server`.
 
+### Before a door demo
+
+- Run exactly one server process. Check-in sessions are held in memory and disappear on restart; duplicate protection is not safe across multiple processes or every restart.
+- Set `DOOR_PIN` and keep it private. If it is unset, anyone can act as the door. Set `ORGANIZER_WALLETS` to the authorized issuing wallets; an empty list prevents issuing.
+- Check `ALLOW_WORLD_SKIP`: when enabled, an unverified guest with an organizer-issued skipped ticket may be admitted. Bought tickets still require a trusted World account and an unused event claim. The door is not restricted to a single event, so run one event at a time.
+- Test the real phones, microphone permissions and network before admitting anyone. If an Arkiv write fails, do not automatically repeat it: it may already have landed. Check the record before deciding what to do.
+- Arkiv data is public and expires; do not put identity details, raw proofs, keys or audio there. See [the data contract](arkiv/schema.md) for the full limitations and recovery gaps.
+
 ## The problem
 
 | Today's approach | How it gets beaten |
@@ -46,11 +54,11 @@ To test sonar, open `/lab` on both phones, use the same room, pick different rol
 
 ## How Resona answers it
 
-1. **Sound for proximity.** The demo checks that the ticket's phone is physically near the door phone. It does not claim to identify the person holding the phone.
-2. **Named holders.** Each ticket is issued to a person's ENS name and wallet address, and recorded in Arkiv.
-3. **Organizer-controlled transfers.** Only the organizer can approve moving a ticket to someone else, which targets the resale market directly.
-4. **One ticket per verified human.** IDKit with World ID helps prevent duplicate claims for an event.
-5. **Event and holder profiles.** ENS provides the event page and holder identity; Arkiv data powers ticket and check-in views. Trophies are deferred from the demo.
+1. **Sound for proximity.** The demo estimates distance between phones; it does not identify the person holding the phone or resist a modified browser client.
+2. **Wallet-bound tickets.** Issued tickets are assigned to a wallet and recorded in Arkiv. ENS pass names are a separate, optional path and are not enforced at the door.
+3. **Transfer policy.** The ENS CLI can issue non-transferable passes; organizer-approved reassignment is not implemented.
+4. **Verified claims.** World ID helps prevent duplicate claims, subject to the recovery and concurrency gaps in the data contract. The optional demo skip is not a verified claim.
+5. **Event and holder profiles.** Arkiv powers event and attendance views in code; public profiles currently use wallet addresses, not ENS names. Live verification and POAPs remain to do.
 
 ## Hackathon and startup focus
 
@@ -58,7 +66,7 @@ The demo centers on sonar check-in. Track priority is Arkiv, then ENS, then Worl
 
 ## Platform
 
-The **demo is a PWA on Android Chrome**, which keeps the build achievable in the hackathon's time and lets judges try it from a link. It stops relays through the real app. A **real product needs a native app**, because a browser can't prove it's the real app or hold a provably hardware-backed key, so a modified client could still fake the timing. [The full reasoning is in ARCHITECTURE.md](docs/ARCHITECTURE.md#platform-decision).
+The **demo is a PWA on Android Chrome**, which lets judges try it from a link. Relay resistance has not yet been verified on the demo phones. A **real product needs stronger device protections**, because a browser can't prove it's the real app or hold a provably hardware-backed key, so a modified client could fake the timing. [The full reasoning is in ARCHITECTURE.md](docs/ARCHITECTURE.md#platform-decision).
 
 ## ETHGlobal Mumbai 2026
 
@@ -68,7 +76,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 |---|---|
 | **ENSv2** | The CLI issues non-transferable pass subnames; the optional API checks live registry ownership and transfer policy. Door enforcement and live deployment are not verified |
 | **Arkiv** | Stores events, tickets, check-ins and trophies, which the app and website read from |
-| **World ID** | Verify one attendee per event before testnet purchase |
+| **World ID** | Verify sign-in and support one claim per human per event, with known uniqueness and recovery gaps |
 
 [TRACKS.md](docs/TRACKS.md) has the submission checklists.
 
@@ -93,3 +101,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 | [docs/AI_TOOLS_SETUP.md](docs/AI_TOOLS_SETUP.md) | Setting up Claude Code with the Arkiv, World and ENS tools |
 
 New information from the team goes into the matching document, and anything undecided goes into `DECISIONS.md`.
+
+## Prior work
+
+The sonar design drew ideas from [enconomy](https://github.com/tawago/enconomy). Its repository has no license; see [the track notes](docs/TRACKS.md) for the team's prior-work guidance.

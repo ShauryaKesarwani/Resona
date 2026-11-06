@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircleIcon, ClockCounterClockwiseIcon, WarningCircleIcon } from '../../components/icons'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
@@ -10,6 +10,7 @@ import { ordinal, short } from '../../data/mock'
 import { api, waitForNextAttempt, waitForResult, type CheckinResult } from '../../services/api'
 import { explorerTx } from '../../services/arkiv'
 import { measure, micError, openMic, problemText } from '../../sonar/run'
+import { checkinCode } from '../../utils/checkinCode'
 
 const PIN_KEY = 'resona.doorPin'
 type Holder = { holder: string; tier: string }
@@ -21,6 +22,7 @@ const JOIN_ERRORS: Record<string, string> = {
   code_not_found: 'That code has finished or expired. Ask the holder to tap Start check in again.',
   bad_door_pin: 'That door PIN is wrong.',
   check_running: 'This check is already running. Wait for it to finish.',
+  door_pin_not_configured: 'The organizer must set a door PIN before selecting a ticket for check-in.',
 }
 
 const fails: Record<string, { title: string; body: string }> = {
@@ -33,6 +35,8 @@ const fails: Record<string, { title: string; body: string }> = {
 
 /** D1. The real door: joins the holder's check in, exchanges sound, and shows the server's decision. */
 export default function Door() {
+  const [params, setParams] = useSearchParams()
+  const selectedPass = params.get('passId') ?? ''
   const [phase, setPhase] = useState<Phase>({ name: 'ready' })
   const [code, setCode] = useState('')
   const [pin, setPin] = useState(() => localStorage.getItem(PIN_KEY) ?? '')
@@ -51,7 +55,7 @@ export default function Door() {
     }
   }, [])
 
-  const check = useCallback(async (entered: string) => {
+  const check = useCallback(async (entered: string, selected = false) => {
     // A double tap must not join twice: the second try would fail and hide the check that is running.
     if (busy.current) return
     busy.current = true
@@ -66,7 +70,9 @@ export default function Door() {
       return setError(micError())
     }
     try {
-      const session = await api.checkinJoin(entered, localStorage.getItem(PIN_KEY) ?? '')
+      const session = selected
+        ? await api.checkinJoinSelected(entered, localStorage.getItem(PIN_KEY) ?? '')
+        : await api.checkinJoin(entered, localStorage.getItem(PIN_KEY) ?? '')
       let { seed, attempt } = session
       const check = { close: () => void mic.audio.close(), id: session.id, doorToken: session.doorToken, attempt }
       live.current = check
@@ -89,7 +95,10 @@ export default function Door() {
       busy.current = false
       await mic.audio.close()
       setPhase({ name: 'ready' })
-      setError(JOIN_ERRORS[(err as Error).message] ?? 'The check did not finish. Start again on both phones.')
+      const reason = (err as Error).message
+      setError(selected && reason === 'code_not_found'
+        ? 'The holder has not started a check-in for this ticket, or it has expired. Ask them to start again.'
+        : JOIN_ERRORS[reason] ?? 'The check did not finish. Start again on both phones.')
     }
   }, [])
 
@@ -99,13 +108,23 @@ export default function Door() {
     live.current = null
     busy.current = false
     setCode('')
+    setParams({})
     setPhase({ name: 'ready' })
   }
   const tryAgain = () => {
     const check = live.current
     if (check) api.checkinRetry(check.id, { doorToken: check.doorToken }).catch(() => setError('Could not start another try.'))
   }
-  const scanned = useCallback((value: string) => void check(value.trim()), [check])
+  const scanned = useCallback((value: string) => {
+    const code = checkinCode(value)
+    if (!code) {
+      setPhase({ name: 'ready' })
+      setError('That is not a check-in QR code. Scan the code on the holder’s check-in screen or type its 6 digits.')
+      return
+    }
+    setCode(code)
+    void check(code)
+  }, [check])
   const noCamera = useCallback(() => {
     setPhase({ name: 'ready' })
     setError('The camera is not available here. Type the code instead.')
@@ -113,9 +132,9 @@ export default function Door() {
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    const value = code.trim()
+    const value = checkinCode(code)
     if (pinRequired && !pin.trim()) return setError('Enter the door PIN.')
-    if (!/^\d{6}$/.test(value)) return setError('The code on the holder’s phone has 6 digits.')
+    if (!value) return setError('The code on the holder’s phone has 6 digits.')
     savePin()
     check(value)
   }
@@ -207,7 +226,13 @@ export default function Door() {
       <TopBar back="/enter" />
       {phase.name === 'scanning' ? <QrScanner onCode={scanned} onFail={noCamera} /> : <Figure ratio="16 / 7" position="50% 45%" />}
       <h1 className="heading-4">Ready for the next ticket</h1>
-      <p className="body-3 text-text-muted">Ask the holder to tap Start check in, then scan or type their code.</p>
+      {selectedPass && <div className="rounded-xl border border-line bg-surface-raised p-4">
+        <p className="title-4">Selected ticket</p>
+        <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{selectedPass}</p>
+        <p className="body-6 text-text-muted">Ask the holder to tap Start check in on their phone first.</p>
+        <button type="button" className="body-5 min-h-12 text-accent" onClick={() => setParams({})}>Clear selection</button>
+      </div>}
+      <p className="body-3 text-text-muted">{phase.name === 'scanning' ? 'Point your camera at the QR code on the holder’s check-in screen.' : 'Ask the holder to tap Start check in, then scan their QR code or type its 6 digits.'}</p>
 
       <form onSubmit={submit} noValidate className="flex flex-1 flex-col gap-4">
         {pinRequired && (
@@ -239,14 +264,19 @@ export default function Door() {
           {error}
         </p>
         <div className="flex-1" />
+        {selectedPass && <Button type="button" onClick={() => {
+          if (!pinRequired) return setError('The organizer must set a door PIN before selecting a ticket for check-in. Scan or type the code instead.')
+          if (!pin.trim()) return setError('Enter the door PIN.')
+          savePin()
+          void check(selectedPass, true)
+        }}>Check in selected ticket</Button>}
         <Link to="/door/recent" className="body-5 flex min-h-12 items-center gap-2 self-center text-text-muted">
           <ClockCounterClockwiseIcon size={20} aria-hidden="true" />
           Recent check ins
         </Link>
         <Button
           type="button"
-          variant="secondary"
-          size="md"
+          variant={phase.name === 'scanning' ? 'secondary' : 'primary'}
           onClick={() => {
             if (pinRequired && !pin.trim()) return setError('Enter the door PIN.')
             savePin()
@@ -254,9 +284,9 @@ export default function Door() {
             setPhase(phase.name === 'scanning' ? { name: 'ready' } : { name: 'scanning' })
           }}
         >
-          {phase.name === 'scanning' ? 'Stop scanning' : 'Scan ticket'}
+          {phase.name === 'scanning' ? 'Stop scanning' : 'Scan check-in QR code'}
         </Button>
-        <Button type="submit">Check in</Button>
+        <Button type="submit" variant="secondary" size="md">Check in with code</Button>
       </form>
     </Screen>
   )

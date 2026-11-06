@@ -17,7 +17,10 @@ export function QrScanner({ onCode, onFail }: { onCode: (code: string) => void; 
       if (typeof BarcodeDetector === 'undefined') return onFail()
       const detector = new BarcodeDetector({ formats: ['qr_code'] })
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      if (!active || !video.current) return
+      if (!active || !video.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
       video.current.srcObject = stream
       await video.current.play()
       setReady(true)

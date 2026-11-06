@@ -1,7 +1,7 @@
 import { createPublicClient, createWalletClient, ExpirationTime } from '@arkiv-network/sdk'
 import { rabdi } from '@arkiv-network/sdk/chains'
-import { eq } from '@arkiv-network/sdk/query'
-import { addr, defineSchema, str } from '@arkiv-network/sdk/schema'
+import { asc, eq, gt } from '@arkiv-network/sdk/query'
+import { addr, defineSchema, key, str } from '@arkiv-network/sdk/schema'
 import { getAddress, http, keccak256, parseEther, type Hex } from 'viem'
 import { walletAccount, walletAddress } from '../utils/wallet'
 import { api } from './api'
@@ -28,6 +28,7 @@ export type ArkivEvent = { eventId: string; eventName: string; eventDate: string
 export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }
 export type ArkivCheckin = { eventId?: string; passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
 export type ArkivPayment = { txnHash: string; eventId: string; passId: string; amountWei: string; createdAt: string }
+export type AttendeeTicket = { passId: string; holder: string; tier: string; status: string }
 
 // The access key can't ship in a browser. Reads go through a small server relay that adds it, because
 // the keyless endpoint runs out after a few pages. The wallet's own writes go straight to Arkiv.
@@ -48,6 +49,39 @@ const organizer = () =>
     if (!c.organizer) throw new Error('arkiv_not_configured')
     return c.organizer as Hex
   }))
+
+/** Bounded current-state reads: these lists cover organizer-issued tickets, not purchases. */
+export async function organizerAttendees(eventId: string): Promise<{ tickets: AttendeeTicket[]; checkins: { passId: string; holder: string }[] }> {
+  const owner = await organizer()
+  const tickets: AttendeeTicket[] = []
+  const checkins: { passId: string; holder: string }[] = []
+  let last: Hex | undefined
+  for (let page = 0; page < 10; page++) {
+    const query = reader.select({ $key: true, passId: true, holder: true, tier: true, status: true })
+      .from(Tickets, { onMismatch: 'throw' }).createdBy(owner).ownedBy(owner)
+      .where(eq('eventId', eventId)).orderBy(asc('$key')).limit(100)
+    const { entities } = await (last ? query.where(gt('$key', key(last))) : query).fetch()
+    tickets.push(...entities.map((t) => ({ passId: t.passId.value, holder: String(t.holder.value).toLowerCase(), tier: t.tier.value, status: t.status.value })))
+    if (entities.length < 100) break
+    const next = entities.at(-1)?.$key
+    if (!next || (last && next.toLowerCase() <= last.toLowerCase()) || page === 9) throw new Error('ticket_list_incomplete')
+    last = next
+  }
+  last = undefined
+  for (let page = 0; page < 10; page++) {
+    const query = reader.select({ $key: true, passId: true, holder: true })
+      .from(Checkins, { onMismatch: 'throw' }).createdBy(owner)
+      .where(eq('eventId', eventId)).orderBy(asc('$key')).limit(100)
+    const entities: ReadonlyArray<{ $key: Hex; passId: { value: string }; holder: { value: string } }> =
+      (await (last ? query.where(gt('$key', key(last))) : query).fetch()).entities
+    checkins.push(...entities.map((c) => ({ passId: c.passId.value, holder: String(c.holder.value).toLowerCase() })))
+    if (entities.length < 100) break
+    const next: Hex | undefined = entities.at(-1)?.$key
+    if (!next || (last && next.toLowerCase() <= last.toLowerCase()) || page === 9) throw new Error('checkin_list_incomplete')
+    last = next
+  }
+  return { tickets, checkins }
+}
 
 /** Every event from the organizer. Anyone can write this schema, so only the organizer's records count. */
 export async function allEvents(): Promise<ArkivEvent[]> {
