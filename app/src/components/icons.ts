@@ -3,7 +3,9 @@
  * Importing from the package root makes the dev server bundle all 1,500+ icons into one 6 MB file.
  * Add a line here when you need a new icon.
  */
+export { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
 export { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
+export { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 export { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
 export { BuildingsIcon } from '@phosphor-icons/react/dist/csr/Buildings'
 export { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'

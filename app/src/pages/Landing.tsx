@@ -1,6 +1,10 @@
 import { Nav } from './landing/Nav'
-import { Benefits, BuiltOn, Hero, How, Problem } from './landing/Sections'
-import { Faq, FinalCta, Footer, Limits } from './landing/Closing'
+import { Benefits } from './landing/Benefits'
+import { BuiltOn, Hero } from './landing/Sections'
+import { Problem } from './landing/Problem'
+import { Faq, FinalCta, Footer } from './landing/Closing'
+import { How } from './landing/How'
+import { Limits } from './landing/Limits'
 import { Tagline } from './landing/Tagline'
 
 /** Landing page, in the approved section order. */

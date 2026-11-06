@@ -15,15 +15,11 @@ import CheckIn from './pages/wallet/CheckIn'
 import Claim from './pages/wallet/Claim'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
+import Organizer from './pages/organizer/Organizer'
 import Transfer from './pages/wallet/Transfer'
 
 /** Planned screens: route, title, parent route for the back button, and what the screen will hold. */
 const screens: { path: string; title: string; back: string; what: string }[] = [
-  { path: '/organizer', title: 'Event', back: '/enter', what: 'Event details and counts of issued, claimed and checked in passes.' },
-  { path: '/organizer/issue', title: 'Issue passes', back: '/organizer', what: 'Enter ENS names, pick a tier and see the result for each name.' },
-  { path: '/organizer/passes', title: 'Passes', back: '/organizer', what: 'Every pass, with a revoke action.' },
-  { path: '/organizer/transfers', title: 'Transfer requests', back: '/organizer', what: 'Approve or deny, with the 24\u00a0hour countdown.' },
-  { path: '/organizer/overrides', title: 'Manual entries', back: '/organizer', what: 'Who admitted whom without a sound check.' },
   { path: '/privacy', title: 'Privacy', back: '/', what: 'The privacy policy is not written yet. Resona is a hackathon demo that runs on a test network.' },
   { path: '/terms', title: 'Terms', back: '/', what: 'The terms are not written yet. Resona is a hackathon demo that runs on a test network.' },
   { path: '/u/:name', title: 'Profile', back: '/', what: 'Public trophy page: avatar, hash, ordinal and events attended.' },
@@ -52,6 +48,7 @@ export default function App() {
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
           <Route path="/enter" element={<Enter />} />
+          <Route path="/organizer" element={<Organizer />} />
           <Route path="/door" element={<Ready />} />
           <Route path="/door/checking" element={<Checking />} />
           <Route path="/door/result" element={<Result />} />

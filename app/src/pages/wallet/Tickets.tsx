@@ -24,7 +24,7 @@ export default function Tickets() {
 
   return (
     <Screen>
-      <TopBar back="/enter" right={<WalletChip />} />
+      <TopBar back="/" right={<WalletChip />} />
       <Figure ratio="16 / 7" position="50% 45%" />
       <div className="flex items-center justify-between gap-2">
         <h1 className="heading-5">Your tickets</h1>
