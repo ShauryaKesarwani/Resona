@@ -184,6 +184,8 @@ This table describes the full protocol. **In the demo build, nothing relying on 
 
 ## Test plan and go/no-go
 
+**Result so far (6 November 2026):** the team ran the `/lab` page on two Android phones in Chrome several times and reported that it worked. The noise, relay and forged-timing tests below haven't been run yet.
+
 Run this first, because the rest of the product depends on it. The go/no-go is at 2:30 in the [build plan](BUILD_PLAN.md#gono-go-at-230). The demo needs the ranging, noise, phone-pair and relay tests, and the others apply to the full protocol.
 
 | Test | Pass condition (proposed) |

@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Enter from './pages/Enter'
+import Lab from './pages/Lab'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
 import { Stub } from './pages/Stub'
@@ -38,6 +39,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/enter" element={<Enter />} />
+        <Route path="/lab" element={<Lab />} />
         <Route path="/wallet" element={<Tickets />} />
         <Route path="/wallet/ticket/:id" element={<Ticket />} />
         <Route path="/wallet/claim/:id" element={<Claim />} />

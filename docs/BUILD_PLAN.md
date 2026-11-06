@@ -106,6 +106,8 @@ npx cloudflared tunnel --url http://localhost:5173
 
 #### Go/no-go at 2:30
 
+**Sonar status:** passed on the team's two Android phones (reported 6 November 2026). The code is in `app/src/sonar` and `server/src/services/lab.service.ts`, and the test page is `/lab`. Phase 2 can start.
+
 | If this fails | Do this |
 |---|---|
 | Two phones don't give stable distances | Use a laptop as the door device |

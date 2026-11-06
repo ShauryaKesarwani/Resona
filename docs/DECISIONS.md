@@ -68,7 +68,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 12. **What does a Meet or Discord relay do to the signal?** It might add delay, or remove the signal entirely. Answered by the relay test.
 13. **How well does ranging hold up in noise?** Answered by the noise test.
 14. **How does the organizer get registrar and unregister roles on a new ENSv2 registry?** Answered by the ENS test and the unread `/ensv2/subnames` docs.
-15. **Does ranging work between two Android phones in Chrome?** enconomy's published browser result used a laptop and a phone. Answered by 2:30 in the build plan.
+15. **Does ranging work between two Android phones in Chrome?** Yes: the team tested it on 6 November 2026 and reported that it worked repeatedly. The readings weren't recorded, so capture some numbers during the noise test.
 
 ## Interpretation of the brief
 

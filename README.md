@@ -4,7 +4,35 @@ Event tickets that require the ticket's specific wallet and phone to be present 
 
 Resona is a ticket wallet and check-in system. An event's ENS domain leads to its event page, where attendees verify with World ID and buy tickets using testnet funds. Tickets are assigned to a specific wallet and represented through ENS. At the door, the staff phone and attendee phone exchange sound to verify proximity; the system then checks that the ticket's assigned wallet is present. Ticket, purchase and check-in data is stored in Arkiv and surfaced in the app.
 
-> **Status:** concept and design only. No code exists yet. Every threshold is untested until the [sonar test](docs/SONAR.md#test-plan-and-gono-go) has run on real phones. False sonar rejections and phone lending are out of scope for the hackathon demo.
+> **Status:** early build. Sonar distance has worked between the team's two Android phones in Chrome, on the `/lab` page. Noise and Google Meet relay tests are still to do, and check-in isn't connected to tickets yet. False sonar rejections and phone lending are out of scope for the hackathon demo.
+
+## Run it
+
+Requires Node 22.18 or later. Set up the server first: copy `server/.env.example` to `server/.env` and fill it in. The server won't start with empty World ID values, though any placeholder text is enough for testing sonar.
+
+Install and start the server:
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
+In a second terminal, install and start the app:
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
+Phones need HTTPS for the microphone, so open a tunnel in a third terminal, and use its URL on both phones:
+
+```bash
+npx cloudflared tunnel --url http://localhost:5173
+```
+
+To test sonar, open `/lab` on both phones, use the same room, pick different roles, and tap Start on both within a second. Run tests with `npm test` in `app` or `server`.
 
 ## The problem
 
