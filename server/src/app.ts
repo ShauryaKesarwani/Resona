@@ -18,5 +18,10 @@ export function createApp(store: Store, registry: AccountRegistry) {
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
   app.use(express.static(dist));
   app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(dist, "index.html")));
+  // RPC errors can contain access keys in URLs; never expose them to clients.
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("Request failed:", err instanceof Error ? err.name : "unknown error");
+    res.status(500).json({ error: "internal_error" });
+  });
   return app;
 }
