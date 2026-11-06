@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/*
+  Design tokens. Surfaces come only from the approved dark list.
+  Spacing: use Tailwind steps 0, 0.5, 1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24
+  (0, 2, 4, 8, 12, 16, 24, 32, 40, 48, 64, 80, 96 px). Nothing between.
+  Radius: Tailwind defaults only.
+*/
+@theme {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
+
+  --color-surface: #000000;
+  --color-surface-raised: #181818;
+  --color-surface-inset: #1f1f1f;
+  --color-line: #272727;
+  --color-surface-high: #313131;
+  --color-surface-warm: #131209;
+
+  --color-text: #ffffff;
+  --color-text-muted: #9b9b9b;
+
+  --color-accent: #7ed6cf;
+  --color-accent-hover: #6bc4bd;
+  --color-on-accent: #000000;
+
+  --color-success: #6fc79a;
+  --color-danger: #e5736b;
+
+  --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    text-wrap: pretty;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Named text styles. Sizes and line heights come from the Tailwind type scale. */
+@utility heading-1 { font-size: var(--text-6xl); line-height: 1; font-weight: 600; }
+@utility heading-2 { font-size: var(--text-5xl); line-height: 1; font-weight: 600; }
+@utility heading-3 { font-size: var(--text-4xl); line-height: var(--text-4xl--line-height); font-weight: 600; }
+@utility heading-4 { font-size: var(--text-3xl); line-height: var(--text-3xl--line-height); font-weight: 600; }
+@utility heading-5 { font-size: var(--text-2xl); line-height: var(--text-2xl--line-height); font-weight: 600; }
+@utility heading-6 { font-size: var(--text-xl); line-height: var(--text-xl--line-height); font-weight: 600; }
+
+@utility title-1 { font-size: var(--text-xl); line-height: var(--text-xl--line-height); font-weight: 500; }
+@utility title-2 { font-size: var(--text-lg); line-height: var(--text-lg--line-height); font-weight: 500; }
+@utility title-3 { font-size: var(--text-base); line-height: var(--text-base--line-height); font-weight: 500; }
+@utility title-4 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 500; }
+@utility title-5 { font-size: var(--text-xs); line-height: var(--text-xs--line-height); font-weight: 500; }
+
+@utility body-1 { font-size: var(--text-base); line-height: var(--text-base--line-height); font-weight: 600; }
+@utility body-2 { font-size: var(--text-base); line-height: var(--text-base--line-height); font-weight: 500; }
+@utility body-3 { font-size: var(--text-base); line-height: var(--text-base--line-height); font-weight: 400; }
+@utility body-4 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 600; }
+@utility body-5 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 500; }
+@utility body-6 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 400; }
+
+@utility button-lg { font-size: var(--text-lg); line-height: var(--text-lg--line-height); font-weight: 600; }
+@utility button-md { font-size: var(--text-base); line-height: var(--text-base--line-height); font-weight: 600; }
+@utility button-sm { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 600; }
+@utility button-xsm { font-size: var(--text-xs); line-height: var(--text-xs--line-height); font-weight: 600; }
+
+@utility caption-1 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 500; }
+@utility caption-2 { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: 400; }
+@utility caption-3 { font-size: var(--text-xs); line-height: var(--text-xs--line-height); font-weight: 600; }
+@utility caption-4 { font-size: var(--text-xs); line-height: var(--text-xs--line-height); font-weight: 500; }
+@utility caption-5 { font-size: var(--text-xs); line-height: var(--text-xs--line-height); font-weight: 400; }
+
+/* The one gradient the system allows: hero heading text, left to right. */
+@utility text-hero {
+  background-image: linear-gradient(90deg, #ffffff, #9b9b9b);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
