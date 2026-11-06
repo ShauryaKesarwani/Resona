@@ -17,7 +17,7 @@ These come from repeated feedback during the build, so treat them as the brief.
 
 **Image led.** One image carries the brand: a lone figure on a dark plain under a huge spiral of light lines. It is used as a full bleed, dimmed backdrop. Text sits in the dark negative space, never over the bright streak. Grayscale with one colour bleeding through (aqua) was chosen over full colour.
 
-**The pulse.** A looping sound waveform video (`components/Pulse.tsx`, assets `pulse.webm` and `pulse.mp4`), recoloured from the supplied orange GIF to aqua and blue on black. It blends with screen so the black vanishes on dark surfaces, and it holds still under reduced motion. Used as the landing sound band, the door's ready screen, the holder's code screen, the empty wallet and behind the profile avatar. Keep it to moments about sound.
+**The gateway flow.** `components/GatewayFlow.tsx` is a canvas of dotted streams that curve in from both edges and pinch at the middle, like two phones meeting, with a tap ripple. Blue at the edges, aqua at the pinch. It draws one still frame under reduced motion. Used as the landing sound band, the door's ready screen, the holder's code screen, the empty wallet and behind the profile avatar. It replaced a recoloured waveform GIF that looked low quality. Keep it to moments about two things meeting.
 
 **Story through motion.** The designer likes one memorable, meaningful moment over scattered effects. The hero pushes in toward the figure and fades to black before opening the wallet. An earlier idea was two figures colliding. Motion must respect reduced motion.
 

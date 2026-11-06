@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CaretRightIcon } from '../../components/icons'
 import { StatusPill, WalletChip } from '../../components/Bits'
-import { Pulse } from '../../components/Pulse'
+import { GatewayFlow } from '../../components/GatewayFlow'
 import { AttendeeTabs } from '../../components/AttendeeTabs'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'
@@ -78,9 +78,7 @@ export default function Tickets() {
 
       {state === 'ready' && tickets.length === 0 && (
         <section className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface-raised p-6 text-center">
-          <div className="relative h-24 w-full overflow-hidden">
-            <Pulse still className="absolute top-1/2 left-1/2 size-48 max-w-none -translate-x-1/2 -translate-y-1/2 opacity-70" />
-          </div>
+          <GatewayFlow still className="h-28 w-full" />
           <h2 className="title-2">No tickets yet</h2>
           <p className="body-6 text-text-muted">Buy a ticket, or ask the organizer to issue one to this wallet.</p>
         </section>

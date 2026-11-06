@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { DeviceMobileIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
 import { DistanceGap, SonarRings } from '../../components/Sonar'
-import { Pulse } from '../../components/Pulse'
+import { GatewayFlow } from '../../components/GatewayFlow'
 import { LiveWave, TraceChart } from '../../components/Waveform'
 import type { Analysis } from '../../sonar/analyze'
 import { Screen, TopBar } from '../../components/Screen'
@@ -191,9 +191,7 @@ export default function CheckIn() {
           <h1 className="heading-5">Show this to the door</h1>
           <QRCodeSVG value={phase.code} size={220} marginSize={2} className="rounded-xl" aria-label={`QR code for ${phase.code}`} />
           <p className="heading-3 font-mono tabular-nums tracking-widest">{phase.code}</p>
-          <div className="relative h-24 w-full overflow-hidden">
-            <Pulse className="absolute top-1/2 left-1/2 size-56 max-w-none -translate-x-1/2 -translate-y-1/2 scale-x-150" />
-          </div>
+          <GatewayFlow className="h-28 w-full" />
           <p className="body-6 text-text-muted" aria-live="polite">
             Keep this screen open. The sound starts when the door joins.
           </p>
