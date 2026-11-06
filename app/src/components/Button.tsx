@@ -22,17 +22,19 @@ export function Button({ variant = 'primary', size = 'lg', to, onLinkClick, busy
       ? 'bg-accent text-on-accent hover:bg-accent-hover'
       : 'bg-surface-raised text-text border border-line hover:bg-surface-inset'
   const cls = `${base}${look} ${className}`
+  // Plain text labels get the font's empty space above and below trimmed, so text sits level in the button.
+  const label = typeof children === 'string' ? <span className="[text-box:trim-both_cap_alphabetic]">{children}</span> : children
 
   if (to) {
     return (
       <Link to={to} onClick={onLinkClick} className={cls}>
-        {children}
+        {label}
       </Link>
     )
   }
   return (
     <button className={cls} disabled={busy || rest.disabled} aria-busy={busy || undefined} {...rest}>
-      {children}
+      {label}
     </button>
   )
 }

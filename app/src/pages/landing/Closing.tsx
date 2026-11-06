@@ -34,7 +34,7 @@ export function Limits() {
   return (
     <Section id="limits">
       <h2 className="heading-4 lg:heading-3 max-w-[680px]">What the demo stops, and what it does not</h2>
-      <p className="body-3 mt-2 max-w-[680px] text-text-muted">
+      <p className="body-3 mt-2 max-w-prose text-text-muted">
         Distances and thresholds are design targets until we test on real phones.
       </p>
       <ul className="mt-8 grid gap-2 md:grid-cols-2">
@@ -64,7 +64,7 @@ export function Limits() {
 }
 
 const faqs = [
-  { q: 'How does the sound check work?', a: 'Your phone and the door phone each play a short sound and record both. Each phone measures the gap between the two sounds, and the server turns that into a distance. Sound travels about 343 metres a second, so any delay on the line shows up as extra distance.' },
+  { q: 'How does the sound check work?', a: 'Your phone and the door phone each play a short sound and record both. Each phone measures the gap between the two sounds, and the server turns that into a distance. Sound travels about 343\u00a0metres a second, so any delay on the line shows up as extra distance.' },
   { q: 'What if the room is loud or my speaker is broken?', a: 'Staff can admit you by hand after checking your ID. Every manual entry is logged against the staff member, so organizers can audit it.' },
   { q: 'Do I need crypto or a wallet app?', a: 'No. Resona creates a wallet in your browser the first time you open it. This demo runs on the Sepolia test network, so no real money is involved.' },
   { q: 'Does it work on iPhone?', a: 'The demo is built for Chrome on Android. iPhone support needs a native app, which comes after the hackathon.' },
@@ -96,7 +96,7 @@ export function Faq() {
                   className="shrink-0 text-text-muted transition duration-300 ease-base group-open:rotate-180"
                 />
               </summary>
-              <p className="body-6 px-4 pb-4 text-text-muted">{f.a}</p>
+              <p className="body-6 max-w-prose px-4 pb-4 text-text-muted">{f.a}</p>
             </details>
           ))}
         </div>
@@ -113,7 +113,7 @@ export function FinalCta() {
           <Figure ratio="16 / 9" variant="mono" position="50% 45%" className="rounded-lg!" />
           <div className="flex flex-col gap-4 p-2">
             <h2 className="heading-4 lg:heading-3">Walk in with your phone</h2>
-            <p className="body-3 text-text-muted">Free to try on the Sepolia test network. No payment and no real money.</p>
+            <p className="body-3 max-w-prose text-text-muted">Free to try on the Sepolia test network. No payment and no real money.</p>
             <Button to="/enter">Open your wallet</Button>
           </div>
         </div>

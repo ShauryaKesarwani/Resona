@@ -7,7 +7,7 @@ import {
   WaveformIcon,
 } from '@phosphor-icons/react'
 import { Button } from '../../components/Button'
-import { PairBackdrop } from '../../components/Figure'
+import { HeroBackdrop } from '../../components/Figure'
 import { Panel, Section } from './Section'
 
 export function Hero() {
@@ -15,7 +15,7 @@ export function Hero() {
   const [leaving, setLeaving] = useState(false)
   const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  /** The figures slide together and the screen goes black before they meet, then the wallet opens. */
+  /** The image pushes in toward the figure and the screen goes black, then the wallet opens. */
   function openWallet(e: MouseEvent<HTMLAnchorElement>) {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
     e.preventDefault()
@@ -26,18 +26,20 @@ export function Hero() {
 
   return (
     <header className="relative flex min-h-dvh flex-col justify-end overflow-hidden px-4 pt-[calc(max(8px,env(safe-area-inset-top))+80px)] pb-8 sm:px-6 lg:px-8">
-      <PairBackdrop closing={leaving} instant={reduce} />
-      <div className="relative z-10 mx-auto flex w-full max-w-[680px] flex-col items-center gap-4 text-center">
+      <HeroBackdrop closing={leaving} instant={reduce} />
+      <div className="relative z-10 mx-auto flex w-full max-w-[680px] flex-col items-center gap-4 text-center lg:grid lg:max-w-5xl lg:grid-cols-[1.25fr_1fr] lg:items-end lg:gap-12 lg:text-left">
         <h1 className="heading-3 sm:heading-2 text-hero">Tickets that only work when you are at the door</h1>
-        <p className="body-3 text-text-muted">
-          Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late, and
-          organizers decide who can hold each ticket.
-        </p>
-        <div className="mt-2 flex w-full max-w-sm flex-col gap-2">
-          <Button to="/wallet" onLinkClick={openWallet} aria-disabled={leaving}>
-            Open your wallet
-          </Button>
-          <p className="caption-2 text-text-muted">Built on ENS, Arkiv and World ID</p>
+        <div className="flex w-full flex-col items-center gap-4 lg:items-stretch">
+          <p className="body-3 max-w-prose text-text-muted">
+            Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late, and
+            organizers decide who can hold each ticket.
+          </p>
+          <div className="mt-2 flex w-full max-w-sm flex-col gap-2 lg:max-w-none">
+            <Button to="/wallet" onLinkClick={openWallet} aria-disabled={leaving}>
+              Open your wallet
+            </Button>
+            <p className="caption-2 text-text-muted">Built on ENS, Arkiv and World ID</p>
+          </div>
         </div>
       </div>
       <div
@@ -60,7 +62,7 @@ const stack = [
 export function BuiltOn() {
   return (
     <Section className="py-8! lg:py-12!">
-      <h2 className="caption-1 mb-4 text-text-muted">What each layer does</h2>
+      <h2 className="heading-5 mb-6">What each layer does</h2>
       <dl className="grid gap-6 sm:grid-cols-3">
         {stack.map((s) => (
           <div key={s.name} className="flex flex-col gap-1">
@@ -139,12 +141,12 @@ export function Benefits() {
   return (
     <Section>
       <h2 className="heading-4 lg:heading-3 mb-8 max-w-[680px]">What changes for the door and for the crowd</h2>
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-3">
         {benefits.map((b, i) => (
-          <Panel key={b.title} className={i === 0 ? 'md:col-span-2' : ''}>
+          <Panel key={b.title} className={i === 0 || i === 3 ? 'md:col-span-2' : ''}>
             <b.icon size={24} className="text-accent" aria-hidden="true" />
             <h3 className="title-2 mt-3">{b.title}</h3>
-            <p className="body-6 mt-1 max-w-[680px] text-text-muted">{b.body}</p>
+            <p className="body-6 mt-1 max-w-prose text-text-muted">{b.body}</p>
           </Panel>
         ))}
       </div>

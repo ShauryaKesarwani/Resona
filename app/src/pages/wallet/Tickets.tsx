@@ -60,7 +60,7 @@ export default function Tickets() {
                 <div className="rounded-lg bg-surface-inset">
                   <div className="flex items-start justify-between gap-2 p-4">
                     <div className="min-w-0">
-                      <p className="title-2">Pass {t.pass}</p>
+                      <p className="title-2">Pass&nbsp;{t.pass}</p>
                       <p className="body-6 text-text-muted">
                         {t.event}, {t.tier}
                       </p>

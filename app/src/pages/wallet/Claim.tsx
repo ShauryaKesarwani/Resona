@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircleIcon, InfoIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, InfoIcon, SkipForwardIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
@@ -48,14 +48,21 @@ export default function Claim() {
   }
 
   if (phase === 'done') {
+    const skipped = !verified
     return (
       <Screen>
         <TopBar back={back} title="Claim ticket" />
         <section className="flex flex-1 flex-col justify-center gap-4" role="status">
-          <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
-          <h1 className="heading-4">Ticket claimed</h1>
+          {skipped ? (
+            <SkipForwardIcon size={48} className="text-text-muted" aria-hidden="true" />
+          ) : (
+            <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
+          )}
+          <h1 className="heading-4">{skipped ? 'Verification skipped' : 'Ticket claimed'}</h1>
           <p className="body-3 text-text-muted">
-            Pass {ticket.pass} is locked to this phone. Bring this phone to the door to check in.
+            {skipped
+              ? `Pass\u00a0${ticket.pass} is saved to this phone without a World ID check. You can verify later from the ticket.`
+              : `Pass\u00a0${ticket.pass} is locked to this phone. Bring this phone to the door to check in.`}
           </p>
           <SimTag>Simulated phone lock</SimTag>
         </section>
@@ -93,7 +100,7 @@ export default function Claim() {
           <span key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-accent' : 'bg-surface-high'}`} />
         ))}
       </div>
-      <p className="caption-1 text-text-muted">Step {step} of 3</p>
+      <p className="caption-1 tabular-nums text-text-muted">Step&nbsp;{step} of&nbsp;3</p>
 
       {step === 1 && (
         <section className="flex flex-col gap-4">

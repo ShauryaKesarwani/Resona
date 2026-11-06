@@ -109,7 +109,7 @@ function Request({ setup, onVerified, onFailed }: { setup: Setup; onVerified: ()
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <QRCodeSVG value={flow.connectorURI} size={200} marginSize={2} className="rounded-xl" />
-      <p className="body-6 text-text-muted">Scan with your phone's camera to open World ID.</p>
+      <p className="body-6 text-text-muted">Scan with your phone’s camera to open World ID.</p>
       {openLink}
     </div>
   )

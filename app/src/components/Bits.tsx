@@ -13,7 +13,7 @@ const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: s
 export function StatusPill({ status }: { status: Status }) {
   const l = look[status]
   return (
-    <span className={`caption-4 inline-flex shrink-0 items-center gap-1 rounded-full bg-line px-2 py-1 ${l.cls}`}>
+    <span className={`caption-4 inline-flex shrink-0 items-center gap-1 rounded-full bg-line px-2 py-1 whitespace-nowrap ${l.cls}`}>
       <l.icon size={14} aria-hidden="true" />
       {l.label}
     </span>
@@ -23,7 +23,7 @@ export function StatusPill({ status }: { status: Status }) {
 /** Marks anything that is not real data or a real action. */
 export function SimTag({ children = 'Simulated' }: { children?: ReactNode }) {
   return (
-    <span className="caption-4 inline-flex w-fit items-center gap-1 rounded-full border border-line px-2 py-0.5 text-text-muted">
+    <span className="caption-4 inline-flex w-fit items-center gap-1 rounded-full border border-line px-2 py-0.5 whitespace-nowrap text-text-muted">
       <FlaskIcon size={12} aria-hidden="true" />
       {children}
     </span>
@@ -41,7 +41,7 @@ export function WalletChip() {
         <span className="body-5 block truncate">{wallet.name}</span>
         <span className="caption-5 block font-mono text-text-muted">{short(wallet.address)}</span>
       </span>
-      <span className="caption-5 flex items-center gap-1 text-text-muted">
+      <span className="caption-5 flex items-center gap-1 whitespace-nowrap text-text-muted">
         <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
         {wallet.network}
       </span>
@@ -56,5 +56,18 @@ export function Row({ label, children }: { label: string; children: ReactNode })
       <span className="body-6 text-text-muted">{label}</span>
       <span className="body-5 text-right">{children}</span>
     </div>
+  )
+}
+
+/** Initial in a circle. Stands in for the ENS avatar until real avatars are read. */
+export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="title-3 grid shrink-0 place-items-center rounded-full bg-surface-high"
+      style={{ width: size, height: size }}
+    >
+      {name[0].toUpperCase()}
+    </span>
   )
 }

@@ -34,8 +34,8 @@ export default function Ticket() {
       <Figure ratio="16 / 7" position="50% 45%" />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="heading-4">Pass {ticket.pass}</h1>
-          <p className="body-6 truncate font-mono text-text-muted">{ticket.ens}</p>
+          <h1 className="heading-4">Pass&nbsp;{ticket.pass}</h1>
+          <p className="body-6 font-mono text-text-muted [overflow-wrap:anywhere]">{ticket.ens}</p>
         </div>
         <StatusPill status={ticket.status} />
       </div>
@@ -62,7 +62,7 @@ export default function Ticket() {
           {gloss && (
             <p className="body-6 border-t border-line px-4 py-3 text-text-muted">
               You cannot send this ticket straight to someone. You ask the organizer, and they approve or deny. A
-              request that nobody answers lapses after 24 hours.
+              request that nobody answers lapses after 24&nbsp;hours.
             </p>
           )}
         </div>
@@ -72,17 +72,19 @@ export default function Ticket() {
       <div className="flex-1" />
 
       {ticket.status === 'issued' && <Button to={`/wallet/claim/${ticket.id}`}>Claim ticket</Button>}
-      {ticket.status === 'skipped' && <Button to={`/wallet/claim/${ticket.id}`}>Verify with World ID</Button>}
       {(ticket.status === 'claimed' || ticket.status === 'skipped') && (
-        <>
-          <Button to={`/wallet/checkin/${ticket.id}`}>Check in</Button>
-          {ticket.status === 'claimed' && (
-            <Button variant="secondary" size="md" to={`/wallet/transfer/${ticket.id}`}>
-              <ArrowsLeftRightIcon size={20} aria-hidden="true" />
-              {pending ? 'See transfer request' : 'Send to someone'}
-            </Button>
-          )}
-        </>
+        <Button to={`/wallet/checkin/${ticket.id}`}>Check in</Button>
+      )}
+      {ticket.status === 'skipped' && (
+        <Button variant="secondary" size="md" to={`/wallet/claim/${ticket.id}`}>
+          Verify with World ID
+        </Button>
+      )}
+      {ticket.status === 'claimed' && (
+        <Button variant="secondary" size="md" to={`/wallet/transfer/${ticket.id}`}>
+          <ArrowsLeftRightIcon size={20} aria-hidden="true" />
+          {pending ? 'See transfer request' : 'Send to someone'}
+        </Button>
       )}
       {ticket.status === 'checked_in' && <Button to={`/u/${wallet.name}`}>View your trophy</Button>}
     </Screen>

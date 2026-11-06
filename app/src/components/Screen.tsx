@@ -15,7 +15,8 @@ export function Screen({ children }: { children: ReactNode }) {
 }
 
 /** Back button on the left, optional title, optional right slot. `back` is the parent route, so deep links still work. */
-export function TopBar({ back, title, right }: { back?: string; title?: string; right?: ReactNode }) {
+export function TopBar({ back, title, right, heading = false }: { back?: string; title?: string; right?: ReactNode; heading?: boolean }) {
+  const Title = heading ? 'h1' : 'p'
   return (
     <header className="flex min-h-12 items-center gap-2">
       {back && (
@@ -27,7 +28,7 @@ export function TopBar({ back, title, right }: { back?: string; title?: string; 
           <ArrowLeftIcon size={20} aria-hidden="true" />
         </Link>
       )}
-      {title && <h1 className="title-2 min-w-0 flex-1 truncate">{title}</h1>}
+      {title && <Title className="title-2 min-w-0 flex-1 truncate">{title}</Title>}
       {!title && <div className="flex-1" />}
       {right}
     </header>

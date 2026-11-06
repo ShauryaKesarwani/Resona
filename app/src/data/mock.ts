@@ -70,3 +70,49 @@ export function serverPass() {
 }
 
 serverPass().catch(() => {})
+
+/** Door side. A check in is a sound pass or a manual entry by staff. */
+export type Checkin = {
+  id: string
+  pass: number
+  name: string
+  at: number
+  method: 'sound' | 'manual'
+  cm?: number
+  reason?: string
+  ordinal: number
+}
+
+export const doorStaff = 'Door A'
+const min = 60000
+
+let checkins: Checkin[] = [
+  { id: 'c3', pass: 25, name: 'devansh.eth', at: Date.now() - 2 * min, method: 'sound', cm: 31, ordinal: 3 },
+  { id: 'c2', pass: 18, name: 'mira.eth', at: Date.now() - 9 * min, method: 'manual', reason: 'Speaker not working', ordinal: 2 },
+  { id: 'c1', pass: 3, name: 'skes.eth', at: Date.now() - 14 * min, method: 'sound', cm: 24, ordinal: 1 },
+]
+
+export const useCheckins = () => useSyncExternalStore(subscribe, () => checkins)
+
+export const findPass = (pass: string | null) => tickets.find((t) => String(t.pass) === (pass ?? '').trim())
+
+export function recordCheckin(pass: number, method: 'sound' | 'manual', extra: { cm?: number; reason?: string }) {
+  const t = tickets.find((x) => x.pass === pass)
+  checkins = [
+    { id: `c${Date.now()}`, pass, name: wallet.name, at: Date.now(), method, ordinal: checkins.length + 1, ...extra },
+    ...checkins,
+  ]
+  if (t) tickets = tickets.map((x) => (x.id === t.id ? { ...x, status: 'checked_in' } : x))
+  subs.forEach((f) => f())
+}
+
+export const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+export const ago = (at: number) => {
+  const m = Math.max(0, Math.round((Date.now() - at) / min))
+  return m < 1 ? 'Just now' : m === 1 ? '1\u00a0min ago' : `${m}\u00a0min ago`
+}

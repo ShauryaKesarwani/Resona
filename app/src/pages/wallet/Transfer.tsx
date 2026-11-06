@@ -10,7 +10,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function left(ms: number) {
   const m = Math.max(0, Math.floor(ms / 60000))
-  return `${Math.floor(m / 60)}h ${m % 60}m`
+  return `${Math.floor(m / 60)}h\u00a0${m % 60}m`
 }
 
 /** W5. Send a ticket. A direct transfer is blocked by the contract, so the path is a request to the organizer. */
@@ -81,8 +81,8 @@ export default function Transfer() {
           <ClockIcon size={48} className="text-accent" aria-hidden="true" />
           <h1 className="heading-4">Waiting for the organizer</h1>
           <p className="body-3 text-text-muted">
-            Your request to send Pass {ticket.pass} is with the organizer. It lapses in{' '}
-            <span className="font-mono text-text">{left(ticket.transferExpires! - now)}</span> if nobody answers. You
+            Your request to send Pass&nbsp;{ticket.pass} is with the organizer. It lapses in{' '}
+            <span className="font-mono tabular-nums text-text">{left(ticket.transferExpires! - now)}</span> if nobody answers. You
             still hold the ticket until it is approved.
           </p>
           <SimTag>Simulated request</SimTag>
@@ -99,7 +99,7 @@ export default function Transfer() {
     <Screen>
       <TopBar back={back} title="Send ticket" />
       <form onSubmit={request} noValidate className="flex flex-1 flex-col gap-4">
-        <h1 className="heading-4">Send Pass {ticket.pass} to someone</h1>
+        <h1 className="heading-4">Send Pass&nbsp;{ticket.pass} to someone</h1>
         <p className="body-3 text-text-muted">
           Only the organizer can move a ticket. Tell us who should get it, and the organizer approves or denies.
         </p>
