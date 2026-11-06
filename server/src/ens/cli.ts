@@ -17,6 +17,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import { normalizeEventName, parsePassExpiry, passLabel } from "./labels.ts";
 
 const required = (name: string) => {
   const value = process.env[name]?.trim();
@@ -33,7 +34,7 @@ const address = (name: string): Address => {
 const env = {
   rpcUrl: required("ENS_RPC_URL"),
   privateKey: process.env.ENS_PRIVATE_KEY?.trim() as Hex | undefined,
-  eventName: required("ENS_EVENT_NAME").toLowerCase(),
+  eventName: normalizeEventName(required("ENS_EVENT_NAME")),
   parentRegistry: address("ENS_PARENT_REGISTRY"),
   factory: address("ENS_FACTORY"),
   implementation: address("ENS_USER_REGISTRY_IMPL"),
@@ -41,10 +42,6 @@ const env = {
     ? address("ENS_EVENT_REGISTRY")
     : undefined,
 };
-
-if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.eth$/.test(env.eventName)) {
-  throw new Error("ENS_EVENT_NAME must be a single-label .eth name, such as demo-event.eth");
-}
 
 const publicClient = createPublicClient({ chain: sepolia, transport: http(env.rpcUrl) });
 const account = env.privateKey ? privateKeyToAccount(env.privateKey) : undefined;
@@ -79,14 +76,6 @@ function getEventRegistry(): Address {
 function getWalletClient() {
   if (!walletClient) throw new Error("This command requires ENS_PRIVATE_KEY in server/.env.ens");
   return walletClient;
-}
-
-function passLabel(value: string): string {
-  const normalized = value.trim().toLowerCase();
-  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(normalized)) {
-    throw new Error("Pass ID must be a single ENS label containing only letters, digits, or hyphens");
-  }
-  return normalized;
 }
 
 async function send(to: Address, abi: typeof registryAbi, functionName: string, args: readonly unknown[]) {
@@ -141,14 +130,11 @@ async function issue(passId: string, holder: string, expiryInput: string) {
   const registry = getEventRegistry();
   const pass = passLabel(passId);
   if (!isAddress(holder)) throw new Error("Holder must be an Ethereum address");
-  if (!/^\d+$/.test(expiryInput)) throw new Error("Expiry must be a Unix timestamp in seconds");
-  const expiry = BigInt(expiryInput);
   const now = BigInt(Math.floor(Date.now() / 1000));
-  if (expiry <= now || expiry > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Expiry must be a future Unix timestamp");
   const parentExpiry = await publicClient.readContract({
     address: env.parentRegistry, abi: registryAbi, functionName: "getExpiry", args: [labelHash],
   });
-  if (expiry > parentExpiry) throw new Error("Pass expiry cannot exceed the event name expiry");
+  const expiry = parsePassExpiry(expiryInput, now, parentExpiry);
   const attached = await publicClient.readContract({
     address: env.parentRegistry, abi: registryAbi, functionName: "getSubregistry", args: [labelHash],
   });

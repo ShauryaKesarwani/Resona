@@ -5,8 +5,10 @@
 Implemented as a standalone operator CLI in `server/src/ens/`:
 
 - Deploy an ENSv2 UserRegistry proxy, link it to an existing event name, issue non-transferable passes, inspect ownership, and simulate a holder transfer.
+- Validate event and pass labels against the demo's single-label ASCII `.eth` policy, and reject pass expiries that are not safe future timestamps within the event name's expiry. For this restricted alphabet, ASCII case folding supplies the expected ENSIP-15 normalization.
 - Pass owners receive **zero roles**; the operator receives registrar, unregister, renew, and set-parent roles on the registry root. The operator receives no upgrade or role-admin powers.
 - `inspect` and `transfer-check` are read-only and do not require a private key. `transfer-check` uses `eth_call`, not a mined transaction.
+- Offline tests cover label and expiry validation. On-chain CLI behavior and ownership verification are not yet covered by automated tests.
 
 The CLI is not connected to the HTTP API, ticket store, app, or check-in flow. **Not yet implemented:** door enforcement, automatic parent-name registration, people namespaces/profiles, address/text resolver records, organizer ENS-name input, automatic issuance from the HTTP issue route, organizer-approved reissue, and an on-chain reverted-transfer transaction or demo page. No live Sepolia deployment has been verified by this implementation.
 
@@ -99,7 +101,7 @@ cd ../app
 npm run build
 ```
 
-The CLI has not been run against a live Sepolia deployment. The repository currently has no ENS CLI or ownership-verification tests. Manual validation remains the deployment, issue, inspect, and transfer simulation workflow above.
+The CLI has not been run against a live Sepolia deployment. Automated tests cover only label and expiry validation; on-chain CLI behavior and ownership verification remain untested. Manual validation remains the deployment, issue, inspect, and transfer simulation workflow above.
 
 ## References
 

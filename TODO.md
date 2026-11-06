@@ -33,6 +33,7 @@ The current code is the source for implementation status; planned behavior and s
 - [ ] Add Arkiv track files: friction, reach, why Arkiv, and how Arkiv is used; complete schema details as implemented.
 - [ ] Add writer addresses and a runnable query to the README.
 - [~] Show an actual Arkiv read in the app: the wallet ticket, event and purchase screens read through the `/api/arkiv` read proxy in code, but this has not been confirmed on a running app with live data.
+- [ ] Restore the app build: `@arkiv-network/sdk` is declared in `app/package.json` and its lockfile, but `npm run build` cannot resolve it from the current app install.
 
 ## World ID
 
@@ -43,8 +44,8 @@ The current code is the source for implementation status; planned behavior and s
 
 ## ENSv2
 
-- [ ] Register and configure Sepolia event and people names and their registries; verify deployed contract roles and setup.
-- [ ] Issue each pass as an ENSv2 subname, populate safe public metadata, and store its reference on the ticket.
+- [~] Standalone CLI supports deploying and linking a Sepolia event UserRegistry with the documented restricted root roles; configure real names and verify a live deployment and roles.
+- [~] Standalone CLI issues non-transferable pass subnames and inspects owners; ASCII label and expiry checks have offline tests. It does not yet populate public metadata or store ENS references on Arkiv tickets.
 - [ ] Verify the actual ENS pass owner matches the assigned ticket wallet before check-in; reconcile failed ENS/Arkiv writes.
 - [ ] Demonstrate blocked transfers for a non-transferable pass and implement organizer-approved reassignment if in scope.
 - [ ] Resolve and display names and profiles in the organizer, wallet and door flows.

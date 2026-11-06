@@ -18,7 +18,7 @@ Organizer-owned, mutable; all reads filter by the trusted organizer and event. `
 | `ensRegistry` | optional address | ENSv2 registry that holds the pass |
 | `ensChainId` | optional string | Decimal chain ID of that registry |
 
-ENS fields are optional for compatibility with existing tickets and until ENS issuance is implemented. They are **unverified metadata**, not evidence of ownership. Issuance and status changes currently work; populating and validating ENS fields, check-in, and revocation do not. Existing tickets remain readable. The Arkiv entity key identifies the record, not the pass ID.
+ENS fields are optional for compatibility with existing tickets. The standalone Sepolia CLI can issue a matching ENS pass, but it does not write these fields to Arkiv; the HTTP ticket API does not populate or validate them. Any stored ENS fields are **unverified metadata**, not evidence of ownership. Arkiv ticket issuance and status changes currently work; ENS/Arkiv reconciliation, check-in, and revocation do not. Existing tickets remain readable. The Arkiv entity key identifies the record, not the pass ID.
 
 Expiry is configured as days from issuance, currently 1–180; expired entities disappear from queries. The plan's event-end-plus-30-days expiry is not yet implemented. Extending the configured value does not extend existing records.
 
