@@ -5,23 +5,29 @@ import { makeCode, type Role } from './codes.ts'
 const RECORD_SECONDS = 6
 const PLAY_AT: Record<Role, number> = { door: 1.5, holder: 3 }
 
-/** Call from a tap. Phone audio processing shifts the sound, so a reading with it on can't be trusted. */
+/**
+ * Call from a tap. The sonar code is Soha's, unchanged from /lab. The one difference here is that the
+ * holder's mic opens before the door joins, so its early audio is thrown away instead of being queued
+ * up and mistaken for the recording.
+ */
 export async function openMic() {
   const audio = new SonarAudio()
   const mic = await audio.open()
-  if (mic.echoCancellation || mic.noiseSuppression || mic.autoGainControl) {
-    await audio.close()
-    throw new Error('mic_processing')
-  }
+  const { capture } = audio as unknown as { capture: AudioWorkletNode }
+  capture.port.onmessage = () => {}
   return { audio, sampleRate: mic.sampleRate }
 }
 
-/** Records and plays this phone's sound, then returns the time between the two sounds, or why it couldn't tell. */
+/** Records and plays this phone's sound. If that fails it says so, so the other phone isn't left waiting. */
 export async function measure(audio: SonarAudio, sampleRate: number, seed: string, role: Role) {
-  const recording = await audio.run(makeCode(seed, role, sampleRate), PLAY_AT[role], RECORD_SECONDS)
-  await new Promise((done) => setTimeout(done, 0))
-  const { elapsedSeconds, problem } = analyzeRecording(recording, seed)
-  return { elapsedSeconds, problem }
+  try {
+    const recording = await audio.run(makeCode(seed, role, sampleRate), PLAY_AT[role], RECORD_SECONDS)
+    await new Promise((done) => setTimeout(done, 0))
+    const { elapsedSeconds, problem } = analyzeRecording(recording, seed)
+    return { elapsedSeconds, problem }
+  } catch {
+    return { elapsedSeconds: null, problem: 'dropout' as const }
+  }
 }
 
 const SOUND_NAME: Record<string, string> = { 'no-door-sound': 'the door phone', 'no-holder-sound': 'the holder phone' }
@@ -36,7 +42,4 @@ export function problemText(problem?: string) {
   return `${who} lost some audio during the check.`
 }
 
-export const micError = (err: unknown) =>
-  (err as Error).message === 'mic_processing'
-    ? 'This browser kept its microphone processing on, so the distance would be wrong. Use Chrome on Android.'
-    : 'Could not use the microphone. Allow it for this site, then try again.'
+export const micError = () => 'Could not use the microphone. Allow it for this site, then try again.'

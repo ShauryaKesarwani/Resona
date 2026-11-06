@@ -18,8 +18,8 @@ type Session = {
 export type Options = { store: CheckinStore; allowSkip: boolean; doorPin?: string; now?: () => number };
 
 const CODE_TTL_MS = 2 * 60 * 1000;
-/** The phones record for 6 seconds, so a run with no result by now has gone wrong. */
-const RUN_TTL_MS = 25 * 1000;
+/** The phones record for 6 seconds and then analyse, so a run with no result by now has gone wrong. */
+const RUN_TTL_MS = 15 * 1000;
 const MAX_SESSIONS = 200;
 const FINISHED: CheckinState[] = ["pass", "too_far", "no_sound", "invalid", "expired", "failed"];
 /** A failed write is left alone: it may have landed, so it is never run again. */
@@ -74,13 +74,31 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     return { status: 200, id: session.id, code, seed: session.seed, attempt: session.attempt };
   }
 
+  /** A fresh seed for every try, so a recording of the last one is useless. */
+  function restart(session: Session) {
+    session.attempt += 1;
+    session.seed = randomBytes(16).toString("hex");
+    session.state = "running";
+    session.runningAt = now();
+    delete session.door;
+    delete session.holder;
+    delete session.cm;
+    delete session.problem;
+  }
+
   /** The door joins with the holder's code. That is the moment both phones start recording. */
   function join(input: { code?: string; pin?: string }): Joined | Failure {
     if (doorPin && !sameSecret(String(input.pin ?? ""), doorPin)) return { status: 403, error: "bad_door_pin" };
     const session = [...sessions.values()].find((item) => item.code === String(input.code ?? "").trim());
-    if (!session || refresh(session).state !== "waiting") return { status: 404, error: "code_not_found" };
-    session.state = "running";
-    session.runningAt = now();
+    if (!session) return { status: 404, error: "code_not_found" };
+    const state = refresh(session).state;
+    if (state === "running" || state === "saving") return { status: 409, error: "check_running" };
+    // Typing the same code after a failed try just starts the next try.
+    if (RETRYABLE.includes(state) && session.runningAt && session.attempt < MAX_ATTEMPTS) restart(session);
+    else if (state === "waiting") {
+      session.state = "running";
+      session.runningAt = now();
+    } else return { status: 404, error: "code_not_found" };
     session.doorToken = randomBytes(16).toString("hex");
     return { status: 200, id: session.id, seed: session.seed, attempt: session.attempt, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
   }
@@ -156,14 +174,7 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     if (!isDoor && !isHolder) return { status: 403, error: "not_in_this_check" };
     if (!RETRYABLE.includes(refresh(session).state) || !session.runningAt) return { status: 409, error: "cannot_retry" };
     if (session.attempt >= MAX_ATTEMPTS) return { status: 409, error: "too_many_attempts" };
-    session.attempt += 1;
-    session.seed = randomBytes(16).toString("hex");
-    session.state = "running";
-    session.runningAt = now();
-    delete session.door;
-    delete session.holder;
-    delete session.cm;
-    delete session.problem;
+    restart(session);
     return { status: 200 };
   }
 

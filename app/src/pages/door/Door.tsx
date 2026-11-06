@@ -18,8 +18,9 @@ type Phase = { name: 'ready' } | { name: 'scanning' } | { name: 'running'; step:
 const steps = ['Connecting to the holder’s phone', 'Playing and listening', 'Checking the distance']
 
 const JOIN_ERRORS: Record<string, string> = {
-  code_not_found: 'That code is not active. Ask the holder to tap Start check in again.',
+  code_not_found: 'That code has finished or expired. Ask the holder to tap Start check in again.',
   bad_door_pin: 'That door PIN is wrong.',
+  check_running: 'This check is already running. Wait for it to finish.',
 }
 
 const fails: Record<string, { title: string; body: string }> = {
@@ -38,6 +39,7 @@ export default function Door() {
   const [pinRequired, setPinRequired] = useState(false)
   const [error, setError] = useState('')
   const alive = useRef(true)
+  const busy = useRef(false)
   const live = useRef<{ close: () => void; id: string; doorToken: string; attempt: number } | null>(null)
 
   useEffect(() => {
@@ -50,14 +52,18 @@ export default function Door() {
   }, [])
 
   const check = useCallback(async (entered: string) => {
+    // A double tap must not join twice: the second try would fail and hide the check that is running.
+    if (busy.current) return
+    busy.current = true
     setError('')
     setPhase({ name: 'running', step: 0 })
     let mic: Awaited<ReturnType<typeof openMic>>
     try {
       mic = await openMic()
-    } catch (err) {
+    } catch {
+      busy.current = false
       setPhase({ name: 'ready' })
-      return setError(micError(err))
+      return setError(micError())
     }
     try {
       const session = await api.checkinJoin(entered, localStorage.getItem(PIN_KEY) ?? '')
@@ -80,6 +86,7 @@ export default function Door() {
         check.attempt = attempt
       }
     } catch (err) {
+      busy.current = false
       await mic.audio.close()
       setPhase({ name: 'ready' })
       setError(JOIN_ERRORS[(err as Error).message] ?? 'The check did not finish. Start again on both phones.')
@@ -90,6 +97,7 @@ export default function Door() {
   const next = () => {
     live.current?.close()
     live.current = null
+    busy.current = false
     setCode('')
     setPhase({ name: 'ready' })
   }

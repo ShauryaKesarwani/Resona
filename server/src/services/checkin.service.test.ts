@@ -177,12 +177,32 @@ test("an old code stops working, and a code works once", async () => {
   assert.deepEqual(checkins.join({ code, pin: "1234" }), { status: 404, error: "code_not_found" });
   const fresh = await started();
   assert.equal(checkins.join({ code: fresh.code, pin: "1234" }).status, 200);
-  assert.deepEqual(checkins.join({ code: fresh.code, pin: "1234" }), { status: 404, error: "code_not_found" });
+  assert.deepEqual(checkins.join({ code: fresh.code, pin: "1234" }), { status: 409, error: "check_running" });
+});
+
+test("typing the same code after a failed try starts the next try, and both phones follow", async () => {
+  const { code, id } = await started();
+  const first = checkins.join({ code, pin: "1234" });
+  await holderReport(id, null);
+  const second = checkins.join({ code, pin: "1234" });
+  assert.equal(second.status, 200);
+  const next = checkins.status(id)!;
+  assert.equal(next.state, "running");
+  assert.equal(next.attempt, 2);
+  assert.notEqual(next.seed, (first as { seed: string }).seed);
+});
+
+test("a code is dead once the check has passed", async () => {
+  const { code, id } = await started();
+  const session = checkins.join({ code, pin: "1234" }) as { doorToken: string };
+  await checkins.report(id, { role: "door", attempt: 1, elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await holderReport(id, 1.5);
+  assert.deepEqual(checkins.join({ code, pin: "1234" }), { status: 404, error: "code_not_found" });
 });
 
 test("a run that never finishes expires", async () => {
   const session = await joined();
-  clock += 30 * 1000;
+  clock += 16 * 1000;
   assert.equal(checkins.status(session.id)!.state, "expired");
   assert.deepEqual(await holderReport(session.id, 1.5), { status: 409, error: "session_not_running" });
 });

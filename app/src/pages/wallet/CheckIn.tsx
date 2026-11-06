@@ -63,9 +63,9 @@ export default function CheckIn() {
     let mic: Awaited<ReturnType<typeof openMic>>
     try {
       mic = await openMic()
-    } catch (err) {
+    } catch {
       setPhase({ name: 'ready' })
-      return setError(micError(err))
+      return setError(micError())
     }
     try {
       const passId = ticket!.id

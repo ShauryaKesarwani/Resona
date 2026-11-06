@@ -52,7 +52,8 @@ const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 /** The holder's phone waits here until the door joins, and both start recording. */
 export async function waitUntilRunning(id: string, keepGoing: () => boolean) {
   while (keepGoing()) {
-    const { state } = await api.checkinStatus(id).catch(() => ({ state: 'waiting' }))
+    // A lost connection keeps waiting, but a session the server no longer has can never start.
+    const { state } = await api.checkinStatus(id).catch((err: Error) => ({ state: err.message === 'session_not_found' ? 'expired' : 'waiting' }))
     if (state !== 'waiting') return state
     await sleep(POLL_MS)
   }

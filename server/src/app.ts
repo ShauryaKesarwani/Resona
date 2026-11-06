@@ -22,8 +22,13 @@ export function createApp(tickets: TicketStore & CheckinStore, registry: Account
   app.use("/api", checkinRoutes(tickets));
 
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
-  app.use(express.static(dist));
-  app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(dist, "index.html")));
+  // Built files have hashed names, but the page that points at them must never be cached, or phones keep an old build.
+  const fresh = (res: express.Response) => res.set("Cache-Control", "no-store");
+  app.use(express.static(dist, { setHeaders: (res, file) => void (file.endsWith(".html") && fresh(res)) }));
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
+    fresh(res);
+    res.sendFile(path.join(dist, "index.html"));
+  });
   // RPC errors can contain access keys in URLs; never expose them to clients.
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error("Request failed:", err instanceof Error ? err.name : "unknown error");
