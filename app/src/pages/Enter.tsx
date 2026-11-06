@@ -32,7 +32,7 @@ export default function Enter() {
       <nav aria-label="Roles" className="flex flex-col gap-2">
         <Role to="/wallet" icon={<WalletIcon size={20} />} title="Attendee" caption="Hold tickets, claim and check in" />
         <Role to="/door" icon={<DoorOpenIcon size={20} />} title="Door staff" caption="Scan tickets and admit people" />
-        <Role to="/organizer" icon={<BuildingsIcon size={20} />} title="Organizer" caption="Issue passes and approve transfers" />
+        <Role to="/organizer" icon={<BuildingsIcon size={20} />} title="Organizer" caption="Issue tickets to wallets" />
       </nav>
     </Screen>
   )

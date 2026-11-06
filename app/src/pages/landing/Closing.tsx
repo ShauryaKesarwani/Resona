@@ -55,7 +55,7 @@ export function FinalCta() {
           <div className="flex flex-col gap-4 p-2">
             <h2 className="heading-4 lg:heading-3">Walk in with your phone</h2>
             <p className="body-3 max-w-prose text-text-muted">Free to try on the Sepolia test network. No payment and no real money.</p>
-            <Button to="/enter">Open your wallet</Button>
+            <Button to="/wallet">Open your wallet</Button>
           </div>
         </div>
       </Panel>
