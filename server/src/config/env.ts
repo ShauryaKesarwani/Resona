@@ -6,12 +6,13 @@ function requireEnv(name: string): string {
 
 export const env = {
   port: Number(process.env.PORT ?? 3000),
-  dbPath: process.env.DB_PATH ?? "resona.db",
   nullifierHashKey: requireEnv("NULLIFIER_HASH_KEY"),
   arkiv: {
     privateKey: process.env.ARKIV_PRIVATE_KEY,
     accessKey: process.env.ARKIV_ACCESS_KEY,
     maxCostWei: BigInt(process.env.ARKIV_MAX_COST_WEI ?? "10000000000000000"),
+    eventId: process.env.ARKIV_EVENT_ID ?? "demo-event",
+    ticketLifetimeDays: Number(process.env.ARKIV_TICKET_LIFETIME_DAYS ?? 30),
   },
   world: {
     appId: requireEnv("WORLD_APP_ID"),

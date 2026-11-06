@@ -1,15 +1,22 @@
-# Arkiv lifecycle spike
+# Arkiv demo storage
 
-This isolated test writes public, disposable `resona.spike.*` entities to Rabdi; it does not change the API or the SQLite store. It creates a ticket, reads it using the organizer as owner, patches the status, and creates and reads a read-only check-in. Both records expire after one day. Read-only prevents attribute changes, not deletion or ownership transfer.
+Arkiv is the only persistent store. Accounts, tickets, and claims are Arkiv entities; the server has no SQL database. The API loads `.env` and `.env.arkiv` on start.
 
-1. Use Node 22.13 or newer and run `npm install` in `server/`.
-2. Run `npm run arkiv:setup`. It creates `.env.arkiv` with a new testnet-only private key and prints its public address. It will not overwrite an existing file.
-3. Fund the printed address with tGLM from the [faucet](https://hub.arkiv.network/faucet). Get an [Arkiv access key](https://hub.arkiv.network/access-keys).
-4. Open `.env.arkiv` locally and add the access key after `ARKIV_ACCESS_KEY=`. Never share or commit this file.
-5. Run `npm run arkiv:spike`.
+## Configuration
 
-The script prints the organizer address, entity keys, and transaction hashes for inspection in the Arkiv explorer. Every run creates new onchain records and spends testnet gas. If an operation fails after a write, that record remains until expiration. A successful spike does not implement actual ticket issuance, sonar verification, or ENS.
+1. Run `npm run arkiv:setup` to create a testnet-only signer in `.env.arkiv`.
+2. Fund its address with tGLM and add an Arkiv access key to `.env.arkiv`.
+3. Set the World ID fields and a stable `NULLIFIER_HASH_KEY` in `.env`.
+4. Set `ARKIV_EVENT_ID` to a stable identifier and `ARKIV_TICKET_LIFETIME_DAYS` to 1 to 180 days. The server hashes the event identifier before storing it.
+5. Run `npm start`.
 
-## API configuration
+The stored account keeps the wallet, keyed nullifier hash, and a stable user ID hash derived from that nullifier hash. Wallet and nullifier lookups keep the one-human/one-wallet check. Claims refer to the hashed user ID and event ID, so repeat claims can be found without storing a raw World ID nullifier.
 
-The API uses Arkiv for tickets, but still stores World ID nullifiers in SQLite. Copy `.env.example` to `.env` if needed, configure its World ID fields, and set a stable `ARKIV_EVENT_ID` and `ARKIV_TICKET_LIFETIME_DAYS` (1–180). Choose a lifetime covering the event plus its retention period; expired tickets disappear from queries. `npm start` loads the signer from `.env.arkiv` as well as `.env`. Existing SQLite tickets are not migrated. Claim and skip serialization only protects a single server process; do not run multiple instances.
+The minimal event and payment schemas are in `src/arkiv/records.ts`:
+
+- Event: `eventId` (hash), `eventName`, `organiser`, `eventDate`.
+- Payment: `txnHash`, `eventId` (hash), `userId` (hash), `createdAt`.
+
+The payment schema is ready for the demo; payment ingestion and event creation are not API features yet. Relationships are simple indexed hash fields that match across entities.
+
+Ticket entities expire after the configured lifetime. Arkiv does not provide uniqueness constraints, so claims are serialized within this single server process; run one instance for the demo.

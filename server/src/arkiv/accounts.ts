@@ -1,4 +1,5 @@
 import { appendFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { createPublicClient, ExpirationTime } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
 import { eq } from "@arkiv-network/sdk/query";
@@ -7,18 +8,19 @@ import { http, type Hex } from "viem";
 import { privateKeyToAddress } from "viem/accounts";
 import { guardedWalletClient, localEnvSigner } from "./signing.mjs";
 
-export type Account = { wallet: string; nullifierHash: string };
+export type Account = { wallet: string; nullifierHash: string; userId: string };
 export type AccountRegistry = {
   /** False until Arkiv keys are set, so a World proof is never spent on a write that can't happen. */
   ready: boolean;
   findByWallet(wallet: string): Promise<Account | null>;
   findByNullifierHash(nullifierHash: string): Promise<Account | null>;
-  create(account: Account): Promise<void>;
+  create(account: Pick<Account, "wallet" | "nullifierHash">): Promise<void>;
 };
 
 export const Accounts = defineSchema("resona.account", {
   wallet: addr().indexed(),
   nullifierHash: str().indexed(),
+  userId: str().optional().indexed(),
 });
 
 const JOURNAL = "arkiv-writes.log";
@@ -49,11 +51,15 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
 
   // Only records this server created count: anyone can write an entity with this schema.
   const accounts = () =>
-    publicClient.select({ wallet: true, nullifierHash: true }).from(Accounts).createdBy(organizer).limit(1);
+    publicClient.select({ wallet: true, nullifierHash: true, userId: true }).from(Accounts).createdBy(organizer).limit(1);
 
   const first = ({ entities }: Awaited<ReturnType<ReturnType<typeof accounts>["fetch"]>>): Account | null => {
     const entity = entities[0];
-    return entity ? { wallet: String(entity.wallet.value).toLowerCase(), nullifierHash: entity.nullifierHash.value } : null;
+    return entity ? {
+      wallet: String(entity.wallet.value).toLowerCase(),
+      nullifierHash: entity.nullifierHash.value,
+      userId: entity.userId?.value ?? createHash("sha256").update(entity.nullifierHash.value).digest("hex"),
+    } : null;
   };
 
   const findByWallet = async (wallet: string) => first(await accounts().where(eq("wallet", addr(wallet as Hex))).fetch());
@@ -65,6 +71,7 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
     findByWallet,
     findByNullifierHash,
     async create({ wallet, nullifierHash }) {
+      const userId = createHash("sha256").update(nullifierHash).digest("hex");
       const signer = localEnvSigner(publicClient, privateKey, journal);
       const client = guardedWalletClient({
         publicClient,
@@ -76,7 +83,7 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
       });
       await client.createEntity(
         Accounts,
-        { wallet: addr(wallet as Hex), nullifierHash },
+        { wallet: addr(wallet as Hex), nullifierHash, userId },
         { expiration: ExpirationTime.max(), flags: { readonly: true } },
       );
       // Wait for indexing, so the next sign-up can't miss this record.

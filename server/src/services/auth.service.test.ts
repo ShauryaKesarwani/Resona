@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { beforeEach, test } from "node:test";
 import { hashSignal } from "@worldcoin/idkit-core/hashing";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
@@ -26,7 +27,7 @@ export function memoryRegistry(): AccountRegistry & { rows: Account[] } {
     ready: true,
     findByWallet: async (wallet) => rows.find((row) => row.wallet === wallet) ?? null,
     findByNullifierHash: async (hash) => rows.find((row) => row.nullifierHash === hash) ?? null,
-    create: async (account) => void rows.push(account),
+    create: async (account) => void rows.push({ ...account, userId: createHash("sha256").update(account.nullifierHash).digest("hex") }),
   };
 }
 
@@ -38,7 +39,7 @@ beforeEach(() => {
 test("a new human gets an account, stored with a hash and never the raw nullifier", async () => {
   const out = await signup(registry, config, passes, { wallet: first, idkitResponse: proofFor(first) });
   assert.deepEqual(out, { status: 200, wallet: first });
-  assert.deepEqual(registry.rows, [{ wallet: first, nullifierHash: hashNullifier("secret", "0xabc") }]);
+  assert.deepEqual(registry.rows, [{ wallet: first, nullifierHash: hashNullifier("secret", "0xabc"), userId: createHash("sha256").update(hashNullifier("secret", "0xabc")).digest("hex") }]);
   assert.ok(!JSON.stringify(registry.rows).includes("abc\""));
 });
 
@@ -112,14 +113,14 @@ test("a returning wallet signs in with a signature and no World proof", async ()
   const timestamp = Date.now();
   const signature = await account.signMessage({ message: signedMessage("login", wallet, timestamp) });
   assert.deepEqual(await session(registry, { wallet, timestamp, signature }), { status: 404, error: "no_account" });
-  registry.rows.push({ wallet, nullifierHash: "h" });
+  registry.rows.push({ wallet, nullifierHash: "h", userId: "u" });
   assert.deepEqual(await session(registry, { wallet, timestamp, signature }), { status: 200, wallet });
 });
 
 test("a typed address, someone else's signature or an old signature can't sign in", async () => {
   const account = privateKeyToAccount(generatePrivateKey());
   const wallet = account.address.toLowerCase();
-  registry.rows.push({ wallet, nullifierHash: "h" });
+  registry.rows.push({ wallet, nullifierHash: "h", userId: "u" });
   const now = Date.now();
   const attacker = privateKeyToAccount(generatePrivateKey());
   const forged = await attacker.signMessage({ message: signedMessage("login", wallet, now) });
