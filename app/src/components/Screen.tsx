@@ -7,7 +7,7 @@ export function Screen({ children }: { children: ReactNode }) {
   return (
     <main
       id="main"
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))]"
+      className="animate-screen-in mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))]"
     >
       {children}
     </main>

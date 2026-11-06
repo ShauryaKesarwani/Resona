@@ -1,3 +1,5 @@
+import { useState, type MouseEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ArrowsLeftRightIcon,
   FingerprintIcon,
@@ -5,30 +7,46 @@ import {
   WaveformIcon,
 } from '@phosphor-icons/react'
 import { Button } from '../../components/Button'
-import { FigurePair } from '../../components/Figure'
+import { PairBackdrop } from '../../components/Figure'
 import { Panel, Section } from './Section'
 
 export function Hero() {
+  const navigate = useNavigate()
+  const [leaving, setLeaving] = useState(false)
+  const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  /** The figures slide together and the screen goes black before they meet, then the wallet opens. */
+  function openWallet(e: MouseEvent<HTMLAnchorElement>) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+    e.preventDefault()
+    if (leaving) return
+    setLeaving(true)
+    setTimeout(() => navigate('/wallet'), reduce ? 350 : 1100)
+  }
+
   return (
-    <header className="px-4 pt-[calc(max(8px,env(safe-area-inset-top))+80px)] pb-8 sm:px-6 lg:px-8 lg:pb-16">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 lg:gap-8">
-        <FigurePair className="aspect-[16/9] lg:aspect-[3/1]" />
-        <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] lg:items-end lg:gap-12">
-          <h1 className="heading-3 sm:heading-2 text-hero max-w-[680px]">
-            Tickets that only work when you are at the door
-          </h1>
-          <div className="flex flex-col gap-4">
-            <p className="body-3 max-w-[680px] text-text-muted">
-              Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late,
-              and organizers decide who can hold each ticket.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button to="/enter">Open your wallet</Button>
-              <p className="caption-2 text-center text-text-muted lg:text-left">Built on ENS, Arkiv and World ID</p>
-            </div>
-          </div>
+    <header className="relative flex min-h-dvh flex-col justify-end overflow-hidden px-4 pt-[calc(max(8px,env(safe-area-inset-top))+80px)] pb-8 sm:px-6 lg:px-8">
+      <PairBackdrop closing={leaving} instant={reduce} />
+      <div className="relative z-10 mx-auto flex w-full max-w-[680px] flex-col items-center gap-4 text-center">
+        <h1 className="heading-3 sm:heading-2 text-hero">Tickets that only work when you are at the door</h1>
+        <p className="body-3 text-text-muted">
+          Resona checks your phone against the door phone using sound. A screenshot or a stream arrives too late, and
+          organizers decide who can hold each ticket.
+        </p>
+        <div className="mt-2 flex w-full max-w-sm flex-col gap-2">
+          <Button to="/wallet" onLinkClick={openWallet} aria-disabled={leaving}>
+            Open your wallet
+          </Button>
+          <p className="caption-2 text-text-muted">Built on ENS, Arkiv and World ID</p>
         </div>
       </div>
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-50 bg-surface ease-base ${
+          leaving ? 'opacity-100 duration-[700ms]' : 'opacity-0 duration-300'
+        } transition-opacity`}
+        style={{ transitionDelay: leaving && !reduce ? '100ms' : '0ms' }}
+      />
     </header>
   )
 }

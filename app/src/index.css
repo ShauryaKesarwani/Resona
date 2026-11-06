@@ -30,6 +30,13 @@
   --color-danger: #e5736b;
 
   --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-screen-in: screen-in 500ms var(--ease-base) both;
+
+  @keyframes screen-in {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 @layer base {
