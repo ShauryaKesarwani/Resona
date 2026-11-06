@@ -4,6 +4,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { DeviceMobileIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
 import { DistanceGap, SonarRings } from '../../components/Sonar'
+import { LiveWave, TraceChart } from '../../components/Waveform'
+import type { Analysis } from '../../sonar/analyze'
 import { Screen, TopBar } from '../../components/Screen'
 import { ordinal, refreshTickets, updateTicket, useTickets } from '../../data/mock'
 import { api, waitForNextAttempt, waitForResult, waitUntilRunning, type CheckinResult } from '../../services/api'
@@ -46,6 +48,8 @@ export default function CheckIn() {
   const ticket = useTickets().find((t) => t.id === id)
   const [phase, setPhase] = useState<Phase>({ name: 'ready' })
   const [error, setError] = useState('')
+  const [trace, setTrace] = useState<Analysis | null>(null)
+  const feed = useRef<((samples: Float32Array) => void) | null>(null)
   const alive = useRef(true)
   const live = useRef<{ close: () => void; id: string; attempt: number } | null>(null)
   const back = `/wallet/ticket/${id}`
@@ -86,7 +90,7 @@ export default function CheckIn() {
       // The mic stays open between tries, so either phone can start the next one with a single tap.
       while (alive.current) {
         setPhase({ name: 'running', step: 0 })
-        const measured = await measure(mic.audio, mic.sampleRate, seed, 'holder')
+        const measured = await measure(mic.audio, mic.sampleRate, seed, 'holder', { onBlock: (b) => feed.current?.(b), onAnalysis: setTrace })
         setPhase({ name: 'running', step: 1 })
         const signed = await signedBy(`checkin-report:${session.id}:${attempt}:${measured.elapsedSeconds}`)
         await api.checkinReport(session.id, { role: 'holder', attempt, ...measured, ...signed }).catch(() => {})
@@ -142,6 +146,7 @@ export default function CheckIn() {
           <DistanceGap cm={cm ?? 0} good />
           <h1 className="heading-3 text-center">You are in</h1>
           <p className="body-3 text-center text-text-muted">You are {ordinal(place ?? 0)} through the door.</p>
+          {trace && <TraceChart analysis={trace} />}
           {transactionHash && (
             <a href={explorerTx(transactionHash)} target="_blank" rel="noreferrer" className="body-5 inline-flex min-h-12 items-center text-accent">
               See the Arkiv record
@@ -170,6 +175,7 @@ export default function CheckIn() {
           <h1 className="heading-3 text-center">{f.title}</h1>
           {state === 'no_sound' && <p className="title-3 text-center">{problemText(problem)}</p>}
           <p className="body-3 text-center text-text-muted">{f.body}</p>
+          {trace && <TraceChart analysis={trace} />}
         </section>
         {state === 'failed' ? <Button to={back}>Back to ticket</Button> : <Button onClick={tryAgain}>Try again</Button>}
       </Screen>
@@ -198,6 +204,10 @@ export default function CheckIn() {
         <TopBar title="Check in" heading />
         <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
           <SonarRings label="Sound leaving your phone" />
+          <div className="w-full">
+            <LiveWave feed={feed} />
+            <p className="caption-4 mt-2 text-text-muted">What your microphone hears</p>
+          </div>
           <div className="flex flex-col gap-2">
             <p className="heading-4">{phase.step === 0 ? 'Listening' : 'Checking the distance'}</p>
             <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>

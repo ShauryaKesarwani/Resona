@@ -1,4 +1,4 @@
-import { analyzeRecording } from './analyze.ts'
+import { analyzeRecording, type Analysis } from './analyze.ts'
 import { SonarAudio } from './audio.ts'
 import { makeCode, type Role } from './codes.ts'
 
@@ -19,14 +19,21 @@ export async function openMic() {
 }
 
 /** Records and plays this phone's sound. If that fails it says so, so the other phone isn't left waiting. */
-export async function measure(audio: SonarAudio, sampleRate: number, seed: string, role: Role) {
+export async function measure(
+  audio: SonarAudio, sampleRate: number, seed: string, role: Role,
+  tap?: { onBlock?: (samples: Float32Array) => void; onAnalysis?: (analysis: Analysis) => void },
+) {
+  audio.onBlock = tap?.onBlock ?? null
   try {
     const recording = await audio.run(makeCode(seed, role, sampleRate), PLAY_AT[role], RECORD_SECONDS)
     await new Promise((done) => setTimeout(done, 0))
-    const { elapsedSeconds, problem } = analyzeRecording(recording, seed)
-    return { elapsedSeconds, problem }
+    const analysis = analyzeRecording(recording, seed)
+    tap?.onAnalysis?.(analysis)
+    return { elapsedSeconds: analysis.elapsedSeconds, problem: analysis.problem }
   } catch {
     return { elapsedSeconds: null, problem: 'dropout' as const }
+  } finally {
+    audio.onBlock = null
   }
 }
 

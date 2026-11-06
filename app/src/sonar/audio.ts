@@ -18,6 +18,8 @@ export class SonarAudio {
   private stream: MediaStream | null = null;
   private capture: AudioWorkletNode | null = null;
   private wakeLock: WakeLockSentinel | null = null;
+  /** Called with every block of mic samples during a run, for drawing the live waveform. */
+  onBlock: ((samples: Float32Array) => void) | null = null;
 
   async open(): Promise<MicSettings> {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -94,6 +96,7 @@ export class SonarAudio {
       }, recordSeconds * 1000 + RECORDING_TIMEOUT_MARGIN_MS);
 
       capture.port.onmessage = ({ data }: MessageEvent<{ frame: number; samples: Float32Array }>) => {
+        this.onBlock?.(data.samples);
         if (firstFrame < 0) {
           firstFrame = data.frame;
           player.start(context.currentTime + playAtSeconds);

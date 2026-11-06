@@ -4,6 +4,8 @@ import { ClockCounterClockwiseIcon, WarningCircleIcon } from '../../components/i
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { DistanceGap, SonarRings } from '../../components/Sonar'
+import { LiveWave, TraceChart } from '../../components/Waveform'
+import type { Analysis } from '../../sonar/analyze'
 import { Figure } from '../../components/Figure'
 import { QrScanner } from '../../components/QrScanner'
 import { Screen, TopBar } from '../../components/Screen'
@@ -43,6 +45,8 @@ export default function Door() {
   const [pin, setPin] = useState(() => localStorage.getItem(PIN_KEY) ?? '')
   const [pinRequired, setPinRequired] = useState(false)
   const [error, setError] = useState('')
+  const [trace, setTrace] = useState<Analysis | null>(null)
+  const feed = useRef<((samples: Float32Array) => void) | null>(null)
   const alive = useRef(true)
   const busy = useRef(false)
   const live = useRef<{ close: () => void; id: string; doorToken: string; attempt: number } | null>(null)
@@ -80,7 +84,7 @@ export default function Door() {
       // The mic stays open between tries, so a retry needs no new code and no new tap on the other phone.
       while (alive.current && live.current === check) {
         setPhase({ name: 'running', step: 1 })
-        const measured = await measure(mic.audio, mic.sampleRate, seed, 'door')
+        const measured = await measure(mic.audio, mic.sampleRate, seed, 'door', { onBlock: (b) => feed.current?.(b), onAnalysis: setTrace })
         setPhase({ name: 'running', step: 2 })
         await api.checkinReport(session.id, { role: 'door', attempt, doorToken: session.doorToken, ...measured }).catch(() => {})
         const result = await waitForResult(session.id)
@@ -159,6 +163,7 @@ export default function Door() {
                 </Row>
               </div>
             </div>
+            {trace && <TraceChart analysis={trace} />}
             {result.transactionHash && (
               <a href={explorerTx(result.transactionHash)} target="_blank" rel="noreferrer" className="body-5 inline-flex min-h-12 items-center text-accent">
                 See the Arkiv record
@@ -185,6 +190,7 @@ export default function Door() {
           <h2 className="heading-6 text-center">{f.title}</h2>
           {result.state === 'no_sound' && <p className="title-3 text-center">{problemText(result.problem)}</p>}
           <p className="body-3 text-center text-text-muted">{f.body}</p>
+          {trace && <TraceChart analysis={trace} />}
         </section>
         {result.state !== 'failed' && <Button onClick={tryAgain}>Try again</Button>}
         <Button variant={result.state === 'failed' ? 'primary' : 'secondary'} size={result.state === 'failed' ? 'lg' : 'md'} onClick={next}>
@@ -200,6 +206,10 @@ export default function Door() {
         <TopBar title="Checking" heading />
         <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
           <SonarRings label="Listening for the holder’s phone" />
+          <div className="w-full">
+            <LiveWave feed={feed} />
+            <p className="caption-4 mt-2 text-text-muted">What this microphone hears</p>
+          </div>
           <div className="flex flex-col gap-2">
             <p className="heading-4">{steps[phase.step]}</p>
             <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>
