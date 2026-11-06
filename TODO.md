@@ -13,6 +13,7 @@ The current code is the source for implementation status; planned behavior and s
 - [x] Require organizer authorization on `POST /issue`: a fresh signature covering the holder and tier, from a wallet in `ORGANIZER_WALLETS`, failing closed when none is listed. Route tests pass, and a live server rejected unsigned and unlisted requests without writing.
 - [~] `ORGANIZER_WALLETS` is set in the local `server/.env`, and the organizer page refuses an unlisted wallet with the address to add. Still set it on the VPS, and confirm a listed wallet issues from the page.
 - [ ] Deploy a single public HTTPS URL on the team's VPS (one server process behind an HTTPS proxy) and verify installation and microphone access on both Android phones.
+- [~] `scripts/autodeploy.sh` keeps the VPS on the latest `origin/main`, tested on a throwaway repo with stubbed builds and with a real server restart locally. Not yet run on the VPS. Pause it before the demo, because a server restart drops check-in sessions.
 - [ ] Choose and add an open-source license, if approved by the repo owner. The GitHub repo is public and has no license yet, which the Arkiv track requires.
 
 ## Sonar and check-in
