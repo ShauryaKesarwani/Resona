@@ -18,6 +18,14 @@ Resona is being built from scratch at the event, so the Continuity Track prizes 
 | World | World ID Agent Pass | $5,000 | **Skip.** It's built around the Agent Pass product, and Resona has no use for it |
 | Arkiv | Arkiv + Swarm bonus | $500 | **Skip,** since it adds another integration for little |
 
+## Resona's demo priority
+
+The implementation order is **Arkiv, ENS, then World ID**, while the attendee-facing story still demonstrates all three. Arkiv should hold ticket and check-in records that the purchase, attendee and door views actually read. ENS supplies the event domain page and holder profile. IDKit / World ID verifies the attendee before a testnet purchase. At the door, sonar checks proximity first, followed by verification of the ticket's assigned wallet.
+
+The demo's central claim is the sonar check-in. If time runs short, preserve that check-in and at least one visible Arkiv read, then the ENS event page, then IDKit verification and testnet purchase. The full purchase-to-door journey remains the intended demo when the core path is stable.
+
+The first startup prospects are Web3 conferences and hackathons. Pitch from both ETHGlobal's and Devcon's perspectives. The commercial model is a per-event organizer charge based on ticket volume, with the per-ticket rate negotiated.
+
 ## ENS
 
 [Prize page](https://ethglobal.com/events/mumbai/prizes/ens). Our design is in [ARCHITECTURE.md](ARCHITECTURE.md#ensv2-tickets-as-subnames).

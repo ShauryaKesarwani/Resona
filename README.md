@@ -1,10 +1,10 @@
 # Resona
 
-Event tickets that only work when the ticket holder's phone is physically at the door.
+Event tickets that require the ticket's specific wallet and phone to be present at the door.
 
-Resona is a ticket wallet and check-in system. Organizers issue tickets to specific people through their ENS names and decide whether each ticket can be transferred. At the door, the staff phone and the attendee's phone exchange sound and measure the distance between them. A ticket streamed over a video call or relayed over the internet arrives too late, so it fails.
+Resona is a ticket wallet and check-in system. An event's ENS domain leads to its event page, where attendees verify with World ID and buy tickets using testnet funds. Tickets are assigned to a specific wallet and represented through ENS. At the door, the staff phone and attendee phone exchange sound to verify proximity; the system then checks that the ticket's assigned wallet is present. Ticket, purchase and check-in data is stored in Arkiv and surfaced in the app.
 
-> **Status:** concept and design only. No code exists yet, and every threshold in these docs is untested until the [sonar test](docs/SONAR.md#test-plan-and-gono-go) has run on real phones.
+> **Status:** concept and design only. No code exists yet. Every threshold is untested until the [sonar test](docs/SONAR.md#test-plan-and-gono-go) has run on real phones. False sonar rejections and phone lending are out of scope for the hackathon demo.
 
 ## The problem
 
@@ -16,11 +16,15 @@ Resona is a ticket wallet and check-in system. Organizers issue tickets to speci
 
 ## How Resona answers it
 
-1. **Sound for proximity.** Sound moves about a million times slower than radio. Sixty centimetres is only about 3.5 ms of round-trip travel, far less than any audio relay over the internet can add.
+1. **Sound for proximity.** The demo checks that the ticket's phone is physically near the door phone. It does not claim to identify the person holding the phone.
 2. **Named holders.** Each ticket is issued to a person's ENS name and wallet address, and recorded in Arkiv.
 3. **Organizer-controlled transfers.** Only the organizer can approve moving a ticket to someone else, which targets the resale market directly.
-4. **One ticket per human.** World ID makes it harder for bots to collect tickets in bulk.
-5. **Attendance trophies.** Attendees get a profile on their ENS name showing the events they attended, such as "11th person through the door".
+4. **One ticket per verified human.** IDKit with World ID helps prevent duplicate claims for an event.
+5. **Event and holder profiles.** ENS provides the event page and holder identity; Arkiv data powers ticket and check-in views. Trophies are deferred from the demo.
+
+## Hackathon and startup focus
+
+The demo centers on sonar check-in. Track priority is Arkiv, then ENS, then World ID, while showing the complete attendee journey: discover an event through ENS, verify and purchase on testnet, then check in with sonar and wallet verification. The first customers to approach are Web3 conferences and hackathons, pitching from both ETHGlobal and Devcon perspectives. Organizers pay per event based on ticket volume; the per-ticket rate is negotiated.
 
 ## Platform
 
@@ -34,7 +38,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 |---|---|
 | **ENSv2** | Each pass is a subname owned by the holder, and the contract blocks transfers on non-transferable tiers |
 | **Arkiv** | Stores events, tickets, check-ins and trophies, which the app and website read from |
-| **World ID** | One claim per human per event |
+| **World ID** | Verify one attendee per event before testnet purchase |
 
 [TRACKS.md](docs/TRACKS.md) has the submission checklists.
 

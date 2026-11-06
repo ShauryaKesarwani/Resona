@@ -10,37 +10,49 @@ Sections marked **(proposed)** were added while writing this up and were not in 
 | **Partner organization** | Discounted passes for its people |
 | **Company buyer** | Buy tickets at checkout and assign them to employees by ENS name, instantly |
 | **Individual attendee** | Buy from the event's site, hold the ticket in the Resona wallet, and walk in |
-| **Door staff (proposed)** | A check-in that takes seconds and has a clear fallback when it fails |
+| **Door staff (proposed)** | A quick check-in that confirms the ticket's phone is nearby and the assigned wallet is present |
 
 ## Flows
 
 ### 1. Organizer creates an event
 
+<<<<<<< Updated upstream
 - Sets up the event, its ticket tiers and its transfer policy.
 - Gets an event ENS name that points to the purchase page and has its own registry for passes, for example `ethglobal-mumbai.eth` on Sepolia.
+=======
+- Sets up the event, ticket volume and any ticket rules in scope.
+- Uses an event ENS name that resolves to the event and purchase page, for example `devcon8.eth` on Sepolia.
+>>>>>>> Stashed changes
 
 ### 2. Tickets are issued
 
-There are three routes, and all of them end in the same ticket record.
+For the hackathon path, the attendee buys directly from the organizer through the event's ENS page. The purchase uses testnet funds and creates the same ticket record used by check-in. Allocation and company checkout are later routes.
 
 | Route | Who starts it | Result |
 |---|---|---|
-| **Allocation** | Organizer gives a partner a set of passes at a discount | Passes are assigned to ENS names |
-| **Public purchase** | Attendee uses the event's purchase link | Ticket is added to the attendee's wallet |
-| **Company checkout** | Company enters employee ENS names while buying | Each employee receives a ticket immediately |
+| **Public purchase (demo path)** | Attendee uses the event's ENS page, verifies with IDKit and pays with testnet funds | Ticket is assigned to the verified attendee's wallet and recorded in Arkiv |
+| **Allocation (later)** | Organizer gives a partner passes at a discount | Passes are assigned to ENS names |
+| **Company checkout (later)** | Company enters employee ENS names while buying | Each employee receives a ticket immediately |
 
 Example: pass `7`, held by `skes.eth`, wallet `0x7…`. The pass is an ENSv2 subname, `7.ethglobal-mumbai.eth`, owned by that wallet, and its details are stored in Arkiv.
 
-### 3. Attendee claims the ticket (proposed detail)
+### 3. Attendee verifies and buys a ticket (demo path)
 
 The brief says tickets are tied to a holder and bots should be blocked. Claiming is where that takes effect:
 
+<<<<<<< Updated upstream
 1. The attendee opens the Resona wallet, which holds a wallet address and a key locked to that phone.
 2. They verify with World ID, at the level the ticket requires, once per event. A second claim by the same person is rejected.
 3. Their ENS name is checked: it must resolve to their Resona wallet address.
 4. The ticket is locked to that address and that phone's key.
+=======
+1. The attendee opens the event page through its ENS domain and connects a wallet.
+2. They verify with IDKit and World ID's Proof of Human. A duplicate verification for the event is rejected.
+3. The event page resolves the attendee's ENS profile and associates it with the connected wallet.
+4. The attendee buys with testnet funds; the ticket is assigned to that wallet and written to Arkiv.
+>>>>>>> Stashed changes
 
-For a company purchase, each employee completes this step themselves. The company can assign a ticket but can't hold a stack of them for later use.
+The demo is limited to an individual attendee purchase. Company assignment is deferred.
 
 ### 4. Transfer
 
@@ -52,13 +64,14 @@ Transfer rules are set **per ticket tier** (proposed). Devcon 8 already works th
 
 ### 5. Check-in at the door
 
-1. The attendee opens the ticket and holds their phone close to the staff phone.
-2. The phones exchange sound for a few seconds at most, and the distance is calculated.
-3. The staff phone shows a pass or fail with the holder's ENS name and avatar. A pass is recorded in Arkiv.
+1. The attendee opens the ticket on the phone associated with its wallet.
+2. The phones exchange sound and calculate proximity.
+3. After sonar passes, Resona checks that the ticket's specific wallet is present and matches the ENS and Arkiv ticket records.
+4. The door view shows pass or fail with the holder's ENS profile. A successful check-in is written to Arkiv and appears in the attendee's history.
 
 The details and security reasoning are in [SONAR.md](SONAR.md).
 
-**Fallback (proposed):** a broken speaker, a dead phone or a very loud room can't mean being turned away. Staff can admit someone manually after an ID check, and the override is logged against that staff member so organizers can audit it.
+**Demo scope:** false sonar rejection, broken speakers, dead phones and manual staff overrides are not part of the demo flow.
 
 ### 6. Attendance trophy
 
@@ -70,12 +83,17 @@ The details and security reasoning are in [SONAR.md](SONAR.md).
 
 Because a ticket is locked to one phone, a lost phone would otherwise lose the ticket. The holder asks the organizer to re-bind it, proves they are the same human with World ID on the new phone, and the old key is revoked.
 
+<<<<<<< Updated upstream
 ## Scope for ETHGlobal Mumbai
+=======
+## Scope for ETHGlobal Mumbai (agreed direction)
+>>>>>>> Stashed changes
 
 The demo is a PWA on two Android phones. Sonar check-in comes first, and nothing else starts until it works. [BUILD_PLAN.md](BUILD_PLAN.md) has the phases, and [TRACKS.md](TRACKS.md) has each track's checklist.
 
 | Stage | Feature | Why |
 |---|---|---|
+<<<<<<< Updated upstream
 | **1** | Sound-based distance check between two Android phones | The core product |
 | **1** | Tickets issued directly by the organizer, and stored on Arkiv | Tickets exist without any checkout |
 | **1** | A sonar pass updates Arkiv, and a repeat check-in is rejected | The check-in record, and the Arkiv track |
@@ -84,9 +102,24 @@ The demo is a PWA on two Android phones. Sonar check-in comes first, and nothing
 | **2** | World ID at claim, with a repeat claim rejected | One ticket per person, and the World track |
 | **3** | Names replace wallet addresses, and passes are ENSv2 subnames the holder can't transfer | Simpler names, and the ENS track |
 | **After** | Native app with attestation and hardware keys, sound challenge with a deadline, iOS | Stopping modified clients in a real product |
+=======
+| **Must** | Sound-based distance check between two Android phones | The core claim |
+| **Must** | Sound-based proximity check on two Android phones, then verify the assigned wallet at the door | Core claim |
+| **Must** | Arkiv ticket and check-in writes, with user-facing reads in the event, ticket and door views | Arkiv priority |
+| **Must** | ENS event domain and holder profile used in the purchase and check-in flow | ENS priority |
+| **Must** | IDKit / World ID verification as part of a testnet ticket purchase; reject duplicate verification | World ID priority |
+| **Must** | Testnet ticket purchase from the organizer through the ENS event page | End-to-end attendee flow |
+| **Must** | Deployed PWA that judges can try | Demo access |
+| **Should** | Live demonstration that remote sound relay fails | Core claim evidence, after happy path |
+| **Could** | ENSv2 subname transfer rules and organizer-approved transfers | ENS expansion |
+| **Could** | Trophy page with ENS avatar, hash and ordinal | Additional Arkiv read |
+| **After** | Company checkout, native app attestation, hardware keys, iOS and real POAP minting | Later product |
+| **After** | Native app with attestation and hardware keys, sound challenge with a deadline, iOS, and real POAP minting | Stopping modified clients in a real product |
+>>>>>>> Stashed changes
 
 ## Later stages
 
+<<<<<<< Updated upstream
 These come only after sonar check-in, World ID and ENS are working.
 
 ### Stage 4: Event pages and profiles
@@ -129,9 +162,21 @@ The ticketing provider chooses what each ticket tier requires. It can be one lev
 
 7. A second claim by the same person is **rejected** by World ID.
 8. The attendee tries to send the pass to a friend: **the transaction reverts**.
+=======
+1. The attendee opens the organizer's event page through its ENS domain.
+2. The attendee verifies with IDKit / World ID and completes the ticket purchase using testnet funds.
+3. The event issues the ticket to the attendee's specific wallet and records it in Arkiv; the ENS profile is shown.
+4. At the door, the phones run sonar at about 30 cm: **pass**.
+5. Resona verifies the ticket's assigned wallet after sonar, then records the check-in in Arkiv.
+6. If time allows, show a remote sound relay failing and the resulting Arkiv check-in history.
+>>>>>>> Stashed changes
 
 ## Limits to be honest about
 
-- Resona proves that the **holder's phone** is at the door. It doesn't prove who is carrying that phone. Someone can still lend their unlocked phone, though the ENS avatar on the staff screen and an optional ID check make that harder.
+- Resona's demo establishes proximity and checks that the assigned wallet is present. It does not independently prove the identity of the person physically holding the phone. Phone lending is out of scope for this demo.
 - World ID makes bulk buying harder but can't stop someone from renting another person's World ID.
 - ENS names and Arkiv records are public, so a ticket can reveal that a person is attending an event unless the record is encrypted. See [the privacy question in DECISIONS.md](DECISIONS.md#open-questions).
+
+## Initial customer and business model
+
+The first prospects are Web3 conferences and hackathons, approached from both ETHGlobal and Devcon perspectives. Resona charges organizers per event, with the event price based on ticket volume and the per-ticket rate negotiated. The initial validation is whether organizers have a costly ticket-sharing or door-fraud problem and will pay for this check-in flow; the initial segment does not establish demand from larger events.

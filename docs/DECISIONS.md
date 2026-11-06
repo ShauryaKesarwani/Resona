@@ -9,12 +9,18 @@ The living record of what is settled and what isn't. Update it whenever the team
 | Name | Resona | Decided by team |
 | Hackathon | ETHGlobal Mumbai 2026 | Decided by team |
 | Target tracks | World ID, ENS, Arkiv | Decided by team |
+| Track priority | Arkiv, then ENS, then World ID; the demo still shows the complete attendee journey | Decided in discussion |
 | Test phones | Two Android phones | Confirmed by team |
 | Proximity method | Sound-based distance check between two phones | Decided by team |
 | Distance threshold | About 60 cm | Team's figure; confirm in testing |
 | Ticket records | Arkiv, on the current testnet | Decided by team; network required by the track |
 | Identity | ENS name resolving to a Resona wallet address | Decided by team |
 | Anti-bot | World ID | Decided by team |
+| Demo purchase | Attendee verifies through IDKit / World ID and buys from the organizer's ENS event page using testnet funds | Decided in discussion |
+| Door verification | Run sonar first, then verify that the ticket's assigned wallet is present; use ENS for the holder profile and Arkiv for ticket/check-in data | Decided in discussion |
+| Demo exclusions | False sonar rejections, manual staff overrides and phone lending are outside the demo scope | Decided in discussion |
+| Initial customer | Web3 conferences and hackathons; pitch from ETHGlobal and Devcon perspectives | Decided in discussion |
+| Business model | Organizer pays per event based on ticket volume; per-ticket rate is negotiated | Decided in discussion |
 | Transfers | Only the organizer can approve | Decided by team |
 | Company purchases | Assign to employee ENS names at checkout | Decided by team |
 | Trophies | ENS profile with badges, avatar, hash and ordinal | Decided by team |
@@ -46,12 +52,20 @@ The living record of what is settled and what isn't. Update it whenever the team
 
 ### Product
 
+<<<<<<< Updated upstream
 3. **Which testnet token pays for tickets in stage 5,** and who pays the gas? MockUSDC and Sepolia ETH are both options. Decide this when stage 5 starts.
 4. **Which verification level should the first event use?** Proof of Human is the proposed start, but it needs an Orb-verified World ID. For the demo, the simulator avoids this.
 5. **How much of the attendee list should be public?** Arkiv and ENS are public, so a pass reveals its holder's wallet. Encrypting holder fields protects privacy but limits queries.
 6. **Can a company reassign a ticket** if an employee leaves before the event?
 7. **Does the trophy ordinal count purchases or check-ins?** The brief mentions both. We've assumed check-ins, since that better proves attendance.
 8. **Who keeps the organizer's key?** The hackathon backend can hold it, but a real product would need something stronger.
+=======
+3. **What event data should be public?** Arkiv and ENS are public, so a pass may reveal its holder's wallet and attendance. Decide which fields to publish or encrypt before implementation.
+4. **What happens to attendees who cannot complete World ID verification?** The demo currently requires IDKit verification for purchase; decide whether a real product needs an alternate purchase path.
+5. **Who keeps the organizer's key in a real product?** The hackathon backend can hold it, but a real product would need stronger key management.
+6. **What pricing range will organizers accept?** The model is per event based on ticket volume, with rate negotiated; validate through organizer conversations.
+7. **Which technical choices remain for wallet presence verification?** Bind the ticket to its assigned wallet, then finalize the proof and recovery flow during implementation.
+>>>>>>> Stashed changes
 
 ### Technical
 
