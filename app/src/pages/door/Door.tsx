@@ -180,7 +180,7 @@ export default function Door() {
             <li
               key={s}
               className={`flex min-h-12 items-center gap-3 rounded-xl border border-line px-4 ${
-                i === phase.step ? 'bg-surface-raised' : i < phase.step ? 'text-text-muted' : 'text-text-muted opacity-40'
+                i === phase.step ? 'bg-surface-raised' : i < phase.step ? 'text-text-muted' : 'text-text-muted'
               }`}
             >
               <span aria-hidden="true" className={`size-2 rounded-full ${i === phase.step ? 'animate-pulse bg-accent' : i < phase.step ? 'bg-success' : 'bg-surface-high'}`} />

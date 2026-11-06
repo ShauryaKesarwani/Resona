@@ -40,7 +40,7 @@ export function QrScanner({ onCode, onFail }: { onCode: (code: string) => void; 
 
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
-      <video ref={video} muted playsInline aria-label="Camera view" className={`aspect-square w-full object-cover ${ready ? '' : 'opacity-0'}`} />
+      <video ref={video} muted playsInline aria-label="Camera view" className={`aspect-[4/3] w-full object-cover ${ready ? '' : 'opacity-0'}`} />
     </div>
   )
 }
