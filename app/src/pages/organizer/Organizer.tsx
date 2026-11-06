@@ -4,6 +4,7 @@ import { StatusPill } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { api, type ServerTicket } from '../../services/api'
+import { signedBy } from '../../services/auth'
 import { walletAddress } from '../../utils/wallet'
 
 const tiers = [
@@ -19,6 +20,8 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const MESSAGES: Record<string, string> = {
   invalid_holder: 'That is not a wallet address.',
   arkiv_not_configured: 'The server cannot reach Arkiv. Check its keys, then try again.',
+  not_organizer: `This wallet cannot issue tickets. Add ${walletAddress()} to ORGANIZER_WALLETS on the server, then restart it.`,
+  bad_signature: 'The server could not confirm this wallet. Check the phone clock, then try again.',
 }
 const explain = (err: unknown) =>
   MESSAGES[(err as Error).message] ??
@@ -48,7 +51,7 @@ export default function Organizer() {
     setError('')
     setBusy(true)
     try {
-      const ticket = await api.issue(address, tier)
+      const ticket = await api.issue(address, tier, await signedBy(`issue:${address.toLowerCase()}:${tier}`))
       setIssued((list) => [ticket, ...list])
       setHolder('')
     } catch (err) {

@@ -53,7 +53,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 ### Needed now
 
 1. **Who takes which role?** Fill in the names in the [build plan](BUILD_PLAN.md#team).
-2. **Which long-running host will the server use?** It needs HTTPS, and must stay awake during the demo.
+2. **Which long-running host will the server use?** Answered: the team's own VPS. It needs HTTPS, and must stay awake during the demo.
 
 ### Product
 

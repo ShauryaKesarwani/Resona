@@ -5,8 +5,9 @@ function requireEnv(name: string): string {
 }
 
 export const env = {
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 3050),
   nullifierHashKey: requireEnv("NULLIFIER_HASH_KEY"),
+  organizerWallets: (process.env.ORGANIZER_WALLETS ?? "").split(",").map((w) => w.trim().toLowerCase()).filter(Boolean),
   arkiv: {
     privateKey: process.env.ARKIV_PRIVATE_KEY,
     accessKey: process.env.ARKIV_ACCESS_KEY,

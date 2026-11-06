@@ -12,7 +12,7 @@ Anyone can write any schema tag, so a record counts only if the read filters it 
 |---|---|---|---|---|
 | `resona.account` | Organizer | Read-only | `createdBy(organizer)` | Implemented |
 | `resona.event` | Organizer | Read-only | `createdBy(organizer)` | Implemented |
-| `resona.ticket` | Organizer (issued) or buyer's wallet (bought) | Mutable | Issued: `ownedBy(organizer)`. Bought: `createdBy(holder)` | Implemented, see known gaps |
+| `resona.ticket` | Organizer (issued) or buyer's wallet (bought) | Mutable | Issued: `createdBy(organizer)` and `ownedBy(organizer)`. Bought: `createdBy(holder)` | Implemented, see known gaps |
 | `resona.claim` | Organizer | Read-only | `createdBy(organizer)` | Partially implemented |
 | `resona.payment` | Buyer's wallet | Read-only | `createdBy(buyer)`, then checked against the chain | Partially implemented |
 | `resona.checkin` | Organizer | Read-only | `createdBy(organizer)` | Partially implemented |
@@ -52,7 +52,7 @@ Nothing stops a second event with the same `eventId`, and reads take the first m
 
 ## Ticket — `resona.ticket` (implemented)
 
-Defined in `server/src/arkiv/tickets.ts`.
+Defined in `server/src/arkiv/tickets.ts`. `POST /api/issue` requires a fresh signature, covering the holder and tier, from a wallet listed in `ORGANIZER_WALLETS`; with none listed, nobody can issue.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -91,7 +91,7 @@ Written by the buyer's wallet from the browser, defined in `server/src/arkiv/rec
 | `amountWei` | string | Self-reported amount. The door uses the chain's value instead |
 | `createdAt`* | string | ISO timestamp |
 
-The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`.
+The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`. With `ALLOW_WORLD_SKIP` off, the buyer's wallet must also have an account.
 
 ## World ID uniqueness and claim — `resona.claim` (partially implemented)
 
@@ -119,7 +119,7 @@ The original requirements for replacing SQLite are in [world-claim-design.md](wo
 
 ## Check-in — `resona.checkin` (partially implemented)
 
-Defined in `server/src/arkiv/records.ts`. The session logic is in `server/src/services/checkin.service.ts`, with tests that use a fake store. It has not been verified on live Arkiv or on the demo phones.
+Defined in `server/src/arkiv/records.ts`. The session logic is in `server/src/services/checkin.service.ts`, with tests that use a fake store. On 7 November a live server wrote and read these records on Rabdi, using the real analyzer on synthesized recordings and a skipped ticket. Real sound on the demo phones is a separate check, and the claimed-ticket path has not been run live.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -136,10 +136,10 @@ Create a record only after every one of these holds:
 2. The ticket is `claimed`, or `skipped` when skip is allowed, and the event has not ended.
 3. This wallet has no check-in for the event.
 4. A bought ticket passes the payment check above.
-5. Each phone reported once for a session with a fresh random seed: the door with its session token, and the holder with a signature over the session and reading.
+5. Each phone reported once for the current attempt, with a fresh random seed: the door with its session token, and the holder with a signature over the session and reading.
 6. The server computed the distance from both reports and it passed.
 
-Failed attempts write nothing. Sessions live in server memory and expire. `DOOR_PIN` guards the door; if it is unset, anyone can act as the door. Never store audio.
+Failed attempts write nothing. Either phone in the check can retry after a failed reading, up to 20 times, with a new seed; a report for an earlier attempt is refused, and a failed Arkiv write is never retried because it may have landed. Sessions live in server memory and expire. `DOOR_PIN` guards the door; if it is unset, anyone can act as the door. Never store audio.
 
 An issued ticket's check-in and its `checked_in` status land in one atomic batch; a bought ticket only gets the check-in record. Read-only attributes do not prevent owner deletion or ownership transfer.
 
@@ -153,9 +153,8 @@ The demo additionally requires a holder wallet signature and sonar pass. Neither
 
 ## Known gaps
 
-- **Forged issued tickets.** Issued tickets are trusted by `ownedBy(organizer)` alone, and an Arkiv ownership transfer needs no recipient consent. Anyone could write a ticket and transfer it to the organizer, and it would read as issued, skipping the payment check. Trusted reads should also require `createdBy(organizer)`. This follows from Arkiv's documented behaviour and has not been tested live.
-- **Bought tickets skip World ID.** The one-ticket-per-human check for purchases runs only in the browser, and the door does not require an account or a claim for a bought ticket. A wallet with no World ID can pay, write its own ticket and be admitted. Separate wallets of one human are not linked.
-- **Open issuance.** `POST /issue` has no organizer authorization.
+- **World ID and bought tickets.** With `ALLOW_WORLD_SKIP` off, the door requires an account for the buyer's wallet, and each account is one human with one wallet. With it on, a wallet with no World ID can pay, write its own ticket and be admitted, as a demo guest. The one-ticket-per-human check when buying still runs only in the browser.
+- **The door is not tied to one event.** `/api/checkin/start` accepts a valid ticket for any event this organizer has, and the door's recent list shows all of them. Run one event at a time.
 - **Single process.** All uniqueness and ordering depends on one server process.
 
 ## Changes and migration

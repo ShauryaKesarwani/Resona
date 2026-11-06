@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-In a second terminal, build the app. The server serves this build on port 3000:
+In a second terminal, build the app. The server serves this build on port 3050:
 
 ```bash
 cd app
@@ -29,7 +29,7 @@ npm run build
 Phones need HTTPS for the microphone, so open a tunnel in a third terminal, and use its URL on both phones:
 
 ```bash
-npx cloudflared tunnel --url http://localhost:3000
+npx cloudflared tunnel --url http://localhost:3050
 ```
 
 Rebuild the app after changing it, then reload the page. Avoid tunnelling `npm run dev` to phones, because dev mode sends a 6.4 MB icon file and the page can hang. Use dev mode on a laptop, at `http://localhost:5173`.

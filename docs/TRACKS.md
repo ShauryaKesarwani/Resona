@@ -43,10 +43,10 @@ Bonus points are mentioned for AI agents, which we aren't pursuing.
 [Prize page](https://ethglobal.com/events/mumbai/prizes/arkiv). Each team can win one Arkiv track prize. The four judging criteria carry 25% each, one file per criterion.
 
 - [ ] Built from scratch at ETHGlobal Mumbai
-- [ ] App writes to Arkiv's current testnet with `@arkiv-network/sdk` or JSON-RPC
-- [ ] At least one feature users see reads its data from Arkiv
+- [x] App writes to Arkiv's current testnet with `@arkiv-network/sdk` or JSON-RPC
+- [x] At least one feature users see reads its data from Arkiv
 - [ ] README lists the wallet addresses that wrote the entities, and one query judges can run
-- [ ] `/arkiv/schema.md`: entities, queried fields, owners and expiry
+- [x] `/arkiv/schema.md`: entities, queried fields, owners and expiry
 - [ ] `/arkiv/friction.md`: feedback, including what broke, what was expected and how to reproduce it
 - [ ] `/arkiv/reach.md`: who it's for, whether they can try it today, and whether we'll keep building after Mumbai
 - [ ] `/arkiv/why-arkiv.md`: what users would lose with Postgres, and what we kept off Arkiv and why

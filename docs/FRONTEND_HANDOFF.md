@@ -139,10 +139,10 @@ cd app
 npm install
 npm run dev     # laptop only
 npm test        # sonar tests
-npm run build   # then tunnel to the server on port 3000 for phones
+npm run build   # then tunnel to the server on port 3050 for phones
 ```
 
-- Never tunnel dev mode to phones. Build, then tunnel to `http://localhost:3000`.
+- Never tunnel dev mode to phones. Build, then tunnel to `http://localhost:3050`.
 - Check each screen at 390, 360 and 430 wide, and on a desktop width, with no horizontal overflow.
 - The in app browser pane reports reduced motion as on. Animation timing has to be checked with that preference off.
 - A real phone has not been tested yet.

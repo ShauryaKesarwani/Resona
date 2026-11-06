@@ -23,6 +23,8 @@ let checkins: ReturnType<typeof createCheckins>;
 let writeFails: boolean;
 let paymentOk: boolean;
 let ended: boolean;
+let hasAccount: boolean;
+const accounts = { findByWallet: async () => (hasAccount ? { wallet, nullifierHash: "hash", userId: "user" } : null) };
 
 beforeEach(() => {
   ticket = { passId, eventId: "event", holder: wallet, tier: "general", status: "claimed", entityKey: "0x1", bought: false };
@@ -31,6 +33,7 @@ beforeEach(() => {
   writeFails = false;
   paymentOk = true;
   ended = false;
+  hasAccount = true;
   store = {
     doorTicket: async (id) => (id === passId ? ticket : undefined),
     paymentIsValid: async () => paymentOk,
@@ -42,7 +45,7 @@ beforeEach(() => {
       return { ordinal: written.length, transactionHash: "0xabc", entityKey: "0xdef" };
     },
   };
-  checkins = createCheckins({ store, allowSkip: false, doorPin: "1234", now: () => clock });
+  checkins = createCheckins({ store, accounts, allowSkip: false, doorPin: "1234", now: () => clock });
 });
 
 const started = async () => {
@@ -169,6 +172,18 @@ test("a bought ticket needs a real payment, and an issued one doesn't", async ()
   ticket.bought = true;
   const out = await checkins.start({ passId, ...await sign(`checkin:${passId}`) });
   assert.deepEqual(out, { status: 402, error: "payment_not_found" });
+});
+
+test("a bought ticket needs a World account unless skip is allowed", async () => {
+  ticket.bought = true;
+  hasAccount = false;
+  const out = await checkins.start({ passId, ...await sign(`checkin:${passId}`) });
+  assert.deepEqual(out, { status: 403, error: "not_verified" });
+  hasAccount = true;
+  assert.equal((await checkins.start({ passId, ...await sign(`checkin:${passId}`) })).status, 200);
+  hasAccount = false;
+  const demo = createCheckins({ store, accounts, allowSkip: true, doorPin: "1234", now: () => clock });
+  assert.equal((await demo.start({ passId, ...await sign(`checkin:${passId}`) })).status, 200);
 });
 
 test("an old code stops working, and a code works once", async () => {

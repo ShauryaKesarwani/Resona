@@ -72,7 +72,7 @@ export async function myTickets(): Promise<ArkivTicket[]> {
       .from(Tickets)
       .where(eq('holder', addr(holder)))
       .limit(100)
-  const [issued, bought] = await Promise.all([query().ownedBy(await organizer()).fetch(), query().createdBy(holder).fetch()])
+  const [issued, bought] = await Promise.all([query().createdBy(await organizer()).ownedBy(await organizer()).fetch(), query().createdBy(holder).fetch()])
   return [...issued.entities, ...bought.entities]
     .map((t) => ({
       passId: t.passId.value, eventId: t.eventId.value, tier: t.tier.value, status: t.status.value,

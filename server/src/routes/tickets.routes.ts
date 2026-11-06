@@ -13,13 +13,15 @@ const send = (res: Response, outcome: Outcome) =>
 export function ticketRoutes(tickets: TicketStore, registry: AccountRegistry, ens: EnsService) {
   const router = Router();
 
-  // Minimal demo issuance directly to Arkiv.
+  // Each ticket costs the organizer key a write, so only a listed wallet may issue. With none listed, nobody can.
   router.post("/issue", async (req, res) => {
     if (!tickets.ready) return void res.status(503).json({ error: "arkiv_not_configured" });
-    const { holder, tier = "general" } = req.body ?? {};
+    const { holder, tier = "general", ...signed } = req.body ?? {};
     if (typeof holder !== "string") return void res.status(400).json({ error: "holder_required" });
     if (!isAddress(holder)) return void res.status(400).json({ error: "invalid_holder" });
     if (typeof tier !== "string" || !tier.trim()) return void res.status(400).json({ error: "invalid_tier" });
+    if (!(await isWalletOwner(`issue:${holder.toLowerCase()}:${tier}`, signed))) return void res.status(401).json({ error: "bad_signature" });
+    if (!env.organizerWallets.includes(signed.wallet.toLowerCase())) return void res.status(403).json({ error: "not_organizer" });
     res.json(await tickets.issue(holder, tier));
   });
 

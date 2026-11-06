@@ -1,5 +1,6 @@
 import { randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { distanceCm, verdictFor } from "../../../app/src/sonar/distance.ts";
+import type { AccountRegistry } from "../arkiv/accounts.ts";
 import type { CheckinStore, DoorTicket } from "../arkiv/tickets.ts";
 import { isWalletOwner, type Signed } from "../utils/signature.ts";
 
@@ -15,7 +16,9 @@ type Session = {
   door?: number; holder?: number; cm?: number;
   ordinal?: number; transactionHash?: string; entityKey?: string;
 };
-export type Options = { store: CheckinStore; allowSkip: boolean; doorPin?: string; now?: () => number };
+export type Options = {
+  store: CheckinStore; accounts: Pick<AccountRegistry, "findByWallet">; allowSkip: boolean; doorPin?: string; now?: () => number;
+};
 
 const CODE_TTL_MS = 2 * 60 * 1000;
 /** The phones record for 6 seconds and then analyse, so a run with no result by now has gone wrong. */
@@ -34,7 +37,7 @@ const sameSecret = (a: string, b: string) => {
 };
 
 /** Live check-ins, held in memory for a few minutes. Only a passed check-in is permanent, on Arkiv. */
-export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Options) {
+export function createCheckins({ store, accounts, allowSkip, doorPin, now = Date.now }: Options) {
   const sessions = new Map<string, Session>();
 
   function refresh(session: Session) {
@@ -57,6 +60,8 @@ export function createCheckins({ store, allowSkip, doorPin, now = Date.now }: Op
     if (ticket.status === "revoked") return { status: 403, error: "ticket_revoked" };
     if (ticket.status === "issued") return { status: 409, error: "not_claimed" };
     if (ticket.status === "skipped" && !allowSkip) return { status: 403, error: "not_verified" };
+    // A buyer writes its own ticket with status claimed, so only the account shows it passed World ID.
+    if (ticket.bought && !allowSkip && !(await accounts.findByWallet(wallet))) return { status: 403, error: "not_verified" };
     if (await store.eventEnded(ticket.eventId)) return { status: 410, error: "event_ended" };
     if (await store.hasCheckedIn(ticket.eventId, wallet)) return { status: 409, error: "already_checked_in" };
     if (ticket.bought && !(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };

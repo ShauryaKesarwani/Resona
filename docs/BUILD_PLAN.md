@@ -78,7 +78,7 @@ The stage 1 flow:
 For local testing on phones, build the app, then tunnel to the server that serves it. Dev mode is too heavy to load through a tunnel:
 
 ```bash
-npx cloudflared tunnel --url http://localhost:3000
+npx cloudflared tunnel --url http://localhost:3050
 ```
 
 **Done when:** both phones open the deployed URL and can add the app to the home screen.

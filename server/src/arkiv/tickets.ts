@@ -112,7 +112,7 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
 
   async function ticket(passId: string): Promise<Ticket | undefined> {
     const { entities } = await reader.select(TICKET_FIELDS)
-      .from(TicketSchema, { onMismatch: "throw" }).ownedBy(account.address)
+      .from(TicketSchema, { onMismatch: "throw" }).createdBy(account.address).ownedBy(account.address)
       .where(eq("passId", passId)).fetch();
     if (entities.length > 1) throw new Error("Duplicate ticket IDs on Arkiv");
     return entities[0] ? toTicket(entities[0]) : undefined;
@@ -156,7 +156,7 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       let lastKey: Hex | undefined;
       do {
         const query = reader.select(TICKET_FIELDS)
-          .from(TicketSchema, { onMismatch: "throw" }).ownedBy(account.address)
+          .from(TicketSchema, { onMismatch: "throw" }).createdBy(account.address).ownedBy(account.address)
           .where(eq("holder", addr(getAddress(holder))))
           .orderBy(asc("$key")).limit(PAGE);
         const { entities } = await (lastKey ? query.where(gt("$key", key(lastKey))) : query).fetch();

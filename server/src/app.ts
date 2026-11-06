@@ -19,7 +19,7 @@ export function createApp(tickets: TicketStore & CheckinStore, registry: Account
   app.use("/api", ticketRoutes(tickets, registry, createEnsService(env.ens)));
   app.use("/api", authRoutes(registry));
   app.use("/api", arkivRoutes());
-  app.use("/api", checkinRoutes(tickets));
+  app.use("/api", checkinRoutes(tickets, registry));
 
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
   // Built files have hashed names, but the page that points at them must never be cached, or phones keep an old build.

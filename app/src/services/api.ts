@@ -32,7 +32,7 @@ export const api = {
   signup: (signed: Signed, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/signup', { ...signed, idkitResponse }),
   login: (signed: Signed, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/login', { ...signed, idkitResponse }),
   tickets: (holder: string) => request<ServerTicket[]>(`/api/tickets?holder=${holder}`),
-  issue: (holder: string, tier: string) => request<ServerTicket>('/api/issue', { holder, tier }),
+  issue: (holder: string, tier: string, signed: Signed) => request<ServerTicket>('/api/issue', { holder, tier, ...signed }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),
