@@ -75,10 +75,10 @@ The stage 1 flow:
 | **Person 1** | Add an empty `/lab` page, and check the mic permission prompt on both phones |
 | **Half person** | Add a license, get Arkiv testnet tokens and an access key, and start `arkiv/friction.md` |
 
-For local testing on phones, use a tunnel:
+For local testing on phones, build the app, then tunnel to the server that serves it. Dev mode is too heavy to load through a tunnel:
 
 ```bash
-npx cloudflared tunnel --url http://localhost:5173
+npx cloudflared tunnel --url http://localhost:3000
 ```
 
 **Done when:** both phones open the deployed URL and can add the app to the home screen.

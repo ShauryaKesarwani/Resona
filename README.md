@@ -18,19 +18,21 @@ npm install
 npm run dev
 ```
 
-In a second terminal, install and start the app:
+In a second terminal, build the app. The server serves this build on port 3000:
 
 ```bash
 cd app
 npm install
-npm run dev
+npm run build
 ```
 
 Phones need HTTPS for the microphone, so open a tunnel in a third terminal, and use its URL on both phones:
 
 ```bash
-npx cloudflared tunnel --url http://localhost:5173
+npx cloudflared tunnel --url http://localhost:3000
 ```
+
+Rebuild the app after changing it, then reload the page. Avoid tunnelling `npm run dev` to phones, because dev mode sends a 6.4 MB icon file and the page can hang. Use dev mode on a laptop, at `http://localhost:5173`.
 
 To test sonar, open `/lab` on both phones, use the same room, pick different roles, and tap Start on both within a second. Run tests with `npm test` in `app` or `server`.
 
