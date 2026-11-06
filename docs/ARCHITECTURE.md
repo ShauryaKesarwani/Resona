@@ -58,7 +58,7 @@ flowchart LR
 | Component | Job |
 |---|---|
 | **PWA** | One React app with organizer, wallet, door and profile pages. HTTPS is required for the microphone |
-| **Node server** | Holds the organizer's keys, verifies World ID, coordinates check-ins over WebSocket, decides pass or fail, and writes to ENS and Arkiv. Needs a long-running host, since serverless platforms handle WebSockets poorly |
+| **Node server** | Holds the organizer's keys, verifies World ID, coordinates check-ins through simple polling, decides pass or fail, and writes to ENS and Arkiv. Needs a long-running host, because check-in sessions live in the server's memory |
 | **`sonar`** | Signal generation, matched filter and distance calculation, in TypeScript |
 
 ## What each sponsor is responsible for
@@ -92,8 +92,9 @@ Target: [Best Use of ENSv2](TRACKS.md#ens). The track requires ENSv2 on mainnet 
 **Each pass is a subname in the event's own registry,** owned by the holder's wallet:
 
 ```
-devcon8.eth                  event name, with its own registry and resolver
-└── 7.devcon8.eth            pass 7, owned by the holder's wallet 0x7…
+devcon8-demo.eth                  event name, with its own registry and resolver
+├── 7.devcon8-demo.eth            pass 7, owned by the holder's wallet 0x7…
+└── skes.devcon8-demo.eth         a person's name, pointing at their wallet
 ```
 
 This puts the brief's "only the company can allow a transfer" rule on-chain:
@@ -114,7 +115,7 @@ Binding the pass to the wallet also keeps the earlier rule: selling a personal E
 
 **Things to check first:**
 
-- **Namespace:** real names like `skes.eth` are on mainnet and won't exist on Sepolia. Register Sepolia test names for the demo, paid with [MockUSDC, whose `mint` is open on Sepolia](https://docs.ens.domains/learn/deployments).
+- **Namespace:** real names like `skes.eth` are on mainnet and won't exist on Sepolia. For the demo, one Sepolia name holds both passes and people's names, so there's only one registry to set up. Register it with [MockUSDC, whose `mint` is open on Sepolia](https://docs.ens.domains/learn/deployments).
 - **Unread docs:** `/ensv2/subnames` and `/ensv2/verifiable-factory` weren't read. Confirm the subname setup steps and how the organizer gets `ROLE_REGISTRAR` and `ROLE_UNREGISTER` on the new registry.
 - **Library:** the docs recommend [ENSjs 5.2.5 or later for writes](https://docs.ens.domains/ensv2/tutorial-app-developers/), and viem for reads.
 
@@ -135,7 +136,6 @@ Facts that shape the design:
 | Entity | Queried by | Owner | Expiry | What the user sees |
 |---|---|---|---|---|
 | `resona.event` | `eventId`, `ensName` | Organizer | Event end + 30 days | Event and tier details |
-| `resona.offer` | `eventId`, `holder`, `route` | Organizer | 48 hours | "Claim by" countdown; an unclaimed offer disappears |
 | `resona.ticket` | `eventId`, `holder`, `status`, `tier` | Organizer | Event end + 30 days | Tickets in the wallet; the door's ticket lookup |
 | `resona.transfer` | `passId`, `status` | Organizer | 24 hours | Pending request; lapses if nobody decides |
 | `resona.checkin` | `eventId`, `holder`, `ordinal` | Organizer, `readonly` | Maximum, then extended | Trophy and ordinal, such as "11th through the door" |
@@ -149,7 +149,7 @@ const Ticket = defineSchema("resona.ticket", {
   tier: str().indexed(),
   holder: addr().indexed(),
   status: str().indexed(),   // issued | claimed | checked_in | revoked
-  ensName: str(),            // for example 7.devcon8.eth
+  ensName: str(),            // for example 7.devcon8-demo.eth
   deviceKeyHash: str(),
   serial: str(),
 })
@@ -177,36 +177,14 @@ Trophy pages read `resona.checkin` from Arkiv and the holder's name and avatar f
 ## Repo layout
 
 ```
-app/               React PWA: organizer, wallet, door and profile pages
+app/               React PWA
+  src/pages/       Organizer, wallet, door and profile pages
   src/sonar/       Signal generation, matched filter, distance math, audio worklet
-server/            Node: check-in sessions, ENS, Arkiv, World ID
+server/            Node: serves the app, check-in sessions, ENS, Arkiv, World ID
 arkiv/             Files required by the Arkiv track
 docs/
 ```
 
-## 9-hour plan for 3.5 people
+## Build plan
 
-| Who | Job |
-|---|---|
-| **A: Sonar** | Audio capture, matched filter, distance, door and wallet check-in screens |
-| **B: Chain** | Node server, ENSv2 passes, Arkiv entities |
-| **C: App** | PWA pages, organizer issuing, World ID claim, trophy page |
-| **0.5: Submission** | Arkiv files, friction log, World debrief, license, README, demo video, and being the second phone tester |
-
-| By hour | A: Sonar | B: Chain | C: App | Checkpoint |
-|---|---|---|---|---|
-| **2** | Two phones in Chrome give a distance | Reverted transfer on Sepolia; first Arkiv write | Deployed HTTPS shell; first World ID success in the simulator | **Go/no-go on sonar and ENS** |
-| **5** | Check-in over WebSocket | Issue and claim write to ENS and Arkiv | Organizer, wallet and door pages on real data | **Full happy path works** |
-| **7** | Meet relay and noise tests; tune | Check-in record, transfer | Trophy page; rejected-claim path | **Feature freeze** |
-| **8** | Rehearse on the real phones | Fix demo blockers | Fix demo blockers | **Video recorded** |
-| **9** | Buffer | Buffer | Buffer | **Submit with time to spare** |
-
-**If behind, cut in this order:** purchase page styling, approved transfer, trophy page polish, the device key signature.
-
-**Never cut:** the distance check, the reverted transfer, Arkiv reads in the UI, the World ID claim with a rejected duplicate, the track files and the video.
-
-**Fallbacks:**
-
-- **Two phones won't range in Chrome by hour 2:** use a laptop as the door device, which is the pairing enconomy tested. A laptop at the door also looks natural.
-- **Reading is unstable:** show the median of up to 3 attempts, and hold the phones closer.
-- **Meet removes the signal entirely:** the relay still fails, and the screen shows "partner sound not found" instead of a large distance. Both results are fine for the demo.
+Phases, roles and the cut list are in [BUILD_PLAN.md](BUILD_PLAN.md).

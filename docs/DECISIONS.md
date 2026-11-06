@@ -19,7 +19,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 | Company purchases | Assign to employee ENS names at checkout | Decided by team |
 | Trophies | ENS profile with badges, avatar, hash and ordinal | Decided by team |
 | Team and deadline | 3.5 people, 9 hours as of 6 November 2026 | Confirmed by team |
-| Demo platform | **PWA on Android Chrome** | **Recommended, needs team sign-off.** Replaces React Native for the demo |
+| Demo platform | **PWA on Android Chrome** | Decided by team. Replaces React Native for the demo |
 | Real product platform | Native app with attestation and hardware keys | Proposed |
 | Tickets as ENSv2 subnames on Sepolia | Pass is a subname, and the contract blocks non-transferable tiers | **Proposed, needs team sign-off** |
 | World ID credential | Proof of Human only | **Proposed, needs team sign-off** |
@@ -31,8 +31,8 @@ The living record of what is settled and what isn't. Update it whenever the team
 
 ### Needed now
 
-1. **Who takes which job?** The [9-hour plan](ARCHITECTURE.md#9-hour-plan-for-35-people) assumes sonar, chain, app and a part-time submission role.
-2. **Which long-running host will the server use?** It needs WebSockets and HTTPS.
+1. **Who takes which role?** Fill in the names in the [build plan](BUILD_PLAN.md#team).
+2. **Which long-running host will the server use?** It needs HTTPS, and must stay awake during the demo.
 
 ### Product
 
@@ -48,7 +48,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 9. **What does a Meet or Discord relay do to the signal?** It might add delay, or remove the signal entirely. Answered by the relay test.
 10. **How well does ranging hold up in noise?** Answered by the noise test.
 11. **How does the organizer get registrar and unregister roles on a new ENSv2 registry?** Answered by the ENS test and the unread `/ensv2/subnames` docs.
-12. **Does ranging work between two Android phones in Chrome?** enconomy's published browser result used a laptop and a phone. Answered by hour 2.
+12. **Does ranging work between two Android phones in Chrome?** enconomy's published browser result used a laptop and a phone. Answered by 2:30 in the build plan.
 
 ## Interpretation of the brief
 

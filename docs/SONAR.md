@@ -15,7 +15,7 @@ This is simpler than the full protocol below. It has no response deadline and no
 2. The server checks the ticket in Arkiv and ENS, and creates a session with a fresh random seed.
 3. Both phones derive two 250 ms signals from the seed, one per role, so old recordings can't be replayed.
 4. The server tells both phones to start. Both are already recording.
-5. The door plays its signal about 0.5 s later, and the holder plays about 1.5 s later. Exact timing doesn't matter, because the recordings are searched for both sounds. Record for about 5 s, to leave room for relay delay.
+5. The door plays its signal 1.5 s later, and the holder plays at 3 s. Exact timing doesn't matter, because the recordings are searched for both sounds. Record for about 6 s, to leave room for relay delay.
 6. Each phone finds both arrivals with a matched filter, and sends its elapsed time to the server. The holder signs its report.
 7. The server computes the distance. **Pass** means under 60 cm, with the ENS name and avatar shown. The check-in goes to Arkiv.
 
@@ -182,7 +182,7 @@ This table describes the full protocol. **In the demo build, nothing relying on 
 
 ## Test plan and go/no-go
 
-Run this first, because the rest of the product depends on it. The go/no-go is at hour 2 of the [9-hour plan](ARCHITECTURE.md#9-hour-plan-for-35-people). The demo needs the ranging, noise, phone-pair and relay tests, and the others apply to the full protocol.
+Run this first, because the rest of the product depends on it. The go/no-go is at 2:30 in the [build plan](BUILD_PLAN.md#gono-go-at-230). The demo needs the ranging, noise, phone-pair and relay tests, and the others apply to the full protocol.
 
 | Test | Pass condition (proposed) |
 |---|---|

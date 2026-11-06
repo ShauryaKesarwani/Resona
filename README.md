@@ -42,6 +42,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 
 | File | What it covers |
 |---|---|
+| [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) | **Start here to build:** phases, roles and cut list |
 | [docs/PRODUCT.md](docs/PRODUCT.md) | Users, flows, ticket rules, trophies and hackathon scope |
 | [docs/SONAR.md](docs/SONAR.md) | Distance measurement, the check-in protocol, threat model and test plan |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Platform decision, components, keys, sponsor designs and build order |

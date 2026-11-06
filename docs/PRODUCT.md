@@ -17,7 +17,7 @@ Sections marked **(proposed)** were added while writing this up and were not in 
 ### 1. Organizer creates an event
 
 - Sets up the event, its ticket tiers and its transfer policy.
-- Gets an event ENS name that points to the purchase page and has its own registry for passes, for example `devcon8.eth` on Sepolia.
+- Gets an event ENS name that points to the purchase page and has its own registry for passes, for example `devcon8-demo.eth` on Sepolia.
 
 ### 2. Tickets are issued
 
@@ -29,7 +29,7 @@ There are three routes, and all of them end in the same ticket record.
 | **Public purchase** | Attendee uses the event's purchase link | Ticket is added to the attendee's wallet |
 | **Company checkout** | Company enters employee ENS names while buying | Each employee receives a ticket immediately |
 
-Example: pass `7`, held by `skes.eth`, wallet `0x7…`. The pass is an ENSv2 subname, `7.devcon8.eth`, owned by that wallet, and its details are stored in Arkiv.
+Example: pass `7`, held by `skes.eth`, wallet `0x7…`. The pass is an ENSv2 subname, `7.devcon8-demo.eth`, owned by that wallet, and its details are stored in Arkiv.
 
 ### 3. Attendee claims the ticket (proposed detail)
 
@@ -91,7 +91,7 @@ The target tracks are World ID, ENS and Arkiv, the demo is a PWA on two Android 
 
 ## Demo script (proposed)
 
-1. Organizer issues a pass, which appears on-chain as `7.devcon8.eth` and in the attendee's wallet.
+1. Organizer issues a pass, which appears on-chain as `7.devcon8-demo.eth` and in the attendee's wallet.
 2. The attendee claims it with World ID, and a second claim by the same person is **rejected**.
 3. The attendee checks in with the phones about 30 cm apart: **pass**, with the distance shown.
 4. The attendee stands across the room: **fail**.
