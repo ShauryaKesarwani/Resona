@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircleIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon, DeviceMobileIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon, DeviceMobileIcon } from '../../components/icons'
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'

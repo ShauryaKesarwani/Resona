@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CaretRightIcon, TicketIcon } from '@phosphor-icons/react'
+import { CaretRightIcon, TicketIcon } from '../../components/icons'
 import { SimTag, StatusPill, WalletChip } from '../../components/Bits'
 import { Figure } from '../../components/Figure'
 import { Screen, TopBar } from '../../components/Screen'

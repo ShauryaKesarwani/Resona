@@ -1,4 +1,4 @@
-import { HandPalmIcon, WaveformIcon } from '@phosphor-icons/react'
+import { HandPalmIcon, WaveformIcon } from '../../components/icons'
 import { Avatar, SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'

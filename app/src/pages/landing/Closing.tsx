@@ -8,8 +8,8 @@ import {
   RobotIcon,
   VideoCameraIcon,
   WarningCircleIcon,
-} from '@phosphor-icons/react'
-import type { Icon } from '@phosphor-icons/react'
+} from '../../components/icons'
+import type { Icon } from '../../components/icons'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'

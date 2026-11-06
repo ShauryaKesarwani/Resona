@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircleIcon, InfoIcon, SkipForwardIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, InfoIcon, SkipForwardIcon, WarningCircleIcon } from '../../components/icons'
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'

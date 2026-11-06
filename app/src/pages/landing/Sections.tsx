@@ -5,7 +5,7 @@ import {
   FingerprintIcon,
   TrophyIcon,
   WaveformIcon,
-} from '@phosphor-icons/react'
+} from '../../components/icons'
 import { Button } from '../../components/Button'
 import { HeroBackdrop } from '../../components/Figure'
 import { Panel, Section } from './Section'

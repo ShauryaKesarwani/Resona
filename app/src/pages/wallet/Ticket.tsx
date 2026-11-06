@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ArrowsLeftRightIcon, InfoIcon } from '@phosphor-icons/react'
+import { ArrowsLeftRightIcon, InfoIcon } from '../../components/icons'
 import { Row, SimTag, StatusPill, WalletChip } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeftIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon } from './icons'
 
 /** One phone screen: safe areas respected, 16px side padding, content column capped on wide screens. */
 export function Screen({ children }: { children: ReactNode }) {

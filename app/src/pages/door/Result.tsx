@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, WarningCircleIcon } from '../../components/icons'
 import { Avatar, Row, SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'

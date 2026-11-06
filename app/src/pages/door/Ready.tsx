@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClockCounterClockwiseIcon, HandPalmIcon } from '@phosphor-icons/react'
+import { ClockCounterClockwiseIcon, HandPalmIcon } from '../../components/icons'
 import { Avatar, SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'

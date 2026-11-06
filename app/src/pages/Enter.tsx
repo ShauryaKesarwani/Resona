@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { BuildingsIcon, CaretRightIcon, DoorOpenIcon, WalletIcon } from '@phosphor-icons/react'
+import { BuildingsIcon, CaretRightIcon, DoorOpenIcon, WalletIcon } from '../components/icons'
 import { Figure } from '../components/Figure'
 import { Screen, TopBar } from '../components/Screen'
 

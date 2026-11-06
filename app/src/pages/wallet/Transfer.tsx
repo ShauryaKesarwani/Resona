@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
-import { ClockIcon, ProhibitIcon } from '@phosphor-icons/react'
+import { ClockIcon, ProhibitIcon } from '../../components/icons'
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
