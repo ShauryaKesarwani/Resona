@@ -26,7 +26,7 @@ const Checkins = defineSchema('resona.checkin', {
 
 export type ArkivEvent = { eventId: string; eventName: string; eventDate: string; priceWei: string; organiser: string }
 export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }
-export type ArkivCheckin = { passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
+export type ArkivCheckin = { eventId?: string; passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
 export type ArkivPayment = { txnHash: string; eventId: string; passId: string; amountWei: string; createdAt: string }
 
 // The access key can't ship in a browser. Reads go through a small server relay that adds it, because
@@ -95,6 +95,23 @@ export async function recentCheckins(): Promise<ArkivCheckin[]> {
   return entities
     .map((c) => ({
       passId: c.passId.value, holder: String(c.holder.value), ordinal: Number(c.ordinal.value),
+      distanceCm: c.distanceCm.value, checkedInAt: c.checkedInAt.value,
+    }))
+    .sort((a, b) => b.checkedInAt.localeCompare(a.checkedInAt))
+}
+
+/** Every door check in for one wallet, newest first. Public: anyone can read a profile. */
+export async function checkinsFor(holder: string): Promise<(ArkivCheckin & { eventId: string })[]> {
+  const { entities } = await reader
+    .select({ eventId: true, passId: true, holder: true, ordinal: true, distanceCm: true, checkedInAt: true })
+    .from(Checkins)
+    .createdBy(await organizer())
+    .where(eq('holder', addr(getAddress(holder))))
+    .limit(100)
+    .fetch()
+  return entities
+    .map((c) => ({
+      eventId: c.eventId.value, passId: c.passId.value, holder: String(c.holder.value), ordinal: Number(c.ordinal.value),
       distanceCm: c.distanceCm.value, checkedInAt: c.checkedInAt.value,
     }))
     .sort((a, b) => b.checkedInAt.localeCompare(a.checkedInAt))

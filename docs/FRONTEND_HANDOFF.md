@@ -111,7 +111,8 @@ Tokens are in `app/src/index.css`.
 | `/door` | Door check in | Real sound. Scan or type the holder's code, with a door PIN |
 | `/door/recent` | Recent check ins | Real, read from Arkiv. Manual admit was removed: it is out of demo scope |
 | `/organizer` | Issue tickets and look up a wallet | Built, real. It calls `/api/issue` and `/api/tickets` |
-| `/u/:name`, `/privacy`, `/terms` | Profile, legal | Stubs that say "Not built yet" |
+| `/u/:name` | Public trophy page | Real, read from Arkiv. Takes a wallet address |
+| `/privacy`, `/terms` | Legal | Stubs that say "Not built yet" |
 | `/lab` | Sonar test page | Person 1's, outside the design system |
 
 **Branches.** `main` is the working branch. The redesigned landing sections, the organizer page and the flow docs are committed on local `main` and have not been pushed to GitHub yet.

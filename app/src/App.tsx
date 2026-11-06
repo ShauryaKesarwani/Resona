@@ -13,6 +13,7 @@ import Claim from './pages/wallet/Claim'
 import Buy from './pages/events/Buy'
 import Event from './pages/events/Event'
 import Events from './pages/events/Events'
+import Profile from './pages/Profile'
 import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
@@ -23,11 +24,10 @@ import Transfer from './pages/wallet/Transfer'
 const screens: { path: string; title: string; back: string; what: string }[] = [
   { path: '/privacy', title: 'Privacy', back: '/', what: 'The privacy policy is not written yet. Resona is a hackathon demo that runs on a test network.' },
   { path: '/terms', title: 'Terms', back: '/', what: 'The terms are not written yet. Resona is a hackathon demo that runs on a test network.' },
-  { path: '/u/:name', title: 'Profile', back: '/', what: 'Public trophy page: avatar, hash, ordinal and events attended.' },
 ]
 
 /** Anyone can open these without signing in. */
-const isPublic = (s: (typeof screens)[number]) => ['/privacy', '/terms', '/u/:name'].includes(s.path)
+const isPublic = (s: (typeof screens)[number]) => ['/privacy', '/terms'].includes(s.path)
 
 const stub = (s: (typeof screens)[number]) => (
   <Route key={s.path} path={s.path} element={<Stub title={s.title} back={s.back} what={s.what} />} />
@@ -47,6 +47,7 @@ export default function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/events" element={<Events />} />
         <Route path="/e/:id" element={<Event />} />
+        <Route path="/u/:name" element={<Profile />} />
         <Route path="/lab" element={<Lab />} />
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
