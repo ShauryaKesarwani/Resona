@@ -5,11 +5,12 @@ import { env } from "../config/env.ts";
 import type { TicketStore } from "../arkiv/tickets.ts";
 import { claim, type Outcome } from "../services/claim.service.ts";
 import { isWalletOwner } from "../utils/signature.ts";
+import type { EnsService } from "../ens/service.ts";
 
 const send = (res: Response, outcome: Outcome) =>
   res.status(outcome.status).json("error" in outcome ? { error: outcome.error } : outcome.ticket);
 
-export function ticketRoutes(tickets: TicketStore, registry: AccountRegistry) {
+export function ticketRoutes(tickets: TicketStore, registry: AccountRegistry, ens: EnsService) {
   const router = Router();
 
   // Minimal demo issuance directly to Arkiv.
@@ -27,6 +28,22 @@ export function ticketRoutes(tickets: TicketStore, registry: AccountRegistry) {
     const holder = String(req.query.holder ?? "");
     if (!isAddress(holder)) return void res.status(400).json({ error: "invalid_holder" });
     res.json(await tickets.ticketsOf(holder));
+  });
+
+  router.get("/ens/pass/:passId", async (req, res) => {
+    if (!ens.configured) return void res.status(503).json({ error: "ens_not_configured" });
+    const ticket = await tickets.ticket(req.params.passId!);
+    if (!ticket) return void res.status(404).json({ error: "ticket_not_found" });
+    res.json(await ens.pass(ticket.passId, ticket.holder));
+  });
+
+  router.post("/ens/pass/:passId/transfer-check", async (req, res) => {
+    if (!ens.configured) return void res.status(503).json({ error: "ens_not_configured" });
+    const ticket = await tickets.ticket(req.params.passId!);
+    if (!ticket) return void res.status(404).json({ error: "ticket_not_found" });
+    const recipient = req.body?.recipient;
+    if (typeof recipient !== "string") return void res.status(400).json({ error: "invalid_recipient" });
+    res.json(await ens.transferCheck(ticket.passId, ticket.holder, recipient));
   });
 
   router.post("/claim", async (req, res) => {

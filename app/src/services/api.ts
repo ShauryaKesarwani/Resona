@@ -1,6 +1,8 @@
 import type { IDKitResult, RpContext } from '@worldcoin/idkit'
 
 export type ServerTicket = { passId: string; holder: string; tier: string; status: 'issued' | 'claimed' | 'skipped' }
+export type EnsPass = { enabled: true; name: string; chainId: 11155111; registry: string; owner: string; expiry: string; matchesHolder: boolean; linked: boolean; active: boolean }
+export type EnsTransferCheck = { result: 'blocked' | 'transferable' | 'not_verified'; pass: EnsPass; tokenId?: string; error?: string }
 export type WorldConfig = {
   appId: `app_${string}`
   action: string
@@ -30,5 +32,7 @@ export const api = {
   tickets: (holder: string) => request<ServerTicket[]>(`/api/tickets?holder=${holder}`),
   issue: (holder: string, tier: string) => request<ServerTicket>('/api/issue', { holder, tier }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
+  ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
+  ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),
   fund: (signed: Signed) => request<{ wallet: string }>('/api/fund', signed),
 }

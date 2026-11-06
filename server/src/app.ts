@@ -7,13 +7,15 @@ import { authRoutes } from "./routes/auth.routes.ts";
 import { labRoutes } from "./routes/lab.routes.ts";
 import { ticketRoutes } from "./routes/tickets.routes.ts";
 import { worldRoutes } from "./routes/world.routes.ts";
+import { createEnsService } from "./ens/service.ts";
+import { env } from "./config/env.ts";
 
 export function createApp(tickets: TicketStore, registry: AccountRegistry) {
   const app = express();
   app.use(express.json({ limit: "256kb" }));
   app.use("/api", worldRoutes);
   app.use("/api", labRoutes);
-  app.use("/api", ticketRoutes(tickets, registry));
+  app.use("/api", ticketRoutes(tickets, registry, createEnsService(env.ens)));
   app.use("/api", authRoutes(registry));
   app.use("/api", arkivRoutes());
 

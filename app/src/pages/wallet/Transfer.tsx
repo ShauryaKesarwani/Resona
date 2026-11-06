@@ -5,6 +5,7 @@ import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { transferWindowMs, updateTicket, useTickets } from '../../data/mock'
+import { api } from '../../services/api'
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -21,6 +22,7 @@ export default function Transfer() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState(false)
+  const [directError, setDirectError] = useState('')
   const [now, setNow] = useState(Date.now())
   const back = `/wallet/ticket/${id}`
 
@@ -64,13 +66,18 @@ export default function Transfer() {
   }
 
   async function direct() {
-    const msg = validate()
-    setError(msg)
-    if (msg) return
     setBusy(true)
-    await wait(900)
-    setBusy(false)
-    setBlocked(true)
+    setDirectError('')
+    try {
+      const result = await api.ensTransferCheck(ticket!.id, '0x000000000000000000000000000000000000dEaD')
+      setBlocked(result.result === 'blocked')
+      if (result.result !== 'blocked') setDirectError(result.result === 'transferable' ? 'This pass appears transferable.' : 'The ENS pass is missing, expired, unlinked, or owned by a different wallet.')
+    } catch (err) {
+      setBlocked(false)
+      setDirectError((err as Error).message === 'ens_not_configured' ? 'ENSv2 is not configured on this server.' : 'Could not check the ENSv2 transfer policy.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (pending) {
@@ -130,25 +137,25 @@ export default function Transfer() {
           <div role="alert" className="flex gap-3 rounded-2xl border border-line bg-surface-raised p-4">
             <ProhibitIcon size={24} className="mt-0.5 shrink-0 text-danger" aria-hidden="true" />
             <div>
-              <p className="title-3">The contract rejected the transfer</p>
+              <p className="title-3">The contract blocks this pass from transfer</p>
               <p className="body-6 mt-1 text-text-muted">
                 This ticket was issued without the transfer role, so only the organizer can move it. Ask the organizer
                 instead.
               </p>
-              <p className="caption-5 mt-2 font-mono text-text-muted">Reverted transaction 0x9c1e…42ab</p>
               <div className="mt-2">
-                <SimTag>Simulated revert</SimTag>
+                <SimTag>Read-only Sepolia simulation; no transaction submitted</SimTag>
               </div>
             </div>
           </div>
         )}
+        {directError && <p role="alert" className="body-6 text-danger">{directError}</p>}
 
         <div className="flex-1" />
         <Button type="submit" busy={busy}>
           {busy ? 'Sending request' : 'Ask the organizer to approve'}
         </Button>
         <Button type="button" variant="secondary" size="md" disabled={busy} onClick={direct}>
-          Demo control: try a direct transfer
+          Demo control: check the ENS transfer rule
         </Button>
       </form>
     </Screen>

@@ -2,7 +2,7 @@
 
 Event tickets that require the ticket's specific wallet and phone to be present at the door.
 
-Resona is a ticket wallet and check-in system. An event's ENS domain leads to its event page, where attendees verify with World ID and buy tickets using testnet funds. Tickets are assigned to a specific wallet and represented through ENS. At the door, the staff phone and attendee phone exchange sound to verify proximity; the system then checks that the ticket's assigned wallet is present. Ticket, purchase and check-in data is stored in Arkiv and surfaced in the app.
+Resona is a ticket wallet and check-in demo. Tickets and purchases are read from Arkiv; the ENSv2 CLI can issue non-transferable pass names, and an optional server read path checks their owner and transfer policy. The door journey is still simulated: sonar is on `/lab`, but there is no live ticket check-in route or Arkiv check-in record yet. See [TODO.md](TODO.md) and the [ENSv2 runbook](docs/ENSV2.md) for the verified implementation status.
 
 > **Status:** early build. Sonar distance has worked between the team's two Android phones in Chrome, on the `/lab` page. Noise and Google Meet relay tests are still to do, and check-in isn't connected to tickets yet. False sonar rejections and phone lending are out of scope for the hackathon demo.
 
@@ -66,7 +66,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 
 | Sponsor | Role in Resona |
 |---|---|
-| **ENSv2** | Each pass is a subname owned by the holder, and the contract blocks transfers on non-transferable tiers |
+| **ENSv2** | The CLI issues non-transferable pass subnames; the optional API checks live registry ownership and transfer policy. Door enforcement and live deployment are not verified |
 | **Arkiv** | Stores events, tickets, check-ins and trophies, which the app and website read from |
 | **World ID** | Verify one attendee per event before testnet purchase |
 

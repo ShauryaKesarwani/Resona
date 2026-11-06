@@ -21,6 +21,13 @@ export const env = {
     environment: requireEnv("WORLD_ENV"),
     allowSkip: process.env.ALLOW_WORLD_SKIP === "true",
   },
+  ens: {
+    rpcUrl: process.env.ENS_RPC_URL,
+    eventName: process.env.ENS_EVENT_NAME?.trim().toLowerCase(),
+    parentRegistry: process.env.ENS_PARENT_REGISTRY,
+    eventRegistry: process.env.ENS_EVENT_REGISTRY,
+    enabled: process.env.ENS_ENABLED === "true",
+  },
 };
 
 export type WorldEnv = typeof env.world;

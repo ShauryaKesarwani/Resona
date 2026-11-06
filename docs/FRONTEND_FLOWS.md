@@ -84,7 +84,7 @@ Signing in means a World ID check once, after which the wallet on the phone is t
 | `/wallet/ticket/:id` | `/wallet` | Depends on status, below | See below | Shows pass, tier, holder, verification, transfer policy |
 | `/wallet/claim/:id` | the ticket | Step 1 "Confirm name", then "Lock ticket to this phone" | Failure: "Try again" and "Back to ticket". Success: "Back to ticket" | Two steps. World ID already happened at sign in |
 | `/wallet/checkin/:id` | the ticket | Ready: "Start check in". Pass: "Back to ticket". Fail: "Try again" | Running: demo controls | Unclaimed ticket shows "Claim ticket" instead |
-| `/wallet/transfer/:id` | the ticket | "Ask the organizer to approve" | "Demo control: try a direct transfer". Pending: "Cancel request" and "Back to ticket" | Blocked transfer is the ENS moment, later |
+| `/wallet/transfer/:id` | the ticket | "Ask the organizer to approve" | "Demo control: check the ENS transfer rule". Pending: "Cancel request" and "Back to ticket" | With ENS configured, the demo runs a read-only transfer simulation and labels that no transaction was sent. The organizer request is still simulated |
 
 Ticket screen buttons by status:
 

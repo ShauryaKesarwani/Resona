@@ -46,8 +46,9 @@ The current code is the source for implementation status; planned behavior and s
 
 - [~] Standalone CLI supports deploying and linking a Sepolia event UserRegistry with the documented restricted root roles; configure real names and verify a live deployment and roles.
 - [~] Standalone CLI issues non-transferable pass subnames and inspects owners; ASCII label and expiry checks have offline tests. It does not yet populate public metadata or store ENS references on Arkiv tickets.
+- [x] Add an optional server-side ENSv2 read path: check the event registry link, pass owner, expiry and ticket-holder match; simulate a direct transfer and accept only the expected `TransferDisallowed` revert. The wallet shows the result, and the transfer screen no longer invents a transaction hash. The API-to-RPC integration test passes against a local Sepolia RPC fixture.
 - [ ] Verify the actual ENS pass owner matches the assigned ticket wallet before check-in; reconcile failed ENS/Arkiv writes.
-- [ ] Demonstrate blocked transfers for a non-transferable pass and implement organizer-approved reassignment if in scope.
+- [~] The wallet transfer demo now runs a real read-only transfer simulation when ENS is configured. Still verify the result on a live Sepolia pass and implement organizer-approved reassignment.
 - [ ] Resolve and display names and profiles in the organizer, wallet and door flows.
 
 ## Later stages and submission

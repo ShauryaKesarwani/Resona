@@ -18,7 +18,7 @@ Organizer-owned, mutable; all reads filter by the trusted organizer and event. `
 | `ensRegistry` | optional address | ENSv2 registry that holds the pass |
 | `ensChainId` | optional string | Decimal chain ID of that registry |
 
-ENS fields are optional for compatibility with existing tickets. The standalone Sepolia CLI can issue a matching ENS pass, but it does not write these fields to Arkiv; the HTTP ticket API does not populate or validate them. Any stored ENS fields are **unverified metadata**, not evidence of ownership. Arkiv ticket issuance and status changes currently work; ENS/Arkiv reconciliation, check-in, and revocation do not. Existing tickets remain readable. The Arkiv entity key identifies the record, not the pass ID.
+ENS fields are optional for compatibility with existing tickets. The standalone Sepolia CLI can issue a matching ENS pass, but it does not write these fields to Arkiv; the HTTP ticket API does not populate them. Any stored ENS fields are **unverified metadata**, not evidence of ownership. When configured, the read-only `/api/ens/pass/:passId` endpoint derives the expected pass name from the ticket `passId` and compares its current Sepolia registry owner and expiry with the Arkiv holder. This live read does not persist or validate the optional ENS fields. The wallet uses the endpoint to display the result. The transfer-check endpoint runs an `eth_call` and accepts only the exact `TransferDisallowed` error; it does not submit a transaction. There is still no ENS/Arkiv write reconciliation or real check-in flow, and revocation is not implemented. Existing tickets remain readable. The Arkiv entity key identifies the record, not the pass ID.
 
 Expiry is configured as days from issuance, currently 1–180; expired entities disappear from queries. The plan's event-end-plus-30-days expiry is not yet implemented. Extending the configured value does not extend existing records.
 
@@ -36,9 +36,9 @@ SQLite remains the chosen durable coordinator: it atomically reserves the canoni
 
 The verified migration blockers and acceptance criteria are in [world-claim-design.md](world-claim-design.md).
 
-## ENS and door invariants (planned)
+## ENS and door invariants (partially implemented)
 
-ENSv2 on Sepolia supplies the pass and transfer policy; Arkiv supplies application status. Normalize ENS names using ENSIP-15. The ENS address record is not proof of ownership. Once ENS is active, check the actual pass owner in the expected registry and chain against the Arkiv holder before accepting a check-in; fail closed on missing or inconsistent data. Public ENS metadata should contain only the `eventId`, `passId`, and a public link; never duplicate mutable status or World ID data as authoritative metadata. Writes to ENS and Arkiv are not atomic and require reconciliation.
+ENSv2 on Sepolia supplies the pass and transfer policy; Arkiv supplies application status. The implementation currently restricts pass labels and event names to a single ASCII `.eth` label; this is the accepted subset for which ASCII case folding is ENSIP-15 safe. The ENS address record is not proof of ownership. A read-only API checks the configured event-registry link, current pass owner, expiry and Arkiv holder match, and the wallet can display that result. **No check-in route exists yet**, so the check is not enforced at a door. Future check-in must fail closed on missing or inconsistent data immediately before its Arkiv write. Public ENS metadata is not implemented; if added, it should contain only `eventId`, `passId`, and a public link, never mutable status or World ID data as authoritative metadata. Writes to ENS and Arkiv are not atomic and require reconciliation.
 
 The demo additionally requires a fresh-session wallet signature and sonar pass. Neither a QR code, ENS name, nor Arkiv record proves proximity. Browser clients cannot attest their timing; modified-client resistance is outside the demo.
 
