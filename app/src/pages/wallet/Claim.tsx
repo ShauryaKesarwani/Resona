@@ -1,0 +1,178 @@
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { CheckCircleIcon, InfoIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { SimTag } from '../../components/Bits'
+import { Button } from '../../components/Button'
+import { Screen, TopBar } from '../../components/Screen'
+import { short, updateTicket, useTickets, wallet } from '../../data/mock'
+
+type Phase = 'idle' | 'busy' | 'rejected' | 'done'
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** W3. Three steps: confirm name, verify with World ID, lock to this phone. All simulated for now. */
+export default function Claim() {
+  const { id } = useParams()
+  const ticket = useTickets().find((t) => t.id === id)
+  const [step, setStep] = useState(1)
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [gloss, setGloss] = useState(false)
+  const back = `/wallet/ticket/${id}`
+
+  if (!ticket || (ticket.status !== 'issued' && phase !== 'done')) {
+    return (
+      <Screen>
+        <TopBar back={back} title="Claim ticket" />
+        <section className="flex flex-1 flex-col justify-center gap-2">
+          <h1 className="heading-5">{ticket ? 'This ticket is already claimed' : 'We could not find this ticket'}</h1>
+          <p className="body-3 text-text-muted">Go back to the ticket to see what you can do with it.</p>
+        </section>
+        <Button to={back}>Back to ticket</Button>
+      </Screen>
+    )
+  }
+
+  async function next(to: number, ms: number) {
+    setPhase('busy')
+    await wait(ms)
+    setPhase('idle')
+    setStep(to)
+  }
+
+  async function lock() {
+    setPhase('busy')
+    await wait(900)
+    updateTicket(ticket!.id, { status: 'claimed' })
+    setPhase('done')
+  }
+
+  if (phase === 'done') {
+    return (
+      <Screen>
+        <TopBar back={back} title="Claim ticket" />
+        <section className="flex flex-1 flex-col justify-center gap-4" role="status">
+          <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
+          <h1 className="heading-4">Ticket claimed</h1>
+          <p className="body-3 text-text-muted">
+            Pass {ticket.pass} is locked to this phone. Bring this phone to the door to check in.
+          </p>
+          <SimTag>Simulated claim</SimTag>
+        </section>
+        <Button to={back}>Back to ticket</Button>
+      </Screen>
+    )
+  }
+
+  if (phase === 'rejected') {
+    return (
+      <Screen>
+        <TopBar back={back} title="Claim ticket" />
+        <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
+          <WarningCircleIcon size={48} className="text-danger" aria-hidden="true" />
+          <h1 className="heading-4">This person has already claimed</h1>
+          <p className="body-3 text-text-muted">
+            World ID shows a ticket for {ticket.event} was already claimed by this person. Each person can claim one
+            ticket per event. Ask the organizer if you think this is a mistake.
+          </p>
+          <SimTag>Simulated rejection</SimTag>
+        </section>
+        <Button variant="secondary" onClick={() => { setPhase('idle'); setStep(2) }}>
+          Try again
+        </Button>
+        <Button to={back}>Back to ticket</Button>
+      </Screen>
+    )
+  }
+
+  const busy = phase === 'busy'
+  return (
+    <Screen>
+      <TopBar back={back} title="Claim ticket" />
+      <div aria-label={`Step ${step} of 3`} className="flex gap-1">
+        {[1, 2, 3].map((n) => (
+          <span key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-accent' : 'bg-surface-high'}`} />
+        ))}
+      </div>
+      <p className="caption-1 text-text-muted">Step {step} of 3</p>
+
+      {step === 1 && (
+        <section className="flex flex-col gap-4">
+          <h1 className="heading-4">Confirm your name</h1>
+          <p className="body-3 text-text-muted">
+            The ticket goes to the wallet your name points to. Check that it matches this phone.
+          </p>
+          <div className="rounded-2xl border border-line bg-surface-raised p-2">
+            <div className="flex flex-col gap-1 rounded-lg bg-surface-inset p-4">
+              <p className="title-2">{wallet.name}</p>
+              <p className="body-6 font-mono text-text-muted">{short(wallet.address)}</p>
+              <p className="caption-1 mt-2 flex items-center gap-1 text-success">
+                <CheckCircleIcon size={16} aria-hidden="true" />
+                Name points to this wallet
+              </p>
+            </div>
+          </div>
+          <SimTag />
+        </section>
+      )}
+
+      {step === 2 && (
+        <section className="flex flex-col gap-4">
+          <h1 className="heading-4">Verify with World ID</h1>
+          <p className="body-3 text-text-muted">
+            This ticket needs <span className="text-text">{ticket.level}</span>. You can claim one ticket per event.
+          </p>
+          <button
+            type="button"
+            onClick={() => setGloss(!gloss)}
+            aria-expanded={gloss}
+            className="body-5 inline-flex min-h-12 items-center gap-2 self-start rounded-lg text-accent"
+          >
+            <InfoIcon size={20} aria-hidden="true" />
+            What does this verification level mean
+          </button>
+          {gloss && (
+            <p className="body-6 rounded-lg bg-surface-raised p-4 text-text-muted">
+              World ID checks you are a real, unique person without sharing who you are.{' '}
+              {ticket.level === 'Orb verified'
+                ? 'Orb verified is the strongest check: an Orb scanned you in person.'
+                : 'Camera verified checks a live selfie against your World ID.'}
+            </p>
+          )}
+          <SimTag>Simulated verification, no World ID call</SimTag>
+        </section>
+      )}
+
+      {step === 3 && (
+        <section className="flex flex-col gap-4">
+          <h1 className="heading-4">Lock to this phone</h1>
+          <p className="body-3 text-text-muted">
+            After this, the ticket only checks in from this phone. A copy or screenshot on another phone will not work.
+          </p>
+          <SimTag />
+        </section>
+      )}
+
+      <div className="flex-1" />
+
+      {step === 1 && (
+        <Button busy={busy} onClick={() => next(2, 600)}>
+          {busy ? 'Checking name' : 'Confirm name'}
+        </Button>
+      )}
+      {step === 2 && (
+        <>
+          <Button busy={busy} onClick={() => next(3, 1200)}>
+            {busy ? 'Verifying' : 'Verify with World ID'}
+          </Button>
+          <Button variant="secondary" size="md" disabled={busy} onClick={() => setPhase('rejected')}>
+            Demo control: simulate a repeat claim
+          </Button>
+        </>
+      )}
+      {step === 3 && (
+        <Button busy={busy} onClick={lock}>
+          {busy ? 'Locking ticket' : 'Lock ticket to this phone'}
+        </Button>
+      )}
+    </Screen>
+  )
+}

@@ -3,14 +3,14 @@ import Enter from './pages/Enter'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
 import { Stub } from './pages/Stub'
+import Claim from './pages/wallet/Claim'
+import Ticket from './pages/wallet/Ticket'
+import Tickets from './pages/wallet/Tickets'
+import Transfer from './pages/wallet/Transfer'
 
 /** Planned screens: route, title, parent route for the back button, and what the screen will hold. */
 const screens: { path: string; title: string; back: string; what: string }[] = [
-  { path: '/wallet', title: 'Your tickets', back: '/enter', what: 'Your ENS name and wallet, and every ticket you hold with its status.' },
-  { path: '/wallet/ticket/:id', title: 'Your ticket', back: '/wallet', what: 'Pass name, tier, transfer policy and the one action that fits the ticket status.' },
-  { path: '/wallet/claim/:id', title: 'Claim ticket', back: '/wallet', what: 'Three steps: confirm your name, prove you are human with World ID, lock the ticket to this phone.' },
   { path: '/wallet/checkin/:id', title: 'Check in', back: '/wallet', what: 'Your ticket code, then the sound exchange with the door phone and the result.' },
-  { path: '/wallet/transfer/:id', title: 'Send ticket', back: '/wallet', what: 'Ask the organizer to move this ticket. Shows the blocked or pending state.' },
   { path: '/door', title: 'Door', back: '/enter', what: 'Scan a ticket code, or type the pass number.' },
   { path: '/door/checking', title: 'Checking', back: '/door', what: 'Live progress while the phones exchange sound.' },
   { path: '/door/result', title: 'Result', back: '/door', what: 'Pass or fail with the holder name, avatar and distance.' },
@@ -38,6 +38,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/enter" element={<Enter />} />
+        <Route path="/wallet" element={<Tickets />} />
+        <Route path="/wallet/ticket/:id" element={<Ticket />} />
+        <Route path="/wallet/claim/:id" element={<Claim />} />
+        <Route path="/wallet/transfer/:id" element={<Transfer />} />
         {screens.map((s) => (
           <Route key={s.path} path={s.path} element={<Stub title={s.title} back={s.back} what={s.what} />} />
         ))}

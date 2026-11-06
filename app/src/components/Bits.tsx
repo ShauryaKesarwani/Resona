@@ -22,7 +22,7 @@ export function StatusPill({ status }: { status: Status }) {
 /** Marks anything that is not real data or a real action. */
 export function SimTag({ children = 'Simulated' }: { children?: ReactNode }) {
   return (
-    <span className="caption-4 inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-text-muted">
+    <span className="caption-4 inline-flex w-fit items-center gap-1 rounded-full border border-line px-2 py-0.5 text-text-muted">
       <FlaskIcon size={12} aria-hidden="true" />
       {children}
     </span>
