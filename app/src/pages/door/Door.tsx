@@ -6,7 +6,7 @@ import { Button } from '../../components/Button'
 import { DistanceGap, SonarRings } from '../../components/Sonar'
 import { LiveWave, TraceChart } from '../../components/Waveform'
 import type { Analysis } from '../../sonar/analyze'
-import { Figure } from '../../components/Figure'
+import { Pulse } from '../../components/Pulse'
 import { QrScanner } from '../../components/QrScanner'
 import { Screen, TopBar } from '../../components/Screen'
 import { ordinal, short } from '../../data/mock'
@@ -222,7 +222,7 @@ export default function Door() {
   return (
     <Screen>
       <TopBar back="/enter" />
-      {phase.name === 'scanning' ? <QrScanner onCode={scanned} onFail={noCamera} /> : <Figure ratio="16 / 7" position="50% 45%" />}
+      {phase.name === 'scanning' ? <QrScanner onCode={scanned} onFail={noCamera} /> : <div className="relative h-32 overflow-hidden rounded-2xl border border-line bg-surface-raised"><Pulse className="absolute top-1/2 left-1/2 size-64 max-w-none -translate-x-1/2 -translate-y-1/2 scale-x-150" /></div>}
       <h1 className="heading-4">Ready for the next ticket</h1>
       {selectedPass && <div className="rounded-xl border border-line bg-surface-raised p-4">
         <p className="title-4">Selected ticket</p>

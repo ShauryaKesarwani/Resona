@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { isAddress } from 'viem'
 import { Avatar } from '../components/Bits'
+import { Pulse } from '../components/Pulse'
 import { Button } from '../components/Button'
 import { Screen, TopBar } from '../components/Screen'
 import { ordinal, short } from '../data/mock'
@@ -54,7 +55,10 @@ export default function Profile() {
     <Screen>
       <TopBar back="/" />
       <header className="flex flex-col items-center gap-2 pt-4 text-center">
-        <Avatar name={name.slice(2)} size={80} />
+        <div className="relative grid size-40 place-items-center">
+          <Pulse className="absolute inset-0 size-full scale-125" />
+          <Avatar name={name.slice(2)} size={80} />
+        </div>
         <h1 className="heading-4 font-mono">{short(name)}</h1>
         <p className="body-5 text-text-muted tabular-nums">
           {trophies ? `${trophies.length} ${trophies.length === 1 ? 'event' : 'events'} attended` : 'Reading Arkiv'}
