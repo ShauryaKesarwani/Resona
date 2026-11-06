@@ -13,7 +13,8 @@ export const portalVerifier: Verifier = async (rpId, idkitResponse) => {
   return { ok: res.ok, body: await res.json().catch(() => null) };
 };
 
-export function signWorldRequest(world: WorldEnv) {
-  const { sig, nonce, createdAt, expiresAt } = signRequest({ signingKeyHex: world.signingKey, action: world.action });
+/** A session proof is signed without an action. A first sign-in is signed with one. */
+export function signWorldRequest(world: WorldEnv, forSession = false) {
+  const { sig, nonce, createdAt, expiresAt } = signRequest({ signingKeyHex: world.signingKey, action: forSession ? undefined : world.action });
   return { rp_id: world.rpId, nonce, created_at: createdAt, expires_at: expiresAt, signature: sig };
 }

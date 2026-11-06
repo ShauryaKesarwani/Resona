@@ -13,6 +13,6 @@ worldRoutes.get("/config", (_req, res) => {
   res.json({ appId, rpId, action, environment, allowSkip, organizer });
 });
 
-worldRoutes.post("/world/sign", (_req, res) => {
-  res.json(signWorldRequest(env.world));
+worldRoutes.post("/world/sign", (req, res) => {
+  res.json(signWorldRequest(env.world, req.body?.session === true));
 });

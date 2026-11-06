@@ -24,9 +24,9 @@ type Signed = { wallet: string; timestamp: number; signature: string }
 
 export const api = {
   config: () => request<WorldConfig>('/api/config'),
-  sign: () => request<RpContext>('/api/world/sign', {}),
-  signup: (wallet: string, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/signup', { wallet, idkitResponse }),
-  session: (signed: Signed) => request<{ wallet: string }>('/api/auth/session', signed),
+  sign: (session: boolean) => request<RpContext>('/api/world/sign', { session }),
+  signup: (signed: Signed, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/signup', { ...signed, idkitResponse }),
+  login: (signed: Signed, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/login', { ...signed, idkitResponse }),
   tickets: (holder: string) => request<ServerTicket[]>(`/api/tickets?holder=${holder}`),
   issue: (holder: string, tier: string) => request<ServerTicket>('/api/issue', { holder, tier }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),

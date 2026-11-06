@@ -21,12 +21,12 @@ export default function Claim() {
   const [verified, setVerified] = useState(false)
   const back = `/wallet/ticket/${id}`
 
-  if (!ticket || (ticket.status !== 'issued' && ticket.status !== 'skipped' && phase !== 'done')) {
+  if (!ticket || ticket.past || (ticket.status !== 'issued' && ticket.status !== 'skipped' && phase !== 'done')) {
     return (
       <Screen>
         <TopBar back={back} title="Claim ticket" />
         <section className="flex flex-1 flex-col justify-center gap-2">
-          <h1 className="heading-5">{ticket ? 'This ticket is already claimed' : 'We could not find this ticket'}</h1>
+          <h1 className="heading-5">{!ticket ? 'We could not find this ticket' : ticket.past ? 'This event has ended' : 'This ticket is already claimed'}</h1>
           <p className="body-3 text-text-muted">Go back to the ticket to see what you can do with it.</p>
         </section>
         <Button to={back}>Back to ticket</Button>

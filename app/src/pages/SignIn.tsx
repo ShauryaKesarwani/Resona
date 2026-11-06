@@ -5,11 +5,14 @@ import { Figure } from '../components/Figure'
 import { Screen, TopBar } from '../components/Screen'
 import { WorldStep } from '../components/WorldStep'
 import { api } from '../services/api'
-import { continueAsGuest } from '../services/auth'
+import { continueAsGuest, markSignedIn, saveWorldSession, signedBy, worldSession } from '../services/auth'
 import { walletAddress } from '../utils/wallet'
 
 const MESSAGES: Record<string, string> = {
   wrong_wallet: 'This proof belongs to a different wallet.',
+  wrong_session: 'This World ID session belongs to a different account.',
+  no_session: 'This account has no World ID session yet.',
+  no_account: 'This wallet has no account yet.',
   wallet_taken: 'This wallet already belongs to another person.',
   verification_failed: 'World ID could not verify this proof. Try again.',
   arkiv_not_configured: 'Sign up is not available right now. You can skip for now.',
@@ -26,7 +29,11 @@ export default function SignIn() {
   const [taken, setTaken] = useState(false)
   const wallet = walletAddress()
   const next = params.get('next') ?? ''
-  const enter = () => navigate(/^\/(?!\/)/.test(next) ? next : '/enter', { replace: true })
+  const enter = () => {
+    markSignedIn()
+    navigate(/^\/(?!\/)/.test(next) ? next : '/enter', { replace: true })
+  }
+  const session = worldSession()
 
   if (taken) {
     return (
@@ -47,18 +54,31 @@ export default function SignIn() {
     <Screen>
       <TopBar back="/" title="Sign in" />
       <Figure ratio="16 / 7" position="50% 45%" />
-      <h1 className="heading-4 mt-2">Sign in with World ID</h1>
-      <p className="body-3 text-text-muted">You only do this once. World ID proves you are human without sharing who you are.</p>
+      <h1 className="heading-4 mt-2">{session ? 'Welcome back' : 'Sign in with World ID'}</h1>
+      <p className="body-3 text-text-muted">
+        {session
+          ? 'Approve in World ID to sign in. It proves you are the same person, without sharing who you are.'
+          : 'World ID proves you are human without sharing who you are.'}
+      </p>
       <div className="flex-1" />
       <WorldStep
         signal={wallet}
         messages={MESSAGES}
-        submit={(result) => api.signup(wallet, result)}
-        onDone={enter}
-        onSkip={() => {
-          continueAsGuest()
-          enter()
+        session={session}
+        submit={async (result) => {
+          if (session) return api.login(await signedBy('login'), result)
+          await api.signup(await signedBy('signup'), result)
+          if ('session_id' in result && result.session_id) saveWorldSession(result.session_id)
         }}
+        onDone={enter}
+        onSkip={
+          session
+            ? undefined
+            : () => {
+                continueAsGuest()
+                navigate(/^\/(?!\/)/.test(next) ? next : '/enter', { replace: true })
+              }
+        }
         onCode={(code) => {
           if (!REPEAT_CODES.has(code)) return false
           setTaken(true)

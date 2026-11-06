@@ -6,7 +6,6 @@ export function RequireSignIn() {
   const signedIn = useSignedIn()
   const { pathname } = useLocation()
 
-  if (signedIn === undefined) return null
   if (!signedIn) return <Navigate to={`/signin?next=${encodeURIComponent(pathname)}`} replace />
   return <Outlet />
 }

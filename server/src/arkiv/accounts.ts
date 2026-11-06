@@ -9,23 +9,25 @@ import { privateKeyToAddress } from "viem/accounts";
 import { guardedWalletClient, localEnvSigner } from "./signing.mjs";
 import { organizerWrites } from "./writes.ts";
 
-export type Account = { wallet: string; nullifierHash: string; userId: string };
+export type Account = { wallet: string; nullifierHash: string; userId: string; sessionHash?: string };
 export type AccountRegistry = {
   /** False until Arkiv keys are set, so a World proof is never spent on a write that can't happen. */
   ready: boolean;
   findByWallet(wallet: string): Promise<Account | null>;
   findByNullifierHash(nullifierHash: string): Promise<Account | null>;
-  create(account: Pick<Account, "wallet" | "nullifierHash">): Promise<void>;
+  create(account: Pick<Account, "wallet" | "nullifierHash" | "sessionHash"> & { userId?: string }): Promise<void>;
 };
 
 export const Accounts = defineSchema("resona.account", {
   wallet: addr().indexed(),
   nullifierHash: str().indexed(),
   userId: str().optional().indexed(),
+  sessionHash: str().optional(),
 });
 
 const JOURNAL = "arkiv-writes.log";
 const READBACK_ATTEMPTS = 8;
+const MAX_RECORDS = 5;
 const journal = (hash: string) => appendFile(JOURNAL, `${new Date().toISOString()} ${hash}\n`, { flush: true });
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,14 +54,16 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
 
   // Only records this server created count: anyone can write an entity with this schema.
   const accounts = () =>
-    publicClient.select({ wallet: true, nullifierHash: true, userId: true }).from(Accounts).createdBy(organizer).limit(1);
+    publicClient.select({ wallet: true, nullifierHash: true, userId: true, sessionHash: true }).from(Accounts).createdBy(organizer).limit(MAX_RECORDS);
 
   const first = ({ entities }: Awaited<ReturnType<ReturnType<typeof accounts>["fetch"]>>): Account | null => {
-    const entity = entities[0];
+    // An older account has a second, read-only record that adds its World session. That record wins.
+    const entity = entities.find((row) => row.sessionHash?.value) ?? entities[0];
     return entity ? {
       wallet: String(entity.wallet.value).toLowerCase(),
       nullifierHash: entity.nullifierHash.value,
       userId: entity.userId?.value ?? createHash("sha256").update(entity.nullifierHash.value).digest("hex"),
+      sessionHash: entity.sessionHash?.value,
     } : null;
   };
 
@@ -71,8 +75,7 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
     ready: true,
     findByWallet,
     findByNullifierHash,
-    async create({ wallet, nullifierHash }) {
-      const userId = createHash("sha256").update(nullifierHash).digest("hex");
+    async create({ wallet, nullifierHash, sessionHash, userId = createHash("sha256").update(nullifierHash).digest("hex") }) {
       const signer = localEnvSigner(publicClient, privateKey, journal);
       const client = guardedWalletClient({
         publicClient,
@@ -84,7 +87,7 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
       });
       await organizerWrites(() => client.createEntity(
         Accounts,
-        { wallet: addr(wallet as Hex), nullifierHash, userId },
+        { wallet: addr(wallet as Hex), nullifierHash, userId, sessionHash },
         { expiration: ExpirationTime.max(), flags: { readonly: true } },
       ));
       // Wait for indexing, so the next sign-up can't miss this record.

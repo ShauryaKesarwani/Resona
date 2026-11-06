@@ -37,7 +37,7 @@ export default function Ticket() {
           <h1 className="heading-4">Pass&nbsp;{ticket.pass}</h1>
           <p className="body-6 font-mono text-text-muted [overflow-wrap:anywhere]">{ticket.ens}</p>
         </div>
-        <StatusPill status={ticket.status} />
+        <StatusPill status={ticket.status} past={ticket.past} />
       </div>
 
       <div className="rounded-2xl border border-line bg-surface-raised p-2">
@@ -70,8 +70,8 @@ export default function Ticket() {
 
       <div className="flex-1" />
 
-      {ticket.status === 'issued' && <Button to={`/wallet/claim/${ticket.id}`}>Claim ticket</Button>}
-      {(ticket.status === 'claimed' || ticket.status === 'skipped') && (
+      {ticket.status === 'issued' && !ticket.past && <Button to={`/wallet/claim/${ticket.id}`}>Claim ticket</Button>}
+      {(ticket.status === 'claimed' || ticket.status === 'skipped') && !ticket.past && (
         <Button to={`/wallet/checkin/${ticket.id}`}>Check in</Button>
       )}
       {ticket.status === 'skipped' && (

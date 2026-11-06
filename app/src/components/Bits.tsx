@@ -11,8 +11,8 @@ const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: s
 }
 
 /** Status is always icon plus words, never colour alone. */
-export function StatusPill({ status }: { status: Status }) {
-  const l = look[status]
+export function StatusPill({ status, past }: { status: Status; past?: boolean }) {
+  const l = past && status === 'issued' ? { ...look.issued, label: 'Not claimed', cls: 'text-text-muted' } : look[status]
   return (
     <span className={`caption-4 inline-flex shrink-0 items-center gap-1 rounded-full bg-line px-2 py-1 whitespace-nowrap ${l.cls}`}>
       <l.icon size={14} aria-hidden="true" />

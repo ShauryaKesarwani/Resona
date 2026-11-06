@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CaretRightIcon, TicketIcon } from '../../components/icons'
 import { StatusPill, WalletChip } from '../../components/Bits'
 import { Button } from '../../components/Button'
+import { SignOutButton } from '../../components/SignOutButton'
 import { Figure } from '../../components/Figure'
 import { Screen, TopBar } from '../../components/Screen'
 import { refreshTickets, useTickets, useTicketsState, type Ticket } from '../../data/mock'
@@ -23,7 +24,7 @@ function TicketRow({ t }: { t: Ticket }) {
                 {t.event}, {t.tier}
               </p>
             </div>
-            <StatusPill status={t.status} />
+            <StatusPill status={t.status} past={t.past} />
           </div>
           <div className="flex items-center justify-between border-t border-line px-4 py-3">
             <span className="caption-5 truncate font-mono text-text-muted">{t.ens}</span>
@@ -105,6 +106,7 @@ export default function Tickets() {
 
       <div className="flex-1" />
       <Button to="/wallet/events">Buy tickets</Button>
+      <SignOutButton />
     </Screen>
   )
 }

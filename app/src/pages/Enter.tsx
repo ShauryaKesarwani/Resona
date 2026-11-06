@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { BuildingsIcon, CaretRightIcon, DoorOpenIcon, WalletIcon } from '../components/icons'
 import { Figure } from '../components/Figure'
 import { Screen, TopBar } from '../components/Screen'
+import { SignOutButton } from '../components/SignOutButton'
 
 function Role({ to, icon, title, caption }: { to: string; icon: ReactNode; title: string; caption: string }) {
   return (
@@ -34,6 +35,7 @@ export default function Enter() {
         <Role to="/door" icon={<DoorOpenIcon size={20} />} title="Door staff" caption="Scan tickets and admit people" />
         <Role to="/organizer" icon={<BuildingsIcon size={20} />} title="Organizer" caption="Issue tickets to wallets" />
       </nav>
+      <SignOutButton />
     </Screen>
   )
 }

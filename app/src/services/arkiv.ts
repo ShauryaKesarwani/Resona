@@ -8,7 +8,9 @@ import { api } from './api'
 import { signedBy } from './auth'
 
 /** Same schemas as server/src/arkiv. Everything on Arkiv is public, so the browser reads it directly. */
-const Accounts = defineSchema('resona.account', { wallet: addr().indexed(), nullifierHash: str().indexed(), userId: str().optional().indexed() })
+const Accounts = defineSchema('resona.account', {
+  wallet: addr().indexed(), nullifierHash: str().indexed(), userId: str().optional().indexed(), sessionHash: str().optional(),
+})
 const Events = defineSchema('resona.event', { eventId: str().indexed(), eventName: str(), organiser: addr().indexed(), eventDate: str(), priceWei: str() })
 const Tickets = defineSchema('resona.ticket', {
   passId: str().indexed(), eventId: str().indexed(), holder: addr().indexed(), tier: str().indexed(), status: str().indexed(),
