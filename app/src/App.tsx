@@ -13,6 +13,7 @@ import Claim from './pages/wallet/Claim'
 import Buy from './pages/events/Buy'
 import Event from './pages/events/Event'
 import Events from './pages/events/Events'
+import Canvas from './pages/Canvas'
 import Profile from './pages/Profile'
 import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/events" element={<Events />} />
         <Route path="/e/:id" element={<Event />} />
         <Route path="/u/:name" element={<Profile />} />
+        {import.meta.env.DEV && <Route path="/canvas" element={<Canvas />} />}
         <Route path="/lab" element={<Lab />} />
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>

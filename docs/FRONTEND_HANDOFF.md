@@ -43,7 +43,6 @@ Cards are used sparingly, and never as a stack of look alikes.
 | `frontend-design` | built in | Process: plan, review against the brief, build, critique. Distinctive choices over defaults. Remove one decoration | Yes |
 | `aesthetics-prompt` | built in | Anti "AI slop" rules: avoid generic fonts, purple gradients and cookie cutter components | Yes |
 | `landing-page-design` | `elayadesign/ai-design-skills`, installed globally | Page structure and copy, plus the strict visual system: Geist only, Tailwind type scale and named text styles, spacing tokens, nested radius, flat dark surfaces, Phosphor icons, motion curve, scroll reveal, tagline reveal | Yes |
-| `figma-designer` | same repo | The same system expressed in Figma variables and components | Installed, not used. There was no time for Figma in a 9 hour build |
 | `better-typography` | `jakubkrehel/skills`, installed globally | Line height, tracking, measure, tabular numbers, wrapping, non breaking spaces, heading structure, caption floor | Yes |
 
 The original brief also named `accessibility-testing`, `visual-testing` and `dataviz`. These were not run. Keyboard order, a contrast audit and screenshot comparison are still open.
@@ -133,6 +132,8 @@ Stage 1 first, as in `docs/BUILD_PLAN.md`:
 6. Event page and buy flow: built on real data. Next: the profile, and showing a bought ticket's payment record on the ticket.
 
 ## How to run and verify
+
+`/canvas` (dev mode only) shows every screen in phone frames on one page, with zoom and a 360, 390 or 430 width switch.
 
 ```bash
 cd app

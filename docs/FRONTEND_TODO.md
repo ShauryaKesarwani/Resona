@@ -52,6 +52,5 @@ These are server decisions, listed so the screens can follow.
 
 ## Not planned
 
-- Figma file. There was no time in a 9 hour build.
 - Manual admit at the door. Out of demo scope.
 - POAPs and company distribution. Only after the core journey is verified.
