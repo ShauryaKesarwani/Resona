@@ -8,7 +8,7 @@ Last updated on 7 November 2026.
 
 - **Top left:** the Back button, a 48px square. It goes to the screen's parent, never to browser history, so deep links still work.
 - **Top right:** context only: the wallet chip (name, short address, network) on wallet screens, the staff chip on the door. Never an action.
-- **Attendee tab bar:** `/events` and `/wallet` share a fixed bottom bar with two tabs, Events and Tickets. Detail screens drop the bar and put the primary action at the bottom instead.
+- **Attendee tab bar:** `/events` and `/wallet` share a fixed bottom bar with three tabs: Events, Tickets and Account. Detail screens drop the bar and put the primary action at the bottom instead.
 - **Bottom:** the one primary action, full width and at least 64px tall, in the thumb zone. A secondary action sits under it at 48px.
 - **Names:** a button keeps one name for the whole flow, and says what it does. Sentence case.
 - **Demo only buttons** start with "Demo control:" and sit below the real actions.
@@ -87,9 +87,11 @@ The attendee's world is two tabs, Events and Tickets, joined by the buy flow.
 | Route | Back | Primary | Secondary and other | Notes |
 |---|---|---|---|---|
 | `/wallet` Tickets | `/` | "Buy tickets" goes to `/events` | Tab bar: Events, Tickets. "Purchases" link to `/wallet/purchases`. Right: wallet chip | Tickets are read from Arkiv. Empty state: "No tickets yet" |
+| `/account` Account | `/` | "Sign out" at the bottom | "Show recovery key", "Restore from a key", copy the address, open the public profile. Tab bar | The wallet is a key on this phone, so this is where it is saved or restored |
+| `/wallet/receipt/:txn` Receipt | `/wallet/purchases` | "See it on the explorer" | The ticket row links to the pass | One payment drawn as a receipt. Reached from Purchases and from the ticket's Payment row |
 | `/wallet/ticket/:id` | `/wallet` | Depends on status, below | See below | Shows pass, tier, holder, verification, transfer policy |
 | `/wallet/claim/:id` | the ticket | Step 1 "Confirm name", then "Lock ticket to this phone" | Failure: "Try again" and "Back to ticket". Success: "Back to ticket" | Two steps. World ID already happened at sign in |
-| `/wallet/checkin/:id` | the ticket | Ready: "Start check in". Pass: "Back to ticket". Fail: "Try again" | Shows a QR code and a 6 digit code for the door | Real sound, signed by the wallet. Unclaimed ticket shows "Claim ticket" instead |
+| `/wallet/checkin/:id` | the ticket | Ready ("Before you check in"): "Start check in", after a diagram of the 30 cm gap and three tips. Running: sonar rings. Pass: "Back to ticket". Fail: "Try again" | Shows a QR code and a 6 digit code for the door | Real sound, signed by the wallet. Unclaimed ticket shows "Claim ticket" instead |
 | `/wallet/transfer/:id` | the ticket | "Ask the organizer to approve" | "Demo control: check the ENS transfer rule". Pending: "Cancel request" and "Back to ticket" | With ENS configured, the demo runs a read-only transfer simulation and labels that no transaction was sent. The organizer request is still simulated |
 
 Ticket screen buttons by status:
@@ -114,7 +116,7 @@ Manual admit was removed as out of scope.
 
 | Route | Back | Primary | Other | Notes |
 |---|---|---|---|---|
-| `/organizer` | `/enter` | Issue view: "Issue ticket". Look up view: "Look up" | A switch at the top changes between Issue and Look up. "Use this phone's wallet" fills the address. The Look up view also lists what was issued in this session | The only organizer screen for now. The old sub routes are dropped: transfers arrive with ENS, and manual entries are out of scope |
+| `/organizer` | `/enter` | Issue: "Issue ticket". Look up: "Look up". New event: "Publish event". Live door: none, it refreshes every 5 seconds | A switch at the top changes between Issue and Look up. "Use this phone's wallet" fills the address. The Look up view also lists what was issued in this session | The only organizer screen for now. The old sub routes are dropped: transfers arrive with ENS, and manual entries are out of scope |
 
 ## Journeys
 

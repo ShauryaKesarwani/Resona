@@ -6,6 +6,8 @@ import { Screen, TopBar } from '../../components/Screen'
 import { api, type ServerTicket } from '../../services/api'
 import { signedBy } from '../../services/auth'
 import { walletAddress } from '../../utils/wallet'
+import { DoorCount } from './DoorCount'
+import { NewEvent } from './NewEvent'
 
 const tiers = [
   { id: 'general', name: 'General admission' },
@@ -31,7 +33,7 @@ const explain = (err: unknown) =>
 
 /** Issue a ticket to a wallet address, and look up what a wallet holds. */
 export default function Organizer() {
-  const [mode, setMode] = useState<'issue' | 'lookup'>('issue')
+  const [mode, setMode] = useState<'issue' | 'lookup' | 'event' | 'door'>('issue')
   const [holder, setHolder] = useState('')
   const [tier, setTier] = useState(tiers[0].id)
   const [error, setError] = useState('')
@@ -80,11 +82,11 @@ export default function Organizer() {
   return (
     <Screen>
       <TopBar back="/enter" />
-      <h1 className="heading-4">Issue tickets</h1>
+      <h1 className="heading-4">Organizer</h1>
       <Button to="/organizer/attendees" variant="secondary" size="md">View attendees and check-ins</Button>
 
       <div role="group" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-raised p-1">
-        {(['issue', 'lookup'] as const).map((m) => (
+        {(['issue', 'lookup', 'event', 'door'] as const).map((m) => (
           <button
             key={m}
             type="button"
@@ -94,10 +96,13 @@ export default function Organizer() {
               mode === m ? 'bg-surface-high text-text' : 'text-text-muted'
             }`}
           >
-            {m === 'issue' ? 'Issue' : 'Look up'}
+            {{ issue: 'Issue', lookup: 'Look up', event: 'New event', door: 'Live door' }[m]}
           </button>
         ))}
       </div>
+
+      {mode === 'event' && <NewEvent />}
+      {mode === 'door' && <DoorCount />}
 
       {mode === 'issue' && (
         <form onSubmit={issue} noValidate className="flex flex-1 flex-col gap-4">

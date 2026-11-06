@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { ArrowsLeftRightIcon, InfoIcon } from '../../components/icons'
 import { Row, StatusPill, WalletChip } from '../../components/Bits'
 import { Button } from '../../components/Button'
-import { Figure } from '../../components/Figure'
 import { Screen, TopBar } from '../../components/Screen'
 import { short, useTickets, wallet } from '../../data/mock'
 import { api, type EnsPass } from '../../services/api'
+import { myPurchases } from '../../services/arkiv'
+import { EventImage } from '../events/EventImage'
 
 /** W2. One ticket, with the single action that fits its status. */
 export default function Ticket() {
@@ -15,6 +16,7 @@ export default function Ticket() {
   const [gloss, setGloss] = useState(false)
   const [ens, setEns] = useState<EnsPass | null>(null)
   const [ensError, setEnsError] = useState('')
+  const [receipt, setReceipt] = useState<string>()
 
   useEffect(() => {
     if (!id) return
@@ -23,6 +25,11 @@ export default function Ticket() {
       if (current && error.message !== 'ens_not_configured') setEnsError('ENS ownership could not be checked.')
     })
     return () => { current = false }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    myPurchases().then((all) => setReceipt(all.find((p) => p.passId === id)?.txnHash)).catch(() => {})
   }, [id])
 
   if (!ticket) {
@@ -43,23 +50,36 @@ export default function Ticket() {
   return (
     <Screen>
       <TopBar back="/wallet" right={<WalletChip />} />
-      <Figure ratio="16 / 7" position="50% 45%" />
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="heading-4">Pass&nbsp;{ticket.pass}</h1>
-          <p className="body-6 font-mono text-text-muted [overflow-wrap:anywhere]">{ens?.name ?? ticket.ens}</p>
+      <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
+        <EventImage eventId={ticket.eventId} ratio="16 / 9" />
+        <h1 className="heading-4 p-4">{ticket.event}</h1>
+        <div aria-hidden="true" className="relative border-t border-dashed border-line">
+          <span className="absolute -top-3 -left-3 size-6 rounded-full border border-line bg-surface" />
+          <span className="absolute -top-3 -right-3 size-6 rounded-full border border-line bg-surface" />
         </div>
-        <StatusPill status={ticket.status} past={ticket.past} />
+        <div className="flex items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <p className="caption-4 text-text-muted">{ticket.tier}</p>
+            <p className="title-2 tabular-nums">Pass&nbsp;{ticket.pass}</p>
+            <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{ens?.name ?? ticket.ens}</p>
+          </div>
+          <StatusPill status={ticket.status} past={ticket.past} />
+        </div>
       </div>
 
       <div className="rounded-2xl border border-line bg-surface-raised p-2">
         <div className="rounded-lg bg-surface-inset">
-          <Row label="Event">{ticket.event}</Row>
-          <Row label="Tier">{ticket.tier}</Row>
           <Row label="Holder">
             <span className="font-mono">{short(wallet.address)}</span>
           </Row>
           <Row label="Verification">{ticket.level}</Row>
+          {receipt && (
+            <Row label="Payment">
+              <Link to={`/wallet/receipt/${receipt}`} className="inline-flex min-h-12 items-center text-accent">
+                See receipt
+              </Link>
+            </Row>
+          )}
           <Row label="Transfers">
             <button
               type="button"

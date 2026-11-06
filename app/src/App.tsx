@@ -14,7 +14,10 @@ import Buy from './pages/events/Buy'
 import Event from './pages/events/Event'
 import Events from './pages/events/Events'
 import Canvas from './pages/Canvas'
+import Preview from './pages/Preview'
 import Profile from './pages/Profile'
+import Account from './pages/wallet/Account'
+import Receipt from './pages/wallet/Receipt'
 import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
@@ -51,6 +54,7 @@ export default function App() {
         <Route path="/e/:id" element={<Event />} />
         <Route path="/u/:name" element={<Profile />} />
         {import.meta.env.DEV && <Route path="/canvas" element={<Canvas />} />}
+        {import.meta.env.DEV && <Route path="/preview" element={<Preview />} />}
         <Route path="/lab" element={<Lab />} />
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
@@ -63,6 +67,8 @@ export default function App() {
           <Route path="/wallet/events" element={<Navigate to="/events" replace />} />
           <Route path="/e/:id/buy" element={<Buy />} />
           <Route path="/wallet/purchases" element={<Purchases />} />
+          <Route path="/wallet/receipt/:txn" element={<Receipt />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/wallet/ticket/:id" element={<Ticket />} />
           <Route path="/wallet/claim/:id" element={<Claim />} />
           <Route path="/wallet/checkin/:id" element={<CheckIn />} />

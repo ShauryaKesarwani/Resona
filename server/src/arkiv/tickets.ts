@@ -25,6 +25,8 @@ export type TicketStore = {
   commitClaim(passId: string, operationId: string, holder: string, userId: string): Promise<Ticket>;
   /** Tops a wallet up to a fixed amount of test tokens. A funded wallet gets nothing more. */
   fund(wallet: string): Promise<void>;
+  /** Publishes an event the organizer can sell tickets for. */
+  createEvent(event: { slug: string; eventName: string; eventDate: string; priceWei: bigint }): Promise<{ eventId: string; entityKey: Hex; transactionHash: Hex }>;
 };
 
 const notConfigured = async () => { throw new Error("Arkiv is not configured"); };
@@ -51,6 +53,7 @@ export const unconfiguredTickets: TicketStore & CheckinStore = {
   setStatus: notConfigured,
   commitClaim: notConfigured,
   fund: notConfigured,
+  createEvent: notConfigured,
   doorTicket: async () => undefined,
   paymentIsValid: async () => false,
   eventEnded: async () => false,

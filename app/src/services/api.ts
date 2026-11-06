@@ -33,6 +33,7 @@ export const api = {
   login: (signed: Signed, idkitResponse: IDKitResult) => request<{ wallet: string }>('/api/auth/login', { ...signed, idkitResponse }),
   tickets: (holder: string) => request<ServerTicket[]>(`/api/tickets?holder=${holder}`),
   issue: (holder: string, tier: string, signed: Signed) => request<ServerTicket>('/api/issue', { holder, tier, ...signed }),
+  createEvent: (eventName: string, eventDate: string, price: string) => request<{ eventId: string; transactionHash: string }>('/api/event', { eventName, eventDate, price }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),

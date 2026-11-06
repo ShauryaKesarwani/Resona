@@ -10,6 +10,7 @@ export type Level = 'Orb verified' | 'Camera verified' | 'Government ID' | 'Not 
 
 export type Ticket = {
   id: string
+  eventId: string
   pass: number
   ens: string
   event: string
@@ -65,6 +66,7 @@ async function loadTickets() {
       const local = tickets.find((t) => t.id === row.passId)
       return {
         id: row.passId,
+        eventId: row.eventId,
         pass: index + 1,
         ens: row.ensName ?? `${row.passId.slice(0, 8)}…`,
         event: event?.eventName ?? 'Event details not published',

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
+import { Link } from 'react-router-dom'
 import { Screen, TopBar } from '../../components/Screen'
-import { allEvents, explorerTx, myPurchases, type ArkivEvent, type ArkivPayment } from '../../services/arkiv'
+import { allEvents, myPurchases, type ArkivEvent, type ArkivPayment } from '../../services/arkiv'
 
 /** W7. Everything this wallet has bought, each linked to its payment on the explorer. */
 export default function Purchases() {
@@ -41,9 +42,9 @@ export default function Purchases() {
               </div>
               <div className="text-right">
                 <p className="body-5 font-mono tabular-nums">{formatEther(BigInt(p.amountWei))}&nbsp;tGLM</p>
-                <a href={explorerTx(p.txnHash)} target="_blank" rel="noreferrer" className="body-6 inline-flex min-h-12 items-center text-accent">
-                  See payment
-                </a>
+                <Link to={`/wallet/receipt/${p.txnHash}`} className="body-6 inline-flex min-h-12 items-center text-accent">
+                  See receipt
+                </Link>
               </div>
             </li>
           ))}

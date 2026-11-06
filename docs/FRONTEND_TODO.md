@@ -18,11 +18,12 @@ Nothing here needs new screens. It needs two real phones and a public HTTPS URL.
 | Item | Why | Notes |
 |---|---|---|
 | ENS names across the screens | The ENS track needs names visible where people see them | Show the pass name and the event name on the event page, the buy success screen and the door pass screen. Profile link by name once names resolve: `/u/sam.eth` |
-| Show the payment on a bought ticket | A purchase has a payment record, but the ticket does not link to it | Add a Row on the ticket with the explorer link, read from `myPurchases` |
 | Claim screen: real phone lock | The claim's phone lock step is still simulated, and shows as such | Depends on the server's claim route |
 | Transfer: organizer approval | The request and the organizer's answer are simulated | Needs a server route and an organizer view of pending requests |
 | Organizer page: pending requests and an event list | The organizer can issue and look up a wallet, nothing else | Wait for the server list routes |
 | Event page: more than name, date and price | Judges see a thin page | Needs description and venue fields on the Arkiv event first |
+
+Done in the remake pass: the check in sonar visuals, the ticket as a pass, Account and backup, Before you check in, Receipt, and the organizer's New event and Live door tabs. `POST /api/event` is a demo stand in like `/api/issue`, with no organizer authorization yet.
 
 ## 3. Policy gaps that show up on screens
 
@@ -30,7 +31,7 @@ These are server decisions, listed so the screens can follow.
 
 - [ ] **Bought tickets skip the World check at the door.** Either the server enforces it, or the buy screen should tell people a World sign in is needed.
 - [ ] **One ticket per human per event** is enforced in the browser only. The buy screen's error message exists, but the server does not back it.
-- [ ] **Organizer authorization** is missing on issue. The organizer page should say so until it is added.
+- [ ] **Organizer authorization** is missing on issue and on publishing an event. The organizer page should say so until it is added.
 
 ## 4. Polish
 

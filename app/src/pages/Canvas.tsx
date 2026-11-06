@@ -25,11 +25,11 @@ export default function Canvas() {
       { title: 'Events', path: '/events' }, { title: 'Event', path: `/e/${eventId}` }, { title: 'Buy', path: `/e/${eventId}/buy` },
     ] },
     { name: 'Wallet', frames: [
-      { title: 'Tickets', path: '/wallet' }, { title: 'Purchases', path: '/wallet/purchases' }, { title: 'Ticket, not found', path: '/wallet/ticket/none' },
+      { title: 'Tickets', path: '/wallet' }, { title: 'Account', path: '/account' }, { title: 'Receipt, not found', path: '/wallet/receipt/none' }, { title: 'Purchases', path: '/wallet/purchases' }, { title: 'Ticket, not found', path: '/wallet/ticket/none' },
       { title: 'Claim, not found', path: '/wallet/claim/none' }, { title: 'Check in, not found', path: '/wallet/checkin/none' }, { title: 'Send, not found', path: '/wallet/transfer/none' },
     ] },
     { name: 'Door and organizer', frames: [
-      { title: 'Door', path: '/door' }, { title: 'Recent check ins', path: '/door/recent' }, { title: 'Organizer', path: '/organizer' },
+      { title: 'Door', path: '/door' }, { title: 'Recent check ins', path: '/door/recent' }, { title: 'Organizer', path: '/organizer' }, { title: 'Check in visuals', path: '/preview' },
     ] },
     { name: 'Public and other', frames: [
       { title: 'Profile', path: `/u/${holder}` }, { title: 'Profile, bad link', path: '/u/nobody' }, { title: 'Privacy', path: '/privacy' },

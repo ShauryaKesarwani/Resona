@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircleIcon, ClockCounterClockwiseIcon, WarningCircleIcon } from '../../components/icons'
+import { ClockCounterClockwiseIcon, WarningCircleIcon } from '../../components/icons'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
+import { DistanceGap, SonarRings } from '../../components/Sonar'
 import { Figure } from '../../components/Figure'
 import { QrScanner } from '../../components/QrScanner'
 import { Screen, TopBar } from '../../components/Screen'
@@ -146,15 +147,10 @@ export default function Door() {
         <Screen>
           <TopBar back="/enter" title="Result" />
           <section className="flex flex-1 flex-col justify-center gap-6" role="status">
-            <div className="flex items-center gap-3">
-              <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
-              <h1 className="heading-3 text-success">Pass</h1>
-            </div>
+            <DistanceGap cm={result.cm ?? 0} good />
+            <h1 className="heading-3 text-center text-success">Pass</h1>
             <div className="rounded-2xl border border-line bg-surface-raised p-2">
               <div className="rounded-lg bg-surface-inset">
-                <Row label="Distance">
-                  <span className="font-mono tabular-nums">{Math.round(result.cm ?? 0)}&nbsp;cm</span>
-                </Row>
                 <Row label="Holder">
                   <span className="font-mono">{short(who.holder)}</span>
                 </Row>
@@ -180,16 +176,15 @@ export default function Door() {
       <Screen>
         <TopBar back="/enter" title="Result" />
         <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
-          <div className="flex items-center gap-3">
-            <WarningCircleIcon size={48} className="text-danger" aria-hidden="true" />
-            <h1 className="heading-3 text-danger">Not admitted</h1>
-          </div>
-          <h2 className="heading-6">{f.title}</h2>
-          {result.cm !== undefined && result.state === 'too_far' && (
-            <p className="title-2 font-mono tabular-nums">{Math.round(result.cm)}&nbsp;cm</p>
+          {result.cm !== undefined && result.state === 'too_far' ? (
+            <DistanceGap cm={result.cm} good={false} />
+          ) : (
+            <WarningCircleIcon size={48} className="mx-auto text-danger" aria-hidden="true" />
           )}
-          {result.state === 'no_sound' && <p className="title-3">{problemText(result.problem)}</p>}
-          <p className="body-3 text-text-muted">{f.body}</p>
+          <h1 className="heading-3 text-center text-danger">Not admitted</h1>
+          <h2 className="heading-6 text-center">{f.title}</h2>
+          {result.state === 'no_sound' && <p className="title-3 text-center">{problemText(result.problem)}</p>}
+          <p className="body-3 text-center text-text-muted">{f.body}</p>
         </section>
         {result.state !== 'failed' && <Button onClick={tryAgain}>Try again</Button>}
         <Button variant={result.state === 'failed' ? 'primary' : 'secondary'} size={result.state === 'failed' ? 'lg' : 'md'} onClick={next}>
@@ -203,20 +198,13 @@ export default function Door() {
     return (
       <Screen>
         <TopBar title="Checking" heading />
-        <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>
-        <ol className="flex flex-col gap-2" aria-live="polite">
-          {steps.map((s, i) => (
-            <li
-              key={s}
-              className={`flex min-h-12 items-center gap-3 rounded-xl border border-line px-4 ${
-                i === phase.step ? 'bg-surface-raised' : i < phase.step ? 'text-text-muted' : 'text-text-muted'
-              }`}
-            >
-              <span aria-hidden="true" className={`size-2 rounded-full ${i === phase.step ? 'animate-pulse bg-accent' : i < phase.step ? 'bg-success' : 'bg-surface-high'}`} />
-              <span className="body-5">{s}</span>
-            </li>
-          ))}
-        </ol>
+        <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
+          <SonarRings label="Listening for the holder’s phone" />
+          <div className="flex flex-col gap-2">
+            <p className="heading-4">{steps[phase.step]}</p>
+            <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>
+          </div>
+        </section>
       </Screen>
     )
   }

@@ -31,7 +31,19 @@
 
   --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
   --animate-screen-in: screen-in 500ms var(--ease-base) both;
+  --animate-sonar: sonar 2400ms var(--ease-base) infinite;
   --animate-ping-soft: ping-soft 1800ms var(--ease-base) infinite;
+
+  @keyframes sonar {
+    from {
+      opacity: 0.7;
+      transform: scale(0.2);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
 
   @keyframes ping-soft {
     from {

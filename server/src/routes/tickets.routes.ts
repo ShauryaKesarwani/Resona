@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { isAddress } from "viem";
+import { isAddress, parseEther } from "viem";
 import type { AccountRegistry } from "../arkiv/accounts.ts";
 import { env } from "../config/env.ts";
 import type { TicketStore } from "../arkiv/tickets.ts";
@@ -23,6 +23,21 @@ export function ticketRoutes(tickets: TicketStore, registry: AccountRegistry, en
     if (!(await isWalletOwner(`issue:${holder.toLowerCase()}:${tier}`, signed))) return void res.status(401).json({ error: "bad_signature" });
     if (!env.organizerWallets.includes(signed.wallet.toLowerCase())) return void res.status(403).json({ error: "not_organizer" });
     res.json(await tickets.issue(holder, tier));
+  });
+
+  // Demo stand-in like /issue: it is not organizer-authenticated yet.
+  router.post("/event", async (req, res) => {
+    if (!tickets.ready) return void res.status(503).json({ error: "arkiv_not_configured" });
+    const { eventName, eventDate, price } = req.body ?? {};
+    const name = typeof eventName === "string" ? eventName.trim() : "";
+    if (name.length < 3 || name.length > 60) return void res.status(400).json({ error: "invalid_event_name" });
+    if (typeof eventDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate) || eventDate < new Date().toISOString().slice(0, 10))
+      return void res.status(400).json({ error: "invalid_event_date" });
+    const tokens = Number(price);
+    if (!Number.isFinite(tokens) || tokens < 0 || tokens > 100) return void res.status(400).json({ error: "invalid_price" });
+    const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
+    const created = await tickets.createEvent({ slug, eventName: name, eventDate, priceWei: parseEther(String(tokens)) });
+    res.json({ eventId: created.eventId, transactionHash: created.transactionHash });
   });
 
   router.get("/tickets", async (req, res) => {

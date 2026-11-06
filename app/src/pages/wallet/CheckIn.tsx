@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { CheckCircleIcon, DeviceMobileIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon } from '../../components/icons'
+import { DeviceMobileIcon, SpeakerHighIcon, WarningCircleIcon, WaveformIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
+import { DistanceGap, SonarRings } from '../../components/Sonar'
 import { Screen, TopBar } from '../../components/Screen'
 import { ordinal, refreshTickets, updateTicket, useTickets } from '../../data/mock'
 import { api, waitForNextAttempt, waitForResult, waitUntilRunning, type CheckinResult } from '../../services/api'
@@ -12,7 +13,6 @@ import { measure, micError, openMic, problemText } from '../../sonar/run'
 
 type Phase = { name: 'ready' } | { name: 'starting' } | { name: 'code'; code: string } | { name: 'running'; step: number } | { name: 'done'; result: CheckinResult }
 
-const steps = ['Playing and listening', 'Checking the distance']
 
 const tips = [
   { icon: SpeakerHighIcon, text: 'Turn the volume all the way up.' },
@@ -139,11 +139,9 @@ export default function CheckIn() {
       <Screen>
         <TopBar back={back} title="Check in" />
         <section className="flex flex-1 flex-col justify-center gap-4" role="status">
-          <CheckCircleIcon size={64} className="text-success" aria-hidden="true" />
-          <h1 className="heading-3">You are in</h1>
-          <p className="body-3 text-text-muted">
-            The phones measured <span className="font-mono tabular-nums">{Math.round(cm ?? 0)}&nbsp;cm</span>. You are {ordinal(place ?? 0)} through the door.
-          </p>
+          <DistanceGap cm={cm ?? 0} good />
+          <h1 className="heading-3 text-center">You are in</h1>
+          <p className="body-3 text-center text-text-muted">You are {ordinal(place ?? 0)} through the door.</p>
           {transactionHash && (
             <a href={explorerTx(transactionHash)} target="_blank" rel="noreferrer" className="body-5 inline-flex min-h-12 items-center text-accent">
               See the Arkiv record
@@ -164,11 +162,14 @@ export default function CheckIn() {
       <Screen>
         <TopBar back={back} title="Check in" />
         <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
-          <WarningCircleIcon size={64} className="text-danger" aria-hidden="true" />
-          <h1 className="heading-3">{f.title}</h1>
-          {state === 'too_far' && cm !== undefined && <p className="title-2 font-mono tabular-nums">{Math.round(cm)}&nbsp;cm</p>}
-          {state === 'no_sound' && <p className="title-3">{problemText(problem)}</p>}
-          <p className="body-3 text-text-muted">{f.body}</p>
+          {state === 'too_far' && cm !== undefined ? (
+            <DistanceGap cm={cm} good={false} />
+          ) : (
+            <WarningCircleIcon size={64} className="mx-auto text-danger" aria-hidden="true" />
+          )}
+          <h1 className="heading-3 text-center">{f.title}</h1>
+          {state === 'no_sound' && <p className="title-3 text-center">{problemText(problem)}</p>}
+          <p className="body-3 text-center text-text-muted">{f.body}</p>
         </section>
         {state === 'failed' ? <Button to={back}>Back to ticket</Button> : <Button onClick={tryAgain}>Try again</Button>}
       </Screen>
@@ -195,15 +196,13 @@ export default function CheckIn() {
     return (
       <Screen>
         <TopBar title="Check in" heading />
-        <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>
-        <ol className="flex flex-col gap-2" aria-live="polite">
-          {steps.map((s, i) => (
-            <li key={s} className={`flex min-h-12 items-center gap-3 rounded-xl border border-line px-4 ${i === phase.step ? 'bg-surface-raised' : 'text-text-muted'}`}>
-              <span aria-hidden="true" className={`size-2 rounded-full ${i === phase.step ? 'animate-pulse bg-accent' : i < phase.step ? 'bg-success' : 'bg-surface-high'}`} />
-              <span className="body-5">{s}</span>
-            </li>
-          ))}
-        </ol>
+        <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
+          <SonarRings label="Sound leaving your phone" />
+          <div className="flex flex-col gap-2">
+            <p className="heading-4">{phase.step === 0 ? 'Listening' : 'Checking the distance'}</p>
+            <p className="body-3 text-text-muted">Hold the phones about 30&nbsp;cm apart and keep them still.</p>
+          </div>
+        </section>
       </Screen>
     )
   }
@@ -211,15 +210,21 @@ export default function CheckIn() {
   return (
     <Screen>
       <TopBar back={back} title="Check in" />
-      <h1 className="heading-4">Pass&nbsp;{ticket.pass}</h1>
-      <p className="body-6 text-text-muted">
-        {ticket.event}, {ticket.tier}
-      </p>
-      <ul className="flex flex-col gap-2">
+      <header className="flex flex-col gap-1">
+        <h1 className="heading-4">Before you check in</h1>
+        <p className="body-6 text-text-muted tabular-nums">
+          Pass&nbsp;{ticket.pass}, {ticket.event}
+        </p>
+      </header>
+      <div className="rounded-2xl border border-line bg-surface-raised py-4">
+        <DistanceGap cm={30} good />
+        <p className="body-6 text-center text-text-muted">Phones about this far apart, speakers facing each other.</p>
+      </div>
+      <ul className="flex flex-col">
         {tips.map((t) => (
-          <li key={t.text} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3">
+          <li key={t.text} className="flex items-center gap-3 py-3 not-first:border-t not-first:border-line">
             <t.icon size={20} className="shrink-0 text-accent" aria-hidden="true" />
-            <span className="body-6">{t.text}</span>
+            <span className="body-5">{t.text}</span>
           </li>
         ))}
       </ul>
@@ -227,7 +232,7 @@ export default function CheckIn() {
         {error}
       </p>
       <div className="flex-1" />
-      <p className="body-6 text-center text-text-muted">Your phone plays a short sound and listens. Allow the microphone when asked.</p>
+      <p className="body-6 text-center text-text-muted">Next, your phone asks to use the microphone. It only listens for the door’s sound.</p>
       <Button busy={phase.name === 'starting'} onClick={start}>
         {phase.name === 'starting' ? 'Getting ready' : 'Start check in'}
       </Button>

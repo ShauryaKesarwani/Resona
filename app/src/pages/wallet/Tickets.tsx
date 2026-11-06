@@ -4,7 +4,6 @@ import { CaretRightIcon, TicketIcon } from '../../components/icons'
 import { StatusPill, WalletChip } from '../../components/Bits'
 import { AttendeeTabs } from '../../components/AttendeeTabs'
 import { Button } from '../../components/Button'
-import { SignOutButton } from '../../components/SignOutButton'
 import { Figure } from '../../components/Figure'
 import { Screen, TopBar } from '../../components/Screen'
 import { refreshTickets, useTickets, useTicketsState, type Ticket } from '../../data/mock'
@@ -107,7 +106,6 @@ export default function Tickets() {
 
       <div className="flex-1" />
       <Button to="/events">Buy tickets</Button>
-      <SignOutButton />
       <AttendeeTabs />
     </Screen>
   )
