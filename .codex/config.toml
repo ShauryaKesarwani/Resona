@@ -1,0 +1,11 @@
+# Project MCP servers for Codex. Keep in sync with .mcp.json and opencode.json.
+# Never put API keys here; see docs/AI_TOOLS_SETUP.md.
+
+[mcp_servers.arkiv]
+url = "https://mcp.arkiv.network/mumbai"
+
+[mcp_servers.world-docs]
+url = "https://docs.world.org/mcp"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
