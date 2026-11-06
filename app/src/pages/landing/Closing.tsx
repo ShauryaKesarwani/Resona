@@ -1,67 +1,8 @@
-import {
-  CaretDownIcon,
-  CheckCircleIcon,
-  CopyIcon,
-  DeviceMobileIcon,
-  MinusCircleIcon,
-  QrCodeIcon,
-  RobotIcon,
-  VideoCameraIcon,
-  WarningCircleIcon,
-} from '../../components/icons'
-import type { Icon } from '../../components/icons'
+import { CaretDownIcon } from '../../components/icons'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'
 import { Panel, Section } from './Section'
-
-type Status = 'stopped' | 'planned' | 'open'
-const statusLook: Record<Status, { label: string; icon: Icon; cls: string }> = {
-  stopped: { label: 'Stopped in the demo', icon: CheckCircleIcon, cls: 'text-success' },
-  planned: { label: 'Planned', icon: WarningCircleIcon, cls: 'text-accent' },
-  open: { label: 'Not stopped', icon: MinusCircleIcon, cls: 'text-danger' },
-}
-
-const attacks: { icon: Icon; title: string; body: string; status: Status }[] = [
-  { icon: QrCodeIcon, title: 'A QR code streamed over a video call', body: 'The code only names the ticket. The sound check still needs your phone at the door.', status: 'stopped' },
-  { icon: VideoCameraIcon, title: 'Sound relayed over Meet or Discord', body: 'The delay shows up as distance, so a relay looks metres away and fails.', status: 'stopped' },
-  { icon: CopyIcon, title: 'A forwarded ticket or copied wallet', body: 'The ticket will be locked to the key of the phone that claimed it.', status: 'planned' },
-  { icon: RobotIcon, title: 'A modified app that fakes the timing', body: 'Needs the native app with hardware keys and attestation, which comes after the demo.', status: 'planned' },
-  { icon: DeviceMobileIcon, title: 'Lending your unlocked phone', body: 'Resona proves the holder’s phone is at the door, not who carries it. The avatar on the staff screen helps.', status: 'open' },
-]
-
-export function Limits() {
-  return (
-    <Section id="limits">
-      <h2 className="heading-4 lg:heading-3 max-w-[680px]">What the demo stops, and what it does not</h2>
-      <p className="body-3 mt-2 max-w-prose text-text-muted">
-        Distances and thresholds are design targets until we test on real phones.
-      </p>
-      <ul className="mt-8 grid gap-2 md:grid-cols-2">
-        {attacks.map((a) => {
-          const s = statusLook[a.status]
-          return (
-            <li key={a.title}>
-              <Panel>
-                <div className="flex items-start gap-3">
-                  <a.icon size={24} className="mt-0.5 shrink-0 text-text-muted" aria-hidden="true" />
-                  <div>
-                    <h3 className="title-3">{a.title}</h3>
-                    <p className="body-6 mt-1 text-text-muted">{a.body}</p>
-                    <p className={`caption-1 mt-3 flex items-center gap-1 ${s.cls}`}>
-                      <s.icon size={16} aria-hidden="true" />
-                      {s.label}
-                    </p>
-                  </div>
-                </div>
-              </Panel>
-            </li>
-          )
-        })}
-      </ul>
-    </Section>
-  )
-}
 
 const faqs = [
   { q: 'How does the sound check work?', a: 'Your phone and the door phone each play a short sound and record both. Each phone measures the gap between the two sounds, and the server turns that into a distance. Sound travels about 343\u00a0metres a second, so any delay on the line shows up as extra distance.' },
