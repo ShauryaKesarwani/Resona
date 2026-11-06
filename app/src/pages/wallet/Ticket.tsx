@@ -76,8 +76,8 @@ export default function Ticket() {
         <Button to={`/wallet/checkin/${ticket.id}`}>Check in</Button>
       )}
       {ticket.status === 'skipped' && (
-        <Button variant="secondary" size="md" to={`/wallet/claim/${ticket.id}`}>
-          Verify with World ID
+        <Button variant="secondary" size="md" to={`/signin?next=/wallet/ticket/${ticket.id}`}>
+          Sign in with World ID
         </Button>
       )}
       {ticket.status === 'claimed' && (

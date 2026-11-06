@@ -1,22 +1,23 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircleIcon, InfoIcon, SkipForwardIcon, WarningCircleIcon } from '../../components/icons'
+import { CheckCircleIcon, SkipForwardIcon, WarningCircleIcon } from '../../components/icons'
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { short, updateTicket, useTickets, wallet } from '../../data/mock'
-import { WorldVerify } from './WorldVerify'
+import { serverPass, short, updateTicket, useTickets, wallet } from '../../data/mock'
+import { api } from '../../services/api'
+import { signedBy } from '../../services/auth'
 
 type Phase = 'idle' | 'busy' | 'rejected' | 'done'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** W3. Three steps: confirm name, verify with World ID, lock to this phone. Only the World ID step is real. */
+/** W3. Two steps: confirm name, then claim. The wallet proves who you are, so there is no World ID step here. */
 export default function Claim() {
   const { id } = useParams()
   const ticket = useTickets().find((t) => t.id === id)
   const [step, setStep] = useState(1)
   const [phase, setPhase] = useState<Phase>('idle')
-  const [gloss, setGloss] = useState(false)
+  const [error, setError] = useState<string>()
   const [verified, setVerified] = useState(false)
   const back = `/wallet/ticket/${id}`
 
@@ -42,9 +43,18 @@ export default function Claim() {
 
   async function lock() {
     setPhase('busy')
-    await wait(900)
-    updateTicket(ticket!.id, { status: verified ? 'claimed' : 'skipped' })
-    setPhase('done')
+    setError(undefined)
+    try {
+      const passId = await serverPass()
+      const claimed = await api.claim(passId, await signedBy(`claim:${passId}`))
+      updateTicket(ticket!.id, { status: claimed.status })
+      setVerified(claimed.status === 'claimed')
+      setPhase('done')
+    } catch (err) {
+      if ((err as Error).message === 'human_already_claimed') return setPhase('rejected')
+      setPhase('idle')
+      setError('We could not claim this ticket. Try again.')
+    }
   }
 
   if (phase === 'done') {
@@ -61,7 +71,7 @@ export default function Claim() {
           <h1 className="heading-4">{skipped ? 'Verification skipped' : 'Ticket claimed'}</h1>
           <p className="body-3 text-text-muted">
             {skipped
-              ? `Pass\u00a0${ticket.pass} is saved to this phone without a World ID check. You can verify later from the ticket.`
+              ? `Pass\u00a0${ticket.pass} is saved to this phone without a World ID check. You can sign in later from the ticket.`
               : `Pass\u00a0${ticket.pass} is locked to this phone. Bring this phone to the door to check in.`}
           </p>
           <SimTag>Simulated phone lock</SimTag>
@@ -79,8 +89,8 @@ export default function Claim() {
           <WarningCircleIcon size={48} className="text-danger" aria-hidden="true" />
           <h1 className="heading-4">This person has already claimed</h1>
           <p className="body-3 text-text-muted">
-            World ID shows a ticket for {ticket.event} was already claimed by this person. Each person can claim one
-            ticket per event. Ask the organizer if you think this is a mistake.
+            This account has already claimed a ticket for {ticket.event}. Each person can claim one ticket per event.
+            Ask the organizer if you think this is a mistake.
           </p>
         </section>
         <Button variant="secondary" onClick={() => { setPhase('idle'); setStep(2) }}>
@@ -95,12 +105,12 @@ export default function Claim() {
   return (
     <Screen>
       <TopBar back={back} title="Claim ticket" />
-      <div aria-label={`Step ${step} of 3`} className="flex gap-1">
-        {[1, 2, 3].map((n) => (
+      <div aria-label={`Step ${step} of 2`} className="flex gap-1">
+        {[1, 2].map((n) => (
           <span key={n} className={`h-1 flex-1 rounded-full ${n <= step ? 'bg-accent' : 'bg-surface-high'}`} />
         ))}
       </div>
-      <p className="caption-1 tabular-nums text-text-muted">Step&nbsp;{step} of&nbsp;3</p>
+      <p className="caption-1 tabular-nums text-text-muted">Step&nbsp;{step} of&nbsp;2</p>
 
       {step === 1 && (
         <section className="flex flex-col gap-4">
@@ -124,36 +134,11 @@ export default function Claim() {
 
       {step === 2 && (
         <section className="flex flex-col gap-4">
-          <h1 className="heading-4">Verify with World ID</h1>
-          <p className="body-3 text-text-muted">
-            This ticket needs <span className="text-text">{ticket.level}</span>. You can claim one ticket per event.
-          </p>
-          <button
-            type="button"
-            onClick={() => setGloss(!gloss)}
-            aria-expanded={gloss}
-            className="body-5 inline-flex min-h-12 items-center gap-2 self-start rounded-lg text-accent"
-          >
-            <InfoIcon size={20} aria-hidden="true" />
-            What does this verification level mean
-          </button>
-          {gloss && (
-            <p className="body-6 rounded-lg bg-surface-raised p-4 text-text-muted">
-              World ID checks you are a real, unique person without sharing who you are.{' '}
-              {ticket.level === 'Orb verified'
-                ? 'Orb verified is the strongest check: an Orb scanned you in person.'
-                : 'Camera verified checks a live selfie against your World ID.'}
-            </p>
-          )}
-        </section>
-      )}
-
-      {step === 3 && (
-        <section className="flex flex-col gap-4">
           <h1 className="heading-4">Lock to this phone</h1>
           <p className="body-3 text-text-muted">
             After this, the ticket only checks in from this phone. A copy or screenshot on another phone will not work.
           </p>
+          {error && <p className="body-3 text-danger" role="alert">{error}</p>}
           <SimTag />
         </section>
       )}
@@ -166,16 +151,6 @@ export default function Claim() {
         </Button>
       )}
       {step === 2 && (
-        <WorldVerify
-          onVerified={() => {
-            setVerified(true)
-            setStep(3)
-          }}
-          onSkipped={() => setStep(3)}
-          onRejected={() => setPhase('rejected')}
-        />
-      )}
-      {step === 3 && (
         <Button busy={busy} onClick={lock}>
           {busy ? 'Locking ticket' : 'Lock ticket to this phone'}
         </Button>

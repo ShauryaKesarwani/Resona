@@ -3,8 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 export type TicketStatus = "issued" | "claimed" | "skipped";
 export type Ticket = { passId: string; holder: string; tier: string; status: TicketStatus };
 
-// Tickets live here until Arkiv is wired in. Nullifiers stay here for good,
-// because they must not be public.
+// Tickets live here until Arkiv is wired in.
 export function openStore(path: string) {
   const db = new DatabaseSync(path);
   db.exec(`
@@ -13,11 +12,6 @@ export function openStore(path: string) {
       holder  TEXT NOT NULL,
       tier    TEXT NOT NULL,
       status  TEXT NOT NULL DEFAULT 'issued'
-    );
-    CREATE TABLE IF NOT EXISTS nullifiers (
-      nullifier TEXT NOT NULL,
-      action    TEXT NOT NULL,
-      UNIQUE (nullifier, action)
     );
   `);
 
@@ -48,12 +42,8 @@ export function openStore(path: string) {
     setStatus(passId: string, status: TicketStatus) {
       db.prepare("UPDATE tickets SET status = ? WHERE pass_id = ?").run(status, passId);
     },
-    /** Returns false if this person has already used this action. */
-    useNullifier(nullifier: string, action: string): boolean {
-      const { changes } = db
-        .prepare("INSERT OR IGNORE INTO nullifiers (nullifier, action) VALUES (?, ?)")
-        .run(nullifier, action);
-      return changes === 1;
+    hasClaimed(holder: string): boolean {
+      return db.prepare("SELECT 1 FROM tickets WHERE holder = ? AND status = 'claimed'").get(holder.toLowerCase()) !== undefined;
     },
   };
 }

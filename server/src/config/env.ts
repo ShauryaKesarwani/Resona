@@ -7,6 +7,12 @@ function requireEnv(name: string): string {
 export const env = {
   port: Number(process.env.PORT ?? 3000),
   dbPath: process.env.DB_PATH ?? "resona.db",
+  nullifierHashKey: requireEnv("NULLIFIER_HASH_KEY"),
+  arkiv: {
+    privateKey: process.env.ARKIV_PRIVATE_KEY,
+    accessKey: process.env.ARKIV_ACCESS_KEY,
+    maxCostWei: BigInt(process.env.ARKIV_MAX_COST_WEI ?? "10000000000000000"),
+  },
   world: {
     appId: requireEnv("WORLD_APP_ID"),
     rpId: requireEnv("WORLD_RP_ID"),

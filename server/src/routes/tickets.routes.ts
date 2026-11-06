@@ -1,13 +1,13 @@
 import { Router, type Response } from "express";
+import type { AccountRegistry } from "../arkiv/accounts.ts";
 import { env } from "../config/env.ts";
 import type { Store } from "../db/store.ts";
-import { claim, skip, type Outcome } from "../services/claim.service.ts";
-import { portalVerifier } from "../services/world.service.ts";
+import { claim, type Outcome } from "../services/claim.service.ts";
 
 const send = (res: Response, outcome: Outcome) =>
   res.status(outcome.status).json("error" in outcome ? { error: outcome.error } : outcome.ticket);
 
-export function ticketRoutes(store: Store) {
+export function ticketRoutes(store: Store, registry: AccountRegistry) {
   const router = Router();
 
   // Stand-in until the real issue route writes to ENS and Arkiv.
@@ -22,11 +22,7 @@ export function ticketRoutes(store: Store) {
   });
 
   router.post("/claim", async (req, res) => {
-    send(res, await claim(store, env.world, portalVerifier, req.body));
-  });
-
-  router.post("/claim/skip", (req, res) => {
-    send(res, skip(store, env.world, req.body));
+    send(res, await claim(store, registry, env.world.allowSkip, req.body ?? {}));
   });
 
   return router;

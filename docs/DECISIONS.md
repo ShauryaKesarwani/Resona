@@ -41,6 +41,9 @@ The living record of what is settled and what isn't. Update it whenever the team
 | Security additions | Sound challenge with a deadline, attestation, hardware device key | **Proposed for the real product;** not in the demo |
 | Timing method | Matched filter for timing; spectrogram only for visuals and optional same-room check | **Proposed, needs team sign-off** |
 | Backend use | Keep the current Node server, but only for what must be server-side: World ID signing and verification, and writes that need the organizer's key. Everything else, including Arkiv reads, runs in the browser | Decided by team |
+| App sign-in | World ID verifies each person once. The wallet created on their device is then the login, proved by a signature, and tickets are claimed with no second World step | Decided by team |
+| One account per person | Arkiv stores `resona.account` with the wallet address and an HMAC of the nullifier, written by the server. A second wallet with the same nullifier is rejected | Decided by team |
+| Backend use | Keep the Node server for what must be server-side only: World ID, Arkiv reads and writes, and signature checks | Decided by team |
 | World ID skip | Demo-only Skip button on the claim page, in case verification is slow. The ticket is marked `skipped`, not verified, and can be verified later. Turn off with `ALLOW_WORLD_SKIP=false` | Decided by team, demo only |
 | POAP | Stage 4, on attendee profiles | Decided by team |
 

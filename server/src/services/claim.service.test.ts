@@ -1,87 +1,66 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
-import { hashSignal } from "@worldcoin/idkit-core/hashing";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import type { AccountRegistry } from "../arkiv/accounts.ts";
 import { openStore, type Store } from "../db/store.ts";
-import { claim, skip, type ClaimConfig } from "./claim.service.ts";
-import type { Verifier } from "./world.service.ts";
+import { signedMessage } from "../utils/signature.ts";
+import { claim } from "./claim.service.ts";
 
-const config: ClaimConfig = { rpId: "rp_test", action: "claim-test", environment: "staging", allowSkip: true };
-const alice = "0xAAaa000000000000000000000000000000000001";
-const aliceAlt = "0xaaaa000000000000000000000000000000000002";
-const passes: Verifier = async () => ({ ok: true, body: { success: true, environment: "staging" } });
+const account = privateKeyToAccount(generatePrivateKey());
+const wallet = account.address.toLowerCase();
 
-const proofFor = (wallet: string, overrides = {}) => ({
-  environment: "staging",
-  action: "claim-test",
-  responses: [{ nullifier: "0xABC", signal_hash: hashSignal(wallet.toLowerCase()) }],
-  ...overrides,
-});
+async function signedClaim(passId: string, signer = account) {
+  const timestamp = Date.now();
+  const signature = await signer.signMessage({ message: signedMessage(`claim:${passId}`, wallet, timestamp) });
+  return { passId, wallet, timestamp, signature };
+}
+
+const withAccount = { ready: true, findByWallet: async () => ({ wallet, nullifierHash: "h" }) } as unknown as AccountRegistry;
+const noAccount = { ready: true, findByWallet: async () => null } as unknown as AccountRegistry;
 
 let store: Store;
 let passId: string;
 beforeEach(() => {
   store = openStore(":memory:");
-  passId = store.issue(alice, "general").passId;
+  passId = store.issue(wallet, "general").passId;
 });
 
-test("a valid proof claims the ticket", async () => {
-  const out = await claim(store, config, passes, { passId, wallet: alice, idkitResponse: proofFor(alice) });
+test("a signed-in wallet claims with no World proof", async () => {
+  const out = await claim(store, withAccount, false, await signedClaim(passId));
   assert.equal(out.status, 200);
   assert.equal(store.ticket(passId)?.status, "claimed");
 });
 
-test("the same human can't claim a second ticket, even with another wallet", async () => {
-  await claim(store, config, passes, { passId, wallet: alice, idkitResponse: proofFor(alice) });
-  const second = store.issue(aliceAlt, "general").passId;
-  const proof = proofFor(aliceAlt, { responses: [{ nullifier: "0xabc", signal_hash: hashSignal(aliceAlt) }] });
-  const out = await claim(store, config, passes, { passId: second, wallet: aliceAlt, idkitResponse: proof });
-  assert.deepEqual(out, { status: 409, error: "human_already_claimed" });
-  assert.equal(store.ticket(second)?.status, "issued");
-});
-
-test("a replay reported by World counts as already claimed", async () => {
-  const replay: Verifier = async () => ({ ok: false, body: { code: "nullifier_replayed" } });
-  const out = await claim(store, config, replay, { passId, wallet: alice, idkitResponse: proofFor(alice) });
-  assert.deepEqual(out, { status: 409, error: "human_already_claimed" });
-});
-
-test("a proof bound to another wallet is rejected before verifying", async () => {
-  const never: Verifier = async () => assert.fail("should not call the Portal");
-  const out = await claim(store, config, never, { passId, wallet: alice, idkitResponse: proofFor(aliceAlt) });
-  assert.deepEqual(out, { status: 400, error: "wrong_wallet" });
-});
-
-test("wrong environment and wrong action are rejected", async () => {
-  const input = { passId, wallet: alice };
-  const env = await claim(store, config, passes, { ...input, idkitResponse: proofFor(alice, { environment: "production" }) });
-  const action = await claim(store, config, passes, { ...input, idkitResponse: proofFor(alice, { action: "other" }) });
-  assert.deepEqual(env, { status: 400, error: "wrong_environment" });
-  assert.deepEqual(action, { status: 400, error: "wrong_action" });
-});
-
-test("a failed verification leaves the ticket unclaimed", async () => {
-  const fails: Verifier = async () => ({ ok: false, body: { code: "invalid_proof" } });
-  const out = await claim(store, config, fails, { passId, wallet: alice, idkitResponse: proofFor(alice) });
-  assert.deepEqual(out, { status: 400, error: "verification_failed" });
+test("a request not signed by the wallet is rejected", async () => {
+  const attacker = privateKeyToAccount(generatePrivateKey());
+  const out = await claim(store, withAccount, false, await signedClaim(passId, attacker));
+  assert.deepEqual(out, { status: 401, error: "bad_signature" });
   assert.equal(store.ticket(passId)?.status, "issued");
 });
 
-test("only the holder can claim or skip", async () => {
-  assert.equal(skip(store, config, { passId, wallet: aliceAlt }).status, 403);
-  const out = await claim(store, config, passes, { passId, wallet: aliceAlt, idkitResponse: proofFor(aliceAlt) });
-  assert.equal(out.status, 403);
+test("a signature for one ticket can't claim another", async () => {
+  const other = store.issue(wallet, "general").passId;
+  const out = await claim(store, withAccount, false, { ...(await signedClaim(passId)), passId: other });
+  assert.deepEqual(out, { status: 401, error: "bad_signature" });
 });
 
-test("skip marks the ticket skipped, and it can still be verified later", async () => {
-  assert.equal(skip(store, config, { passId, wallet: alice }).status, 200);
+test("one account claims one ticket", async () => {
+  await claim(store, withAccount, false, await signedClaim(passId));
+  const second = store.issue(wallet, "general").passId;
+  const out = await claim(store, withAccount, false, await signedClaim(second));
+  assert.deepEqual(out, { status: 409, error: "human_already_claimed" });
+});
+
+test("only the ticket's holder can claim it", async () => {
+  const theirs = store.issue("0xaaaa000000000000000000000000000000000001", "general").passId;
+  const out = await claim(store, withAccount, false, await signedClaim(theirs));
+  assert.deepEqual(out, { status: 403, error: "not_ticket_holder" });
+});
+
+test("a guest is marked skipped only when skip is on, and can claim properly later", async () => {
+  assert.deepEqual(await claim(store, noAccount, false, await signedClaim(passId)), { status: 403, error: "no_account" });
+  await claim(store, noAccount, true, await signedClaim(passId));
   assert.equal(store.ticket(passId)?.status, "skipped");
-  const out = await claim(store, config, passes, { passId, wallet: alice, idkitResponse: proofFor(alice) });
-  assert.equal(out.status, 200);
+  await claim(store, withAccount, false, await signedClaim(passId));
   assert.equal(store.ticket(passId)?.status, "claimed");
-});
-
-test("skip can be turned off, and can't undo a verified claim", async () => {
-  assert.deepEqual(skip(store, { ...config, allowSkip: false }, { passId, wallet: alice }), { status: 403, error: "skip_disabled" });
-  await claim(store, config, passes, { passId, wallet: alice, idkitResponse: proofFor(alice) });
-  assert.deepEqual(skip(store, config, { passId, wallet: alice }), { status: 409, error: "already_claimed" });
 });

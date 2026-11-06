@@ -1,8 +1,10 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { RequireSignIn } from './components/RequireSignIn'
 import Enter from './pages/Enter'
 import Lab from './pages/Lab'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
+import SignIn from './pages/SignIn'
 import { Stub } from './pages/Stub'
 import Checking from './pages/door/Checking'
 import Manual from './pages/door/Manual'
@@ -27,6 +29,13 @@ const screens: { path: string; title: string; back: string; what: string }[] = [
   { path: '/u/:name', title: 'Profile', back: '/', what: 'Public trophy page: avatar, hash, ordinal and events attended.' },
 ]
 
+/** Anyone can open these without signing in. */
+const isPublic = (s: (typeof screens)[number]) => ['/privacy', '/terms', '/u/:name'].includes(s.path)
+
+const stub = (s: (typeof screens)[number]) => (
+  <Route key={s.path} path={s.path} element={<Stub title={s.title} back={s.back} what={s.what} />} />
+)
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -38,22 +47,23 @@ export default function App() {
       </a>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/enter" element={<Enter />} />
+        <Route path="/signin" element={<SignIn />} />
         <Route path="/lab" element={<Lab />} />
-
-        <Route path="/door" element={<Ready />} />
-        <Route path="/door/checking" element={<Checking />} />
-        <Route path="/door/result" element={<Result />} />
-        <Route path="/door/manual" element={<Manual />} />
-        <Route path="/door/recent" element={<Recent />} />
-        <Route path="/wallet" element={<Tickets />} />
-        <Route path="/wallet/ticket/:id" element={<Ticket />} />
-        <Route path="/wallet/claim/:id" element={<Claim />} />
-        <Route path="/wallet/checkin/:id" element={<CheckIn />} />
-        <Route path="/wallet/transfer/:id" element={<Transfer />} />
-        {screens.map((s) => (
-          <Route key={s.path} path={s.path} element={<Stub title={s.title} back={s.back} what={s.what} />} />
-        ))}
+        {screens.filter(isPublic).map(stub)}
+        <Route element={<RequireSignIn />}>
+          <Route path="/enter" element={<Enter />} />
+          <Route path="/door" element={<Ready />} />
+          <Route path="/door/checking" element={<Checking />} />
+          <Route path="/door/result" element={<Result />} />
+          <Route path="/door/manual" element={<Manual />} />
+          <Route path="/door/recent" element={<Recent />} />
+          <Route path="/wallet" element={<Tickets />} />
+          <Route path="/wallet/ticket/:id" element={<Ticket />} />
+          <Route path="/wallet/claim/:id" element={<Claim />} />
+          <Route path="/wallet/checkin/:id" element={<CheckIn />} />
+          <Route path="/wallet/transfer/:id" element={<Transfer />} />
+          {screens.filter((s) => !isPublic(s)).map(stub)}
+        </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

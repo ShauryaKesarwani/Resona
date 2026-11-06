@@ -1,30 +1,31 @@
 import { useEffect, useState } from 'react'
-import { proofOfHuman, useIDKitRequest, type RpContext } from '@worldcoin/idkit'
+import { proofOfHuman, useIDKitRequest, type IDKitResult, type RpContext } from '@worldcoin/idkit'
 import { QRCodeSVG } from 'qrcode.react'
-import { Button } from '../../components/Button'
-import { serverPass, wallet } from '../../data/mock'
-import { api, type WorldConfig } from '../../services/api'
+import { api, type WorldConfig } from '../services/api'
+import { Button } from './Button'
 
-const MESSAGES: Record<string, string> = {
-  already_claimed: 'This ticket is already claimed.',
-  wrong_wallet: 'This proof belongs to a different wallet.',
-  verification_failed: 'World ID could not verify this proof. Try again.',
+type Setup = { config: WorldConfig; rpContext: RpContext }
+type Props = {
+  signal: string
+  /** Sends the proof to the server. Throw an Error with a server code to reject it. */
+  submit: (result: IDKitResult) => Promise<unknown>
+  onDone: () => void
+  onSkip: () => void
+  /** Handles a code itself, such as a repeat. Return true if handled. */
+  onCode?: (code: string) => boolean
+  messages?: Record<string, string>
 }
 
-type Setup = { config: WorldConfig; rpContext: RpContext; passId: string }
-type Props = { onVerified: () => void; onSkipped: () => void; onRejected: () => void }
-
-/** The real World ID step. Skip stays on screen the whole time, in case verification is slow. */
-export function WorldVerify({ onVerified, onSkipped, onRejected }: Props) {
+/** One World ID proof. Skip stays on screen the whole time, in case verification is slow. */
+export function WorldStep({ signal, submit, onDone, onSkip, onCode, messages = {} }: Props) {
   const [setup, setSetup] = useState<Setup>()
   const [error, setError] = useState<string>()
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let current = true
-    setSetup(undefined)
-    Promise.all([api.config(), api.sign(), serverPass()])
-      .then(([config, rpContext, passId]) => current && setSetup({ config, rpContext, passId }))
+    Promise.all([api.config(), api.sign()])
+      .then(([config, rpContext]) => current && setSetup({ config, rpContext }))
       .catch(() => current && setError('Could not reach the Resona server. Check that it is running, then try again.'))
     return () => {
       current = false
@@ -33,21 +34,14 @@ export function WorldVerify({ onVerified, onSkipped, onRejected }: Props) {
 
   const retry = () => {
     setError(undefined)
+    setSetup(undefined)
     setAttempt((n) => n + 1)
   }
 
-  async function skip() {
-    try {
-      await api.skip(setup!.passId, wallet.address)
-      onSkipped()
-    } catch (err) {
-      setError(MESSAGES[(err as Error).message] ?? 'Could not skip this step.')
-    }
-  }
-
   function failed(code: string) {
-    if (code === 'human_already_claimed') onRejected()
-    else setError(MESSAGES[code] ?? 'Verification failed. Try again.')
+    if (onCode?.(code)) return
+    console.error('World ID step failed:', code)
+    setError(`${messages[code] ?? 'Verification failed. Try again.'} (${code})`)
   }
 
   return (
@@ -58,12 +52,12 @@ export function WorldVerify({ onVerified, onSkipped, onRejected }: Props) {
           <Button onClick={retry}>Try again</Button>
         </>
       ) : setup ? (
-        <Request key={attempt} setup={setup} onVerified={onVerified} onFailed={failed} />
+        <Request key={attempt} setup={setup} signal={signal} submit={submit} onDone={onDone} onFailed={failed} />
       ) : (
         <Button busy>Starting World ID</Button>
       )}
       {setup?.config.allowSkip && (
-        <Button variant="secondary" size="md" onClick={skip}>
+        <Button variant="secondary" size="md" onClick={onSkip}>
           Skip for now
         </Button>
       )}
@@ -71,15 +65,16 @@ export function WorldVerify({ onVerified, onSkipped, onRejected }: Props) {
   )
 }
 
-function Request({ setup, onVerified, onFailed }: { setup: Setup; onVerified: () => void; onFailed: (code: string) => void }) {
-  const { config, rpContext, passId } = setup
+type RequestProps = Pick<Props, 'signal' | 'submit' | 'onDone'> & { setup: Setup; onFailed: (code: string) => void }
+
+function Request({ setup, signal, submit, onDone, onFailed }: RequestProps) {
   const flow = useIDKitRequest({
-    app_id: config.appId,
-    action: config.action,
-    rp_context: rpContext,
+    app_id: setup.config.appId,
+    action: setup.config.action,
+    rp_context: setup.rpContext,
     allow_legacy_proofs: true,
-    environment: config.environment,
-    preset: proofOfHuman({ signal: wallet.address }),
+    environment: setup.config.environment,
+    preset: proofOfHuman({ signal }),
     polling: { interval: 2_000, timeout: 300_000 },
   })
 
@@ -87,7 +82,7 @@ function Request({ setup, onVerified, onFailed }: { setup: Setup; onVerified: ()
   useEffect(() => flow.open(), [])
   useEffect(() => {
     if (!flow.result) return
-    api.claim(passId, wallet.address, flow.result).then(onVerified).catch((err: Error) => onFailed(err.message))
+    submit(flow.result).then(onDone).catch((err: Error) => onFailed(err.message))
   }, [flow.result])
   useEffect(() => {
     if (flow.errorCode) onFailed(flow.errorCode)
@@ -109,7 +104,7 @@ function Request({ setup, onVerified, onFailed }: { setup: Setup; onVerified: ()
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <QRCodeSVG value={flow.connectorURI} size={200} marginSize={2} className="rounded-xl" />
-      <p className="body-6 text-text-muted">Scan with your phone’s camera to open World ID.</p>
+      <p className="body-6 text-text-muted">Scan with your phone's camera to open World ID.</p>
       {openLink}
     </div>
   )

@@ -6,8 +6,8 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "dev": "tsx watch --env-file=.env src/index.ts",
-    "start": "tsx --env-file=.env src/index.ts",
+    "dev": "tsx watch --env-file=.env --env-file-if-exists=.env.arkiv src/index.ts",
+    "start": "tsx --env-file=.env --env-file-if-exists=.env.arkiv src/index.ts",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "arkiv:setup": "tsx src/arkiv/setup.ts",
     "arkiv:spike": "node --env-file=.env.arkiv --import tsx src/arkiv/spike.ts"
