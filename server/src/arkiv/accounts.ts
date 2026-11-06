@@ -7,6 +7,7 @@ import { addr, defineSchema, str } from "@arkiv-network/sdk/schema";
 import { http, type Hex } from "viem";
 import { privateKeyToAddress } from "viem/accounts";
 import { guardedWalletClient, localEnvSigner } from "./signing.mjs";
+import { organizerWrites } from "./writes.ts";
 
 export type Account = { wallet: string; nullifierHash: string; userId: string };
 export type AccountRegistry = {
@@ -81,11 +82,11 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
         approve: async () => true, // maxCostWei is the approved budget for each sign-up.
         onSubmitted: journal,
       });
-      await client.createEntity(
+      await organizerWrites(() => client.createEntity(
         Accounts,
         { wallet: addr(wallet as Hex), nullifierHash, userId },
         { expiration: ExpirationTime.max(), flags: { readonly: true } },
-      );
+      ));
       // Wait for indexing, so the next sign-up can't miss this record.
       for (let attempt = 0; attempt < READBACK_ATTEMPTS; attempt++) {
         if (await findByNullifierHash(nullifierHash)) return;

@@ -1,13 +1,12 @@
 import { useSyncExternalStore } from 'react'
-import { api } from '../services/api'
+import { allEvents, myTickets } from '../services/arkiv'
 import { walletAddress } from '../utils/wallet'
 
 /**
- * Simulated data. Everything here is fake and shown with a "Simulated" tag in the UI.
- * The shapes follow docs/ARCHITECTURE.md (resona.ticket) so the server or Arkiv can replace this file.
+ * Tickets are real and read from Arkiv. Check ins are still simulated until the door is wired up.
  */
-export type Status = 'issued' | 'claimed' | 'skipped' | 'checked_in'
-export type Level = 'Orb verified' | 'Camera verified' | 'Government ID'
+export type Status = 'issued' | 'claimed' | 'skipped' | 'checked_in' | 'revoked'
+export type Level = 'Orb verified' | 'Camera verified' | 'Government ID' | 'Not verified'
 
 export type Ticket = {
   id: string
@@ -17,23 +16,22 @@ export type Ticket = {
   tier: string
   level: Level
   status: Status
+  /** The event's date has gone by. */
+  past: boolean
   /** Set while the organizer has not yet decided a transfer request. */
   transferExpires?: number
 }
 
 export const wallet = {
-  name: 'skes.eth',
+  name: 'Resona wallet',
   address: walletAddress(),
-  network: 'Sepolia',
+  network: 'Rabdi',
 }
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 
-let tickets: Ticket[] = [
-  { id: '7', pass: 7, ens: '7.ethglobal-mumbai.eth', event: 'ETHGlobal Mumbai', tier: 'General admission', level: 'Orb verified', status: 'issued' },
-  { id: '12', pass: 12, ens: '12.ethglobal-mumbai.eth', event: 'ETHGlobal Mumbai', tier: 'Partner discount', level: 'Camera verified', status: 'claimed' },
-  { id: '3', pass: 3, ens: '3.ethglobal-mumbai.eth', event: 'ETHGlobal Mumbai', tier: 'Builder', level: 'Orb verified', status: 'checked_in' },
-]
+let tickets: Ticket[] = []
+let ticketsState: 'loading' | 'ready' | 'failed' = 'loading'
 
 const subs = new Set<() => void>()
 const subscribe = (f: () => void) => {
@@ -42,6 +40,7 @@ const subscribe = (f: () => void) => {
 }
 
 export const useTickets = () => useSyncExternalStore(subscribe, () => tickets)
+export const useTicketsState = () => useSyncExternalStore(subscribe, () => ticketsState)
 
 export function updateTicket(id: string, patch: Partial<Ticket>) {
   tickets = tickets.map((t) => (t.id === id ? { ...t, ...patch } : t))
@@ -50,26 +49,40 @@ export function updateTicket(id: string, patch: Partial<Ticket>) {
 
 export const transferWindowMs = 24 * 60 * 60 * 1000
 
-/** Pass 7 is real: each browser wallet gets its own server ticket behind it. The other passes stay simulated. */
-const REAL_PASS = '7'
-let realPass: Promise<string> | undefined
+const tierNames: Record<string, string> = { general: 'General admission', partner: 'Partner discount', builder: 'Builder' }
 
-async function loadRealPass() {
-  const rows = await api.tickets(wallet.address)
-  const row = rows[0] ?? (await api.issue(wallet.address, 'general'))
-  updateTicket(REAL_PASS, { status: row.status })
-  return row.passId
+let refreshing: Promise<void> | undefined
+
+/** Reads this wallet's tickets from Arkiv, once at a time. A check in stays on this phone until the door is real. */
+export const refreshTickets = () => (refreshing ??= loadTickets().finally(() => (refreshing = undefined)))
+
+async function loadTickets() {
+  try {
+    const [rows, events] = await Promise.all([myTickets(), allEvents()])
+    const today = new Date().toISOString().slice(0, 10)
+    tickets = rows.map((row, index) => {
+      const event = events.find((e) => e.eventId === row.eventId)
+      const local = tickets.find((t) => t.id === row.passId)
+      return {
+        id: row.passId,
+        pass: index + 1,
+        ens: row.ensName ?? `${row.passId.slice(0, 8)}…`,
+        event: event?.eventName ?? 'Event details not published',
+        tier: tierNames[row.tier] ?? row.tier,
+        level: row.status === 'claimed' || row.status === 'checked_in' ? 'Orb verified' : 'Not verified',
+        status: local?.status === 'checked_in' ? 'checked_in' : (row.status as Status),
+        past: event ? event.eventDate < today : false,
+        transferExpires: local?.transferExpires,
+      }
+    })
+    ticketsState = 'ready'
+  } catch {
+    ticketsState = 'failed'
+  }
+  subs.forEach((f) => f())
 }
 
-export function serverPass() {
-  realPass ??= loadRealPass().catch((err) => {
-    realPass = undefined
-    throw err
-  })
-  return realPass
-}
-
-serverPass().catch(() => {})
+refreshTickets()
 
 /** Door side. A check in is a sound pass or a manual entry by staff. */
 export type Checkin = {
@@ -86,11 +99,7 @@ export type Checkin = {
 export const doorStaff = 'Door A'
 const min = 60000
 
-let checkins: Checkin[] = [
-  { id: 'c3', pass: 25, name: 'devansh.eth', at: Date.now() - 2 * min, method: 'sound', cm: 31, ordinal: 3 },
-  { id: 'c2', pass: 18, name: 'mira.eth', at: Date.now() - 9 * min, method: 'manual', reason: 'Speaker not working', ordinal: 2 },
-  { id: 'c1', pass: 3, name: 'skes.eth', at: Date.now() - 14 * min, method: 'sound', cm: 24, ordinal: 1 },
-]
+let checkins: Checkin[] = []
 
 export const useCheckins = () => useSyncExternalStore(subscribe, () => checkins)
 

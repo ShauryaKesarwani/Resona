@@ -13,6 +13,8 @@ import Recent from './pages/door/Recent'
 import Result from './pages/door/Result'
 import CheckIn from './pages/wallet/CheckIn'
 import Claim from './pages/wallet/Claim'
+import Events from './pages/wallet/Events'
+import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
 import Organizer from './pages/organizer/Organizer'
@@ -55,6 +57,8 @@ export default function App() {
           <Route path="/door/manual" element={<Manual />} />
           <Route path="/door/recent" element={<Recent />} />
           <Route path="/wallet" element={<Tickets />} />
+          <Route path="/wallet/events" element={<Events />} />
+          <Route path="/wallet/purchases" element={<Purchases />} />
           <Route path="/wallet/ticket/:id" element={<Ticket />} />
           <Route path="/wallet/claim/:id" element={<Claim />} />
           <Route path="/wallet/checkin/:id" element={<CheckIn />} />

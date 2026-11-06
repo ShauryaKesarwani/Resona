@@ -29,7 +29,7 @@ async function main() {
   const nullifierHash = digest(`resona-spike-nullifier:${suffix}`);
   const userId = digest(nullifierHash);
   const operationId = randomUUID();
-  const tickets = createArkivTickets(key as Hex, process.env.ARKIV_ACCESS_KEY ?? "", eventIdentifier, 1);
+  const tickets = createArkivTickets(key as Hex, process.env.ARKIV_ACCESS_KEY ?? "", eventIdentifier);
   console.log(`Arkiv schema check using organizer ${account.address}; event ${eventId}`);
 
   stage = "event create";
@@ -37,7 +37,8 @@ async function main() {
     eventId,
     eventName: "Resona disposable schema check",
     organiser: addr(account.address),
-    eventDate: new Date().toISOString(),
+    eventDate: "2000-01-01", // Already ended, so this test event never goes on sale in the app.
+    priceWei: "0",
   }, { expiration, flags: { readonly: true } });
   const { entities: events } = await reader.select({ $key: true, eventName: true })
     .from(EventSchema, { onMismatch: "throw" }).ownedBy(account.address).where(eq("eventId", eventId)).fetch();
@@ -65,10 +66,10 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
   if (!storedTicket || storedTicket.status !== "issued") throw new Error("Ticket schema create/read failed.");
-  if (await tickets.hasClaimed(userId)) throw new Error("New user unexpectedly has a claim.");
+  if (await tickets.hasClaimed(userId, eventId)) throw new Error("New user unexpectedly has a claim.");
   stage = "claim create and status patch";
   await tickets.commitClaim(ticket.passId, operationId, account.address, userId);
-  if (!(await tickets.hasClaimed(userId)) || (await tickets.ticket(ticket.passId))?.status !== "claimed") {
+  if (!(await tickets.hasClaimed(userId, eventId)) || (await tickets.ticket(ticket.passId))?.status !== "claimed") {
     throw new Error("Claim schema create and ticket claim batch failed.");
   }
   stage = "duplicate-claim check";
@@ -88,14 +89,14 @@ async function main() {
   stage = "payment create and read";
   const txnHash = keccak256(stringToBytes(`resona-spike-payment:${suffix}`));
   const createdAt = new Date().toISOString();
-  const payment = await writer.createEntity(PaymentSchema, { txnHash, eventId, userId, createdAt }, { expiration, flags: { readonly: true } });
+  const payment = await writer.createEntity(PaymentSchema, { txnHash, eventId, userId, passId: ticket.passId, amountWei: "0", createdAt }, { expiration, flags: { readonly: true } });
   const { entities: payments } = await reader.select({ $key: true, txnHash: true, eventId: true, userId: true, createdAt: true })
     .from(PaymentSchema, { onMismatch: "throw" }).ownedBy(account.address).where(eq("txnHash", txnHash)).fetch();
   if (payments.length !== 1 || payments[0].$key !== payment.entityKey || payments[0].eventId.value !== eventId || payments[0].userId.value !== userId) {
     throw new Error("Payment schema create/read failed.");
   }
 
-  console.log("Account, event, ticket, claim, and payment schema checks passed. Entities expire after one day.");
+  console.log("Account, event, ticket, claim, and payment schema checks passed. Tickets and claims keep the longest lifetime; the rest expire after one day.");
 }
 
 main().catch((error: unknown) => {

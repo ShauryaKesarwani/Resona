@@ -21,7 +21,7 @@ export async function claim(
 
   const account = await registry.findByWallet(wallet);
   if (account) {
-    if (await tickets.hasClaimed(account.userId)) return { status: 409, error: "human_already_claimed" };
+    if (await tickets.hasClaimed(account.userId, ticket.eventId)) return { status: 409, error: "human_already_claimed" };
     try {
       const claimed = await tickets.commitClaim(ticket.passId, randomUUID(), wallet, account.userId);
       return { status: 200, ticket: claimed };
@@ -32,6 +32,7 @@ export async function claim(
     }
   }
   if (!allowSkip) return { status: 403, error: "no_account" };
+  if (ticket.status === "skipped") return { status: 200, ticket };
   const skipped = await tickets.setStatus(ticket.passId, "skipped");
   return { status: 200, ticket: skipped };
 }

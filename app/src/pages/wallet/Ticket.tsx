@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowsLeftRightIcon, InfoIcon } from '../../components/icons'
-import { Row, SimTag, StatusPill, WalletChip } from '../../components/Bits'
+import { Row, StatusPill, WalletChip } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Figure } from '../../components/Figure'
 import { Screen, TopBar } from '../../components/Screen'
@@ -67,7 +67,6 @@ export default function Ticket() {
           )}
         </div>
       </div>
-      <SimTag>Simulated ticket data</SimTag>
 
       <div className="flex-1" />
 
@@ -86,7 +85,7 @@ export default function Ticket() {
           {pending ? 'See transfer request' : 'Send to someone'}
         </Button>
       )}
-      {ticket.status === 'checked_in' && <Button to={`/u/${wallet.name}`}>View your trophy</Button>}
+      {ticket.status === 'checked_in' && <Button to={`/u/${wallet.address}`}>View your trophy</Button>}
     </Screen>
   )
 }

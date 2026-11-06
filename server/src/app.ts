@@ -2,6 +2,7 @@ import path from "node:path";
 import express from "express";
 import type { AccountRegistry } from "./arkiv/accounts.ts";
 import type { TicketStore } from "./arkiv/tickets.ts";
+import { arkivRoutes } from "./routes/arkiv.routes.ts";
 import { authRoutes } from "./routes/auth.routes.ts";
 import { labRoutes } from "./routes/lab.routes.ts";
 import { ticketRoutes } from "./routes/tickets.routes.ts";
@@ -14,6 +15,7 @@ export function createApp(tickets: TicketStore, registry: AccountRegistry) {
   app.use("/api", labRoutes);
   app.use("/api", ticketRoutes(tickets, registry));
   app.use("/api", authRoutes(registry));
+  app.use("/api", arkivRoutes());
 
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
   app.use(express.static(dist));

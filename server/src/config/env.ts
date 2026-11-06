@@ -12,7 +12,6 @@ export const env = {
     accessKey: process.env.ARKIV_ACCESS_KEY,
     maxCostWei: BigInt(process.env.ARKIV_MAX_COST_WEI ?? "10000000000000000"),
     eventId: process.env.ARKIV_EVENT_ID ?? "demo-event",
-    ticketLifetimeDays: Number(process.env.ARKIV_TICKET_LIFETIME_DAYS ?? 30),
   },
   world: {
     appId: requireEnv("WORLD_APP_ID"),

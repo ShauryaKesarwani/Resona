@@ -10,7 +10,7 @@ const registry = privateKey && accessKey
   : unconfiguredAccounts;
 if (!registry.ready) console.warn("Arkiv keys are missing: World sign-up is unavailable.");
 const tickets = privateKey && accessKey
-  ? createArkivTickets(privateKey as Hex, accessKey, env.arkiv.eventId, env.arkiv.ticketLifetimeDays)
+  ? createArkivTickets(privateKey as Hex, accessKey, env.arkiv.eventId)
   : unconfiguredTickets;
 if (!tickets.ready) console.warn("Arkiv keys are missing: ticket operations are unavailable.");
 

@@ -6,6 +6,7 @@ export type WorldConfig = {
   action: string
   environment: 'production' | 'staging'
   allowSkip: boolean
+  organizer?: string
 }
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
@@ -29,4 +30,5 @@ export const api = {
   tickets: (holder: string) => request<ServerTicket[]>(`/api/tickets?holder=${holder}`),
   issue: (holder: string, tier: string) => request<ServerTicket>('/api/issue', { holder, tier }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
+  fund: (signed: Signed) => request<{ wallet: string }>('/api/fund', signed),
 }

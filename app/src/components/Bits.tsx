@@ -7,6 +7,7 @@ const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: s
   claimed: { label: 'Claimed', icon: SealCheckIcon, cls: 'text-accent' },
   skipped: { label: 'Not verified', icon: WarningCircleIcon, cls: 'text-text-muted' },
   checked_in: { label: 'Checked in', icon: CheckCircleIcon, cls: 'text-success' },
+  revoked: { label: 'Revoked', icon: WarningCircleIcon, cls: 'text-danger' },
 }
 
 /** Status is always icon plus words, never colour alone. */

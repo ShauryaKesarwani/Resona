@@ -1,17 +1,20 @@
 import { addr, defineSchema, str } from "@arkiv-network/sdk/schema";
 
-/** Small demo event record. eventId is the SHA-256 hash used by related entities. */
+/** An event people can buy tickets for. eventId is the SHA-256 hash used by related entities. */
 export const EventSchema = defineSchema("resona.event", {
   eventId: str().indexed(),
   eventName: str(),
   organiser: addr().indexed(),
   eventDate: str(),
+  priceWei: str(),
 });
 
-/** One payment per transaction: transaction hash, event ID hash, user ID hash, and creation time. */
+/** One payment per transaction, with hashed event and user IDs. Reading by userId gives a person's purchase history. */
 export const PaymentSchema = defineSchema("resona.payment", {
   txnHash: str().indexed(),
   eventId: str().indexed(),
   userId: str().indexed(),
+  passId: str().indexed(),
+  amountWei: str(),
   createdAt: str().indexed(),
 });

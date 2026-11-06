@@ -4,7 +4,7 @@ import { CheckCircleIcon, SkipForwardIcon, WarningCircleIcon } from '../../compo
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { serverPass, short, updateTicket, useTickets, wallet } from '../../data/mock'
+import { short, updateTicket, useTickets, wallet } from '../../data/mock'
 import { api } from '../../services/api'
 import { signedBy } from '../../services/auth'
 
@@ -45,7 +45,7 @@ export default function Claim() {
     setPhase('busy')
     setError(undefined)
     try {
-      const passId = await serverPass()
+      const passId = ticket!.id
       const claimed = await api.claim(passId, await signedBy(`claim:${passId}`))
       updateTicket(ticket!.id, { status: claimed.status })
       setVerified(claimed.status === 'claimed')

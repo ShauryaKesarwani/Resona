@@ -17,6 +17,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 | Identity | ENS name resolving to a Resona wallet address | Decided by team |
 | Anti-bot | World ID | Decided by team |
 | Demo purchase | Attendee verifies through IDKit / World ID and buys from the organizer's ENS event page using testnet funds | Decided in discussion |
+| Ticket payment | The buyer's wallet pays the organizer in tGLM on Rabdi and writes its own ticket and payment records from the browser. The server only tops up empty wallets and relays Arkiv reads with the access key | Decided in discussion |
 | Door verification | Run sonar first, then verify that the ticket's assigned wallet is present; use ENS for the holder profile and Arkiv for ticket/check-in data | Decided in discussion |
 | Demo exclusions | False sonar rejections, manual staff overrides and phone lending are outside the demo scope | Decided in discussion |
 | Initial customer | Web3 conferences and hackathons; pitch from ETHGlobal and Devcon perspectives | Decided in discussion |
@@ -56,7 +57,7 @@ The living record of what is settled and what isn't. Update it whenever the team
 
 ### Product
 
-3. **Which testnet token pays for tickets,** and who pays the gas? MockUSDC and Sepolia ETH are both options. Decide this when purchase work starts.
+3. **Decided:** tGLM on Rabdi pays for tickets, and the organizer funds a signed-in wallet's gas through `/api/fund`. See Ticket payment above.
 4. **Which verification level should the first event use?** Proof of Human is the proposed start. It needs an Orb-verified World ID, which everyone on the team has.
 5. **What event data should be public?** Arkiv and ENS are public, so a pass may reveal its holder's wallet and attendance. Decide which fields to publish or encrypt before implementation. Encrypting holder fields protects privacy but limits queries.
 6. **What happens to attendees who cannot complete World ID verification?** The demo requires it; decide whether a real product needs an alternate path.

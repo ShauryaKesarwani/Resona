@@ -89,8 +89,8 @@ Tokens are in `app/src/index.css`.
 ## Code conventions
 
 - **Components:** `Button`, `Screen` and `TopBar`, `Figure` and `HeroBackdrop`, `Bits` (status pill, simulated tag, wallet chip, avatar), and `Reveal`. Landing sections are in `app/src/pages/landing/`.
-- **Simulated data:** `app/src/data/mock.ts`. It follows the shape of the `resona.ticket` record so the server or Arkiv can replace it. State resets on reload.
-- **Real data so far:** sign in, the signed claim, pass 7 and the organizer page. The wallet list and door are still simulated.
+- **Ticket data:** `app/src/data/mock.ts` holds the ticket state read through `app/src/services/arkiv.ts`, plus the simulated check ins, which reset on reload.
+- **Real data so far:** sign in, the signed claim, the organizer page, wallet tickets, buying and purchases. The door and check ins are still simulated.
 - **Tags:** show `SimTag` on anything simulated. Prefix demo only buttons with "Demo control:".
 
 ## Screens and status
@@ -100,8 +100,10 @@ Tokens are in `app/src/index.css`.
 | `/` | Landing | Built, with the redesigned problem, benefits, how it works and limits sections |
 | `/signin` | Sign in with World ID once, or skip for the demo | Real, built by Person A |
 | `/enter` | Role picker | Built |
-| `/wallet` | Tickets | Simulated |
-| `/wallet/ticket/:id` | Ticket | Simulated |
+| `/wallet` | Tickets, upcoming then past | Real, read from Arkiv |
+| `/wallet/events` | Upcoming events and buying | Real testnet payment |
+| `/wallet/purchases` | Purchase history | Real, read from Arkiv |
+| `/wallet/ticket/:id` | Ticket | Real |
 | `/wallet/claim/:id` | Claim | Two steps, with a real signed claim. World ID happens at sign in |
 | `/wallet/checkin/:id` | Holder check in | Simulated. Sonar lives in `/lab` |
 | `/wallet/transfer/:id` | Send ticket | Simulated |

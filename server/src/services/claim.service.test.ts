@@ -29,6 +29,7 @@ beforeEach(() => {
     ticket: async (id) => rows.find((row) => row.passId === id),
     ticketsOf: async () => rows,
     hasClaimed: async (userId) => userClaims.has(userId),
+    fund: async () => {},
     setStatus: async (id, status) => {
       const row = rows.find((item) => item.passId === id)!;
       row.status = status;
