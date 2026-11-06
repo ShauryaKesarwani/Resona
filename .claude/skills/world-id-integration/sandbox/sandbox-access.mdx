@@ -1,0 +1,107 @@
+---
+title: "How to get access"
+description: "Install the sandbox World ID app and point your integration at the Sandbox environment."
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+{/* cspell:ignore idkit TestFlight */}
+
+Getting set up in Sandbox has two parts: install the **sandbox World ID app** on your
+test device, and point your **integration** at the Sandbox environment. Both are
+covered below.
+
+New here? Start with [What is Sandbox?](/world-id/sandbox/what-is-sandbox) for context.
+
+## 1. Install the sandbox World ID app
+
+The sandbox apps are not publicly listed in the App Store or on Google Play. You
+install them through the testing links below.
+
+### iOS — TestFlight
+
+The sandbox build is distributed through TestFlight, and gated behind an enrollment
+request.
+
+#### Request tester access
+
+1. Install [TestFlight](https://apps.apple.com/app/testflight/id899247664) from the
+   App Store if you don't have it.
+2. In the [Developer Portal](https://developer.world.org), select **World ID Sandbox**
+   from the sidebar, choose the **iOS** tab, and submit the Apple Account email you
+   want enrolled. Enrollment is tied to a team, so open the sandbox panel from within
+   a team.
+3. Wait for approval.
+
+#### Install the build
+
+1. Once your request is approved, you'll get a TestFlight invitation email.
+2. Accept the invitation.
+3. Install it.
+
+#### Troubleshooting FAQ
+
+- Confirm the email you submitted is the Apple Account you'll use to sign in to
+  TestFlight, not any other email.
+- If your request was rejected or your access was revoked, submitting the same email
+  again won't create a new request. Contact Sandbox Support at
+  sandbox.access@toolsforhumanity.org.
+
+### Android — Google Play
+
+The sandbox build is distributed through a **private testing track on Google Play**.
+
+#### Request tester access
+
+1. In the [Developer Portal](https://developer.world.org), select **World ID Sandbox**
+   from the sidebar.
+2. Enter the email address for the Google Account you use with the Google Play Store,
+   then request tester access.
+3. Wait until access is granted before opening the Google Play testing link.
+
+#### Install the build
+
+1. On your Android device, open the Google Play Store and confirm that it is signed in
+   with the exact Google Account for which you requested tester access.
+2. If this is the account's first Google Play Store sign-in, complete the initial setup
+   and accept all Google Play Terms of Service before continuing.
+3. In the browser that will open the testing link, sign in to the same Google Account.
+   The browser and Google Play Store must use the same account; otherwise, Google Play
+   may report that the build is unavailable.
+4. Return to **World ID Sandbox** in the
+   [Developer Portal](https://developer.world.org). On your Android device, scan the QR
+   code or open the Google Play testing link.
+5. Install the **World ID (Sandbox)** build from Google Play.
+
+#### Troubleshooting FAQ
+
+- Confirm that the email used to request tester access matches the Google Account used
+  by both the browser and Google Play Store.
+- If the account has just signed in to Google Play for the first time, Google may need
+  time to recognize the new account. Wait at least **15 minutes** before opening the testing link again.
+
+## 2. Point your integration at Sandbox
+
+1. **Update IDKit** to the latest version.
+2. **Set `environment: sandbox`** in your IDKit configuration.
+3. To verify a proof, send it to the production verify endpoint (`https://developer.world.org/api/v4/verify/${rp_id}`).
+
+Nothing else is required — the handoff will open the sandbox World ID app and return a
+proof to your session over the bridge.
+
+## Things to know
+
+- **Sandbox apps aren't publicly listed in the app stores.** Testers install via
+  TestFlight (iOS) or a private Google Play testing link (Android). Because access is
+  gated to testers, install links and store acquisition can behave differently from a
+  public production listing.
+- **Proofs are non-production.** Identities and proofs issued in Sandbox are for
+  integration validation only.
+- **Accounts are resettable.** You can delete and recreate accounts freely while
+  testing.
+
+## Next step
+
+Once you're installed and pointed at Sandbox, you're ready to run the Selfie Check
+integration flows. See [Testing Selfie Check in Sandbox](/world-id/sandbox/testing-selfie-check)
+for coverage, critical user journeys, and known limitations.

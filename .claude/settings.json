@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "arkiv@arkiv": true
+  },
+  "extraKnownMarketplaces": {
+    "arkiv": {
+      "source": {
+        "source": "github",
+        "repo": "Arkiv-Network/ai-plugin"
+      }
+    }
+  }
+}

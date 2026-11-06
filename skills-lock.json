@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "base": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/base/SKILL.md",
+      "computedHash": "a87e2bbf83f6767ea14081d4ae8a53972f0d60aeb0453f00f97665bbf78a282a"
+    },
+    "ens-protocol": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/ens-protocol/SKILL.md",
+      "computedHash": "64a3c209dd9077bab1a38034c143f0942a578e24d0665a8e058f1d96ef341735"
+    },
+    "enscli": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/enscli/SKILL.md",
+      "computedHash": "fbc0dbef106fbd0aed302cf85a486d56cfb89c6c49acec24028cdab482c51585"
+    },
+    "enskit": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/enskit/SKILL.md",
+      "computedHash": "c117ea083d8289ef4a71b070c6268959b3ecacba8ef9fb98ba3f573d4ba460d0"
+    },
+    "enssdk": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/enssdk/SKILL.md",
+      "computedHash": "f442357805a8e37b386aedc498730131d25cf052e5e9f2c5fd6e0f532c30d45b"
+    },
+    "omnigraph": {
+      "source": "namehash/ensnode",
+      "ref": "v1.16.0",
+      "sourceType": "github",
+      "skillPath": "packages/ensskills/skills/omnigraph/SKILL.md",
+      "computedHash": "bdaab9adc4911cef6ef83236dc26b60f74b6377a3b5b2798144c306ad3d0f381"
+    },
+    "world-id-integration": {
+      "source": "worldcoin/developer-docs",
+      "sourceType": "github",
+      "skillPath": "world-id/SKILL.md",
+      "computedHash": "2722587a7a87c815bf16f91764d3cfd27449c6986919afc088a7981e654fc497"
+    }
+  }
+}

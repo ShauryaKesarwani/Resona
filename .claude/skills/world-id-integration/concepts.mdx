@@ -1,0 +1,36 @@
+---
+title: "Core Concepts"
+description: "Core World ID vocabulary for integrators: relying parties, credentials, issuers, actions, nullifiers, signals and legacy World ID 3.0 concepts."
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+World ID is designed for straightforward integration. This page covers only the core concepts most teams need before shipping.
+
+## World ID
+A user's self-custodial identity which lives in their Authenticator. When referring to the protocol, it's usually written as the _World ID Protocol_.
+
+## Relying Party (RP)
+A third-party application that wants to verify a user's credential. This is probably you.
+
+## Credential
+A signed attestation about a subject used to generate proofs. It includes issuer, subject, validity window, and claim commitments as defined in the [Credential's World ID 4.0 specs](https://docs.rs/world-id-primitives/latest/world_id_primitives/credential/struct.Credential.html).
+
+## Issuer
+An entity that issues credentials to users. In World ID, issuers are responsible for verifying a user's identity and signing their credential. Issuers must be registered in the `CredentialSchemaIssuerRegistry` to be recognized by the protocol.
+
+
+## Proof Concepts
+
+- **Action**: A developer-facing primitive that lets you put any app operation behind a unique-human gate. An app can have one or more actions depending on your use case.
+- **Zero-Knowledge Proof (ZKP)**: A cryptographic method to prove that a statement is true without revealing any information about the statement itself. World ID uses ZKPs to prove that a user is verified without revealing the user's identity.
+- **Nullifier**: A component of the World ID ZKP; a unique identifier for a combination of a user, `app_id`, and `action`.
+- **Signal**: A component of the World ID ZKP; data attached to the proof that cannot be tampered with. An example may be a user's choice for an election.
+
+
+
+# Legacy Concepts (World ID 3.0)
+
+- **Identity Commitment**: A hash of a user's secret identity nullifier and trapdoor, which is inserted into the Merkle Tree. This is no longer used in World ID 4.0, but you may see it referenced in older documentation.
+- **App ID**: The ID of your app that is assigned in our [Developer Portal](https://developer.worldcoin.org/). In World ID 4.0, this is now referred to as **RP ID**.
+- **Merkle Root**: A component of the World ID ZKP; the root of the [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree) that identity commitments are inserted to. While 4.0 still uses Merkle Trees, the root is now encoded within the received ZKP, so you don't need to worry about handling it.

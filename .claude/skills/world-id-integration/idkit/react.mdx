@@ -1,0 +1,213 @@
+---
+title: "React"
+description: "Reference for @worldcoin/idkit React widgets and hooks, including request flows and presets."
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+Use `@worldcoin/idkit` when you want React-native ergonomics on top of `@worldcoin/idkit-core`.
+
+## Install
+
+<CodeGroup>
+```bash npm
+npm i @worldcoin/idkit
+```
+
+```bash pnpm
+pnpm add @worldcoin/idkit
+```
+
+```bash yarn
+yarn add @worldcoin/idkit
+```
+</CodeGroup>
+
+## Choose your API
+
+- **Widgets**: quickest integration, built-in modal and state handling
+- **Hooks**: headless control for custom UI and flow orchestration
+
+## Controlled widgets
+
+### Request widget
+
+```tsx
+import { IDKitRequestWidget, orbLegacy, type RpContext } from "@worldcoin/idkit";
+
+const rpContext: RpContext = {
+  rp_id: "rp_xxxxx",
+  nonce: "0x...",
+  created_at: 1735689600,
+  expires_at: 1735689900,
+  signature: "0x...",
+};
+
+<IDKitRequestWidget
+  open={open}
+  onOpenChange={setOpen}
+  app_id="app_xxxxx"
+  action="my-action"
+  rp_context={rpContext}
+  allow_legacy_proofs={true}
+  preset={orbLegacy({ signal: "user-123" })}
+  environment="production"
+  handleVerify={async (result) => {
+    const response = await fetch("/api/verify-proof", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ rp_id: rpContext.rp_id, idkitResponse: result }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Backend verification failed");
+    }
+  }}
+  onSuccess={() => {
+    // Called after `handleVerify` resolves (or immediately if omitted).
+    // Update your app state/UI here.
+  }}
+  onError={(errorCode, debugReport) => {
+    console.error("IDKit error", errorCode, debugReport);
+  }}
+/>;
+```
+
+### Widget callbacks
+
+- `onSuccess` is required for `IDKitRequestWidget` and `IDKitSessionWidget`.
+- `handleVerify` is optional and only available on widgets. Use it to verify the proof in your backend before success is emitted.
+- If `handleVerify` throws/rejects, the widget enters an error state, emits `onError("failed_by_host_app")`, and does not call `onSuccess`. This means World App already returned a proof, but your callback or backend did not accept it.
+- `onError` is optional.
+
+## Headless hooks
+
+### `useIDKitRequest`
+
+```tsx
+import { useIDKitRequest, orbLegacy } from "@worldcoin/idkit";
+
+const flow = useIDKitRequest({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context,
+  allow_legacy_proofs: true,
+  preset: orbLegacy({ signal: "user-123" }),
+  polling: {
+    interval: 2_000,
+    timeout: 120_000,
+  },
+});
+
+<button onClick={flow.open} disabled={flow.isAwaitingUserConfirmation}>
+  Verify
+</button>;
+```
+
+Hook result fields:
+
+- `open()`
+- `reset()`
+- `isAwaitingUserConnection`
+- `isAwaitingUserConfirmation`
+- `isSuccess`
+- `isError`
+- `connectorURI`
+- `result`
+- `errorCode`
+- `getDebugReport()`
+
+## Invite-code mode
+
+For invite-code flows, use `IDKitInviteCodeRequestWidget` (controlled) or `useIDKitInviteCodeRequest` (headless). Config matches `IDKitRequestWidget` / `useIDKitRequest` — invite-code mode adds no new required fields. See [Invite-code mode](/world-id/idkit/verification-flows#with-invite-code-mode) for when to use it.
+
+```tsx
+import { IDKitInviteCodeRequestWidget, proofOfHuman } from "@worldcoin/idkit";
+
+<IDKitInviteCodeRequestWidget
+  open={open}
+  onOpenChange={setOpen}
+  app_id="app_xxxxx"
+  action="my-action"
+  rp_context={rpContext}
+  allow_legacy_proofs={true}
+  preset={proofOfHuman({ signal: "user-123" })}
+  handleVerify={async (result) => { /* ... */ }}
+  onSuccess={() => { /* ... */ }}
+/>;
+```
+
+`useIDKitInviteCodeRequest` result fields (sibling of `useIDKitRequest`'s):
+
+- `open()`
+- `reset()`
+- `isAwaitingUserConnection`
+- `isAwaitingUserConfirmation`
+- `isSuccess`
+- `isError`
+- `connectorURI`
+- `codeExpiresAt`
+- `result`
+- `errorCode`
+- `getDebugReport()`
+
+### Migrating from QR / connect-URL
+
+```tsx
+// Before — QR / connect-URL widget
+import { IDKitRequestWidget, orbLegacy } from "@worldcoin/idkit";
+
+<IDKitRequestWidget
+  open={open}
+  onOpenChange={setOpen}
+  app_id="app_xxxxx"
+  action="my-action"
+  rp_context={rpContext}
+  allow_legacy_proofs={true}
+  preset={orbLegacy({ signal: "user-123" })}
+  handleVerify={handleVerify}
+  onSuccess={onSuccess}
+/>;
+```
+
+```tsx
+// After — invite-code widget
+import { IDKitInviteCodeRequestWidget, proofOfHuman } from "@worldcoin/idkit";
+
+<IDKitInviteCodeRequestWidget
+  open={open}
+  onOpenChange={setOpen}
+  app_id="app_xxxxx"
+  action="my-action"
+  rp_context={rpContext}
+  allow_legacy_proofs={true}
+  preset={proofOfHuman({ signal: "user-123" })}
+  handleVerify={handleVerify}
+  onSuccess={onSuccess}
+/>;
+```
+
+Swap the component and preset. Props, callbacks, and backend verification stay the same. The headless equivalent is `useIDKitInviteCodeRequest` in place of `useIDKitRequest`.
+
+## Session flows
+
+Session verification uses `IDKitSessionWidget` (controlled) or `useIDKitSession` (headless); `onSuccess` returns an `IDKitResultSession`. Both share the request flows' widget callbacks and hook-result fields — including `onError(errorCode, debugReport?)` and `getDebugReport()`.
+
+## Presets
+
+React hooks/widgets take `preset` directly in config.
+
+## Localization and UX notes
+
+- Widgets support `language="en" | "es" | "th"`
+- Widgets default to `autoClose={true}` after success
+
+## Backend utilities
+
+For RP signature generation in React/Next.js apps, use the pure JS subpath:
+
+```ts
+import { signRequest } from "@worldcoin/idkit/signing";
+```
+
+See [RP Signatures](/world-id/idkit/signatures) for the full algorithm and test vectors.

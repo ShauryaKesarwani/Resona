@@ -1,0 +1,418 @@
+---
+title: "IDKit"
+sidebarTitle: "Integrate"
+description: "Integrate World ID into your app"
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+import IDKitResponse from "/snippets/idkit-response.mdx";
+
+IDKit is the SDK for integrating World ID into your app. It handles proof requests, verification flows and communication with the World ID App, so your backend receives cryptographic proof of human, not personal data.
+
+Use the React widget for drop-in integration, or the JS, Swift and Kotlin SDKs for custom flows. For the core concepts of World ID, see [this page](/world-id/concepts).
+
+> Tip: To integrate faster, give your coding agent the [Build with LLMs prompt](/world-id/idkit/build-with-llms) — copy it once, then paste into Claude, Cursor or any AI coding assistant.
+
+## How it works
+
+Use IDKit to request a proof and verify it on your backend: follow this guide for one-time checks, or use [session proofs](/world-id/idkit/session-proofs) for returning users.
+
+<div className="dark:rounded-2xl dark:bg-white dark:p-6">
+  <img src="/images/docs/idkit-flow-v2.svg" alt="IDKit integration flow: your app sends a proof request to World App, receives a ZK proof, forwards it to your backend, and the backend verifies it with the World ID Developer Portal" />
+</div>
+
+Four components are involved: your **client** (where IDKit runs), your **backend** (which signs requests and verifies proofs), the **World ID App** (on the user's device) and the **Developer Portal** (which validates proofs on-chain). The steps below cover each one.
+
+# Step 1: Install IDKit
+
+Use the latest `4.x` version.
+
+<CodeGroup title="Install">
+```bash title="JavaScript"
+npm i @worldcoin/idkit-core
+```
+
+```bash title="React"
+npm i @worldcoin/idkit
+```
+
+```swift title="Swift (SPM)"
+.package(url: "https://github.com/worldcoin/idkit-swift.git", from: "<version>")
+```
+
+```kotlin title="Kotlin (Gradle)"
+dependencies {
+    implementation("com.worldcoin:idkit:<version>")
+}
+```
+</CodeGroup>
+
+# Step 2: Create an app in the Developer Portal
+
+Create your app in the [Developer Portal](https://developer.world.org). If you're migrating from an old app, complete RP registration by clicking the Enable World ID 4.0 banner. Keep these values:
+  - `app_id`
+  - `rp_id`
+  - `signing_key` - this should be stored as a secret.
+
+# Step 3: Generate an RP signature in your backend
+Signatures verify that proof requests come from your app, preventing impersonation attacks.
+
+<CodeGroup title="Generate RP signature">
+```typescript title="JavaScript"
+import { NextResponse } from "next/server";
+import { signRequest } from "@worldcoin/idkit-core/signing";
+
+export async function POST(request: Request): Promise<Response> {
+  const { action } = await request.json();
+
+  const { sig, nonce, createdAt, expiresAt } = signRequest({
+    signingKeyHex: process.env.RP_SIGNING_KEY!,
+    action,
+  });
+
+  return NextResponse.json({
+    sig,
+    nonce,
+    created_at: createdAt,
+    expires_at: expiresAt,
+  });
+}
+```
+
+```go title="Go"
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+
+	"github.com/worldcoin/idkit/go/idkit"
+)
+
+func handleRPSignature(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		Action string `json:"action"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	sig, err := idkit.SignRequest(
+		os.Getenv("RP_SIGNING_KEY"),
+		idkit.WithAction(body.Action),
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"sig":        sig.Sig,
+		"nonce":      sig.Nonce,
+		"created_at": sig.CreatedAt,
+		"expires_at": sig.ExpiresAt,
+	})
+}
+```
+</CodeGroup>
+
+<Warning>
+  Never generate RP signatures on the client and never expose your RP signing
+  key. If the key leaks, attackers can forge requests from your app.
+</Warning>
+
+
+<Note>
+  The steps below cover the standard request flow. Depending on whether the user
+  already has World ID and the credential you're requesting, they may see a
+  different experience. See [Verification flows](/world-id/idkit/verification-flows)
+  for details.
+</Note>
+
+# Step 4: Generate the connect URL and collect proof
+To test during development, use the [simulator](https://simulator.worldcoin.org/) and set `environment` to `"staging"`.
+
+<CodeGroup title="Create request and collect proof">
+```typescript title="JavaScript"
+import { IDKit, orbLegacy } from "@worldcoin/idkit-core";
+
+const rpSig = await fetch("/api/rp-signature", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ action: "my-action" }),
+}).then((r) => r.json());
+
+const request = await IDKit.request({
+  // App ID: `app_id` from the Developer Portal
+  app_id: "app_xxxxx",
+  // Action: Context that scopes what the user is proving uniqueness for
+  // e.g., "verify-account-2026" or "claim-airdrop-2026".
+  action: "my-action",
+  rp_context: {
+    rp_id: "rp_xxxxx", // Your app's `rp_id` from the Developer Portal
+    nonce: rpSig.nonce,
+    created_at: rpSig.created_at,
+    expires_at: rpSig.expires_at,
+    signature: rpSig.sig,
+  },
+  allow_legacy_proofs: true,
+  environment: "production", // Only set this to staging for testing with the simulator
+  return_to: "myapp://verify-done", // Optional: mobile deep-link callback URL
+  // Signal (optional): Bind specific context into the requested proof.
+  // Examples: user ID, wallet address. Your backend should enforce the same value.
+}).preset(orbLegacy({ signal: "local-election-1" }));
+
+const connectUrl = request.connectorURI;
+const response = await request.pollUntilCompletion();
+```
+
+```tsx title="React"
+import {
+  IDKitRequestWidget,
+  orbLegacy,
+  type RpContext,
+} from "@worldcoin/idkit";
+
+const rpSig = await fetch("/api/rp-signature", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ action: "my-action" }),
+}).then((r) => r.json());
+
+const rp_context: RpContext = {
+  rp_id: "rp_xxxxx", // Your app's `rp_id` from the Developer Portal
+  nonce: rpSig.nonce,
+  created_at: rpSig.created_at,
+  expires_at: rpSig.expires_at,
+  signature: rpSig.sig,
+};
+
+// ...
+ 
+<IDKitRequestWidget
+  open={open}
+  onOpenChange={setOpen}
+  app_id="app_xxxxx" // Your app's `app_id` from the Developer Portal
+  // Action: Context that scopes what the user is proving uniqueness for
+  // e.g., "verify-account-2026" or "claim-airdrop-2026".
+  action="my-action"
+  rp_context={rp_context}
+  allow_legacy_proofs={true}
+  // Signal (optional): Bind specific context into the requested proof.
+  // Examples: user ID, wallet address. Your backend should enforce the same value.
+  preset={orbLegacy({ signal: "local-election-1" })}
+  handleVerify={async (result) => {
+    const response = await fetch("/api/verify-proof", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        rp_id: rp_context.rp_id,
+        idkitResponse: result,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Backend verification failed");
+    }
+  }}
+  onSuccess={(result) => {
+    // Runs after `handleVerify` succeeds. Update app state/UI here.
+  }}
+/>;
+```
+
+```swift title="Swift"
+import IDKit
+
+// Fetch the RP signature from your backend
+let rpSig = try await yourBackend.fetchRpSignature(action: "my-action")
+
+let rpContext = try RpContext(
+  rpId: "rp_xxxxx", // Your app's `rp_id` from the Developer Portal
+  nonce: rpSig.nonce,
+  createdAt: rpSig.createdAt,
+  expiresAt: rpSig.expiresAt,
+  signature: rpSig.sig
+)
+
+let config = IDKitRequestConfig(
+  // App ID: `app_id` from the Developer Portal
+  appId: "app_xxxxx", 
+  // Action: Context that scopes what the user is proving uniqueness for
+  // e.g., "verify-account-2026" or "claim-airdrop-2026".
+  action: "my-action",
+  rpContext: rpContext,
+  actionDescription: "Verify user",
+  bridgeUrl: nil,
+  allowLegacyProofs: true,
+  overrideConnectBaseUrl: nil,
+  environment: .production
+)
+
+// Signal (optional): Bind specific context into the requested proof.
+// Examples: user ID, wallet address. Your backend should enforce the same value.
+let request = try IDKit.request(config: config).preset(orbLegacy(signal: "local-election-1"))
+let connectUrl = request.connectorURL
+let completion = await request.pollUntilCompletion()
+```
+
+```kotlin title="Kotlin"
+import com.worldcoin.idkit.IDKit
+import com.worldcoin.idkit.IDKitRequestConfig
+import com.worldcoin.idkit.RpContext
+import com.worldcoin.idkit.Environment
+import com.worldcoin.idkit.orbLegacy
+
+// Fetch the RP signature from your backend (see Step 2)
+val rpSig = yourBackend.fetchRpSignature(action = "my-action")
+
+val rpContext = RpContext(
+  rpId = "rp_xxxxx", // Your app's `rp_id` from the Developer Portal
+  nonce = rpSig.nonce,
+  createdAt = rpSig.createdAt.toULong(),
+  expiresAt = rpSig.expiresAt.toULong(),
+  signature = rpSig.sig,
+)
+
+val config = IDKitRequestConfig(
+  // App ID: `app_id` from the Developer Portal
+  appId = "app_xxxxx", 
+  // Action: Context that scopes what the user is proving uniqueness for
+  // e.g., "verify-account-2026" or "claim-airdrop-2026".
+  action = "my-action",
+  rpContext = rpContext,
+  allowLegacyProofs = true,
+)
+
+// Signal (optional): Bind specific context into the requested proof.
+// Examples: user ID, wallet address. Your backend should enforce the same value.
+val request = IDKit.request(config).preset(orbLegacy(signal = "local-election-1"))
+val connectorURI = request.connectorURI
+val completion = request.pollUntilCompletion()
+```
+</CodeGroup>
+
+### IDKit response
+
+After the user completes the verification flow, IDKit returns one of the following response shapes, depending on the protocol version and proof type.
+
+<IDKitResponse />
+
+# Step 5: Verify the proof in your backend
+
+After completion, send the returned payload to your backend and
+forward it directly to `POST https://developer.world.org/api/v4/verify/{rp_id}`. Check that the verify response’s `environment` matches your backend’s expected environment (assert `"production"` for production integrations).
+
+<Note>
+  Forward the IDKit result payload as-is. No field remapping is required.
+</Note>
+
+```typescript title="app/api/verify-proof/route.ts"
+import { NextResponse } from "next/server";
+import type { IDKitResult } from "@worldcoin/idkit";
+
+export async function POST(request: Request): Promise<Response> {
+  const { rp_id, idkitResponse } = (await request.json()) as {
+    rp_id: string;
+    idkitResponse: IDKitResult;
+  };
+
+  /*
+   * Set the expected environment on your backend. Reject proofs from other
+   * environments before verification, including staging and sandbox in production.
+   */
+  const expectedEnvironment = "production";
+
+  if (idkitResponse?.environment !== expectedEnvironment) {
+    return NextResponse.json({ error: "Verification failed" }, { status: 400 });
+  }
+
+  const response = await fetch(
+    `https://developer.world.org/api/v4/verify/${rp_id}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...idkitResponse,
+        environment: expectedEnvironment,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    return NextResponse.json({ error: "Verification failed" }, { status: 400 });
+  }
+
+  const verification = await response.json();
+
+  if (
+    verification?.success !== true ||
+    verification?.environment !== expectedEnvironment
+  ) {
+    return NextResponse.json({ error: "Verification failed" }, { status: 400 });
+  }
+
+  // Uniqueness: store the nullifier (Step 6).
+  // Sessions: validate and store the session result (see the session guide).
+  return NextResponse.json({ success: true });
+}
+```
+
+# Step 6: Store the nullifier
+
+This step applies to uniqueness requests. For session proofs, follow the
+[session guide](/world-id/idkit/session-proofs).
+
+Every uniqueness proof contains a nullifier — a value derived from the user's World ID, your app, and the action. The same person verifying the same action always produces the same nullifier, but different apps or actions produce different ones, making nullifiers unlinkable across apps.
+
+The Developer Portal confirms the proof is **cryptographically valid**, but your backend must check that the nullifier hasn't been used before. Otherwise, the same person could verify multiple times for the same action.
+
+Nullifiers are returned as 0x-prefixed hex strings representing 256-bit integers. Convert and store them as numbers to avoid parsing and casing issues that can lead to security vulnerabilities. For example, PostgreSQL doesn't natively support 256-bit integers, so convert the nullifier to a decimal and store it as `NUMERIC(78, 0)`.
+
+<CodeGroup>
+```sql title="PostgreSQL schema"
+CREATE TABLE nullifiers (
+  nullifier   NUMERIC(78, 0) NOT NULL,
+  action      TEXT NOT NULL,
+  verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (nullifier, action)
+);
+```
+</CodeGroup>
+
+## Architecture detail
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant Backend
+    participant Portal as Developer Portal
+
+    Client->>Backend: 1. Request RP signature
+    Backend->>Backend: Sign with signing_key
+    Backend-->>Client: { sig, nonce, created_at, expires_at }
+
+    Client->>Client: 2. Create IDKit request with RP signature
+    Client->>User: 3. Show connect URL / QR code
+    User->>User: 4. Prove uniqueness in World ID
+
+    User-->>Client: 5. Proof returned via IDKit
+
+    Client->>Backend: 6. Forward proof payload
+    Backend->>Portal: POST /v4/verify/{rp_id}
+    Portal-->>Backend: Verification result
+    Backend->>Backend: 7. Check & store nullifier
+    Backend-->>Client: Success / failure
+```
+
+## Next pages
+
+- [RP Signatures](/world-id/idkit/signatures) — algorithm details, pseudocode, and test vectors
+- [POST /v4/verify reference](/api-reference/developer-portal/verify)

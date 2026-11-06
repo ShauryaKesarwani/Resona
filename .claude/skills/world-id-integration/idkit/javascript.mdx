@@ -1,0 +1,212 @@
+---
+title: "JavaScript"
+description: "Reference for `@worldcoin/idkit-core`"
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+`@worldcoin/idkit-core` is the lowest-level JavaScript/TypeScript IDKit SDK.
+Use it when you want full control over UI and state management or when you're not using React.
+
+## Install
+
+<CodeGroup>
+```bash npm
+npm i @worldcoin/idkit-core
+```
+
+```bash pnpm
+pnpm add @worldcoin/idkit-core
+```
+
+```bash yarn
+yarn add @worldcoin/idkit-core
+```
+</CodeGroup>
+
+## Entry points
+
+- `IDKit.request(config)` for uniqueness proofs
+- `IDKit.requestWithInviteCode(config)` for invite-code mode
+- `proofOfHuman`, `passport`, `selfieCheck`, and `identityCheck` for current presets
+- `orbLegacy`, `secureDocumentLegacy`, `documentLegacy`, and `deviceLegacy` for legacy presets
+
+Each entry point returns a builder. Finalize it with `.preset(...)`.
+
+## Request config
+
+```ts
+import { IDKit } from "@worldcoin/idkit-core";
+
+const builder = IDKit.request({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context: {
+    rp_id: "rp_xxxxx",
+    nonce: "0x...",
+    created_at: 1735689600,
+    expires_at: 1735689900,
+    signature: "0x...",
+  },
+  allow_legacy_proofs: true,
+  environment: "production", // Only set this to staging for testing with the simulator
+  return_to: "myapp://verify-done", // Optional: mobile deep-link callback URL
+  bridge_url: undefined, // Optional: custom bridge URL
+});
+```
+
+<Warning>
+  Generate `rp_context` in your backend only. Never expose your RP signing key in client code.
+</Warning>
+
+## Presets
+
+```ts
+import { IDKit, orbLegacy } from "@worldcoin/idkit-core";
+
+const request = await IDKit.request({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context,
+  allow_legacy_proofs: true,
+}).preset(orbLegacy({ signal: "user-123" }));
+```
+
+## Polling and status
+
+After `.preset(...)`, you get an `IDKitRequest` object:
+
+- `connectorURI`
+- `requestId`
+- `pollOnce()`
+- `pollUntilCompletion({ pollInterval, timeout })`
+- `getDebugReport()`
+
+```ts
+import { IDKitErrorCodes } from "@worldcoin/idkit-core";
+
+const completion = await request.pollUntilCompletion({
+  pollInterval: 2_000,
+  timeout: 120_000,
+});
+
+if (!completion.success) {
+  if (completion.error === IDKitErrorCodes.Timeout) {
+    // UI timeout handling
+  }
+  if (completion.error === IDKitErrorCodes.Cancelled) {
+    // User/app cancellation handling
+  }
+}
+```
+
+<Note>
+  When running inside World App, native transport is used and `connectorURI` may be empty.
+  Outside World App, `connectorURI` is the URL you render as a QR code.
+</Note>
+
+## Debug report
+
+Both `IDKitRequest` and `IDKitInviteCodeRequest` expose `getDebugReport(): IDKitDebugReport` with diagnostics for the latest request state.
+
+```ts
+import type { IDKitDebugReport } from "@worldcoin/idkit-core";
+
+const completion = await request.pollUntilCompletion();
+if (!completion.success) {
+  const report = request.getDebugReport();
+  console.error(report.transport, report.request_id, report);
+}
+```
+
+`IDKitDebugReport` fields: `version`, `package_version`, `transport` (`"bridge" | "mini_app"`), `generated_at`, and optional `request_id`, `request_payload`, `response_payload`, and `mini_app` (`MiniAppDebugInfo`). For bridge transport `response_payload` is the decrypted plaintext response string once the request completes; for native (`mini_app`) transport it is a structured debug object. The `mini_app` object holds World App native-transport diagnostics: `verify_version`, `platform`, `send_channel`, `minikit_subscribed`, and `response_channel`.
+
+<Note>
+  `setDebug(true)` (or `window.IDKIT_DEBUG = true`) and `isDebug()` toggle verbose `console.debug` logging. This is separate from `getDebugReport()`, which works regardless.
+</Note>
+
+## Invite-code mode
+
+Use `IDKit.requestWithInviteCode(config)` to open a landing page that displays both an invite code and a QR code. Validation, the returned `Status` shape, and the poll loop are identical to `IDKit.request`. See [Invite-code mode](/world-id/idkit/verification-flows#with-invite-code-mode) for when to use it.
+
+```ts
+import { IDKit, proofOfHuman } from "@worldcoin/idkit-core";
+
+const request = await IDKit.requestWithInviteCode({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context,
+  allow_legacy_proofs: true,
+}).preset(proofOfHuman({ signal: "user-123" }));
+
+const connectorURI = request.connectorURI; // URL with &c=<code>&a=<app_id>
+const expiresAt = request.expiresAt;       // Unix seconds
+const completion = await request.pollUntilCompletion();
+```
+
+`IDKitInviteCodeRequest` exposes:
+
+- `connectorURI`
+- `expiresAt`
+- `requestId`
+- `pollOnce()`
+- `pollUntilCompletion({ pollInterval, timeout })`
+- `getDebugReport()`
+
+### Migrating from QR / connect-URL
+
+```ts
+// Before — QR / connect-URL flow
+const request = await IDKit.request({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context,
+  allow_legacy_proofs: true,
+}).preset(orbLegacy({ signal: "user-123" }));
+
+const connectorURI = request.connectorURI;   // render as QR
+const completion = await request.pollUntilCompletion();
+```
+
+```ts
+// After — invite-code mode
+const request = await IDKit.requestWithInviteCode({
+  app_id: "app_xxxxx",
+  action: "my-action",
+  rp_context,
+  allow_legacy_proofs: true,
+}).preset(proofOfHuman({ signal: "user-123" }));
+
+const connectorURI = request.connectorURI;   // display to user (URL with code embedded)
+const expiresAt = request.expiresAt;         // drive a countdown
+const completion = await request.pollUntilCompletion();
+```
+
+The config object is unchanged. The `connectorURI` now includes `&c=<code>&a=<app_id>` params; use it alongside `expiresAt` in your UI. Polling, proof verification, and nullifier storage stay the same.
+
+## Server-side helpers
+
+Use subpath exports on your backend:
+
+```ts
+import { signRequest } from "@worldcoin/idkit-core/signing";
+import { hashSignal } from "@worldcoin/idkit-core/hashing";
+
+const { sig, nonce, createdAt, expiresAt } = signRequest({
+  signingKeyHex: process.env.RP_SIGNING_KEY!,
+  action: "my-action",
+  ttl: 300, // optional, default 300s
+});
+
+const signalHash = hashSignal("user-123");
+```
+
+`signRequest` should only run in trusted server environments. See [RP Signatures](/world-id/idkit/signatures) for the full algorithm and test vectors.
+
+## Related pages
+
+- [Getting started](/world-id/idkit/integrate)
+- [RP Signatures](/world-id/idkit/signatures)
+- [React](/world-id/idkit/react)
+- [Error Codes](/world-id/idkit/error-codes)
+- [POST /v4/verify reference](/api-reference/developer-portal/verify)
