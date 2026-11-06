@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { ArrowLeftIcon } from './icons'
 
 /** One phone screen: safe areas respected, 16px side padding, content column capped on wide screens. */
-export function Screen({ children }: { children: ReactNode }) {
+export function Screen({ children, tabs = false }: { children: ReactNode; tabs?: boolean }) {
   return (
     <main
       id="main"
-      className="animate-screen-in mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))]"
+      className={`animate-screen-in mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 pt-[max(8px,env(safe-area-inset-top))] ${
+        tabs ? 'pb-[calc(96px+env(safe-area-inset-bottom))]' : 'pb-[max(16px,env(safe-area-inset-bottom))]'
+      }`}
     >
       {children}
     </main>

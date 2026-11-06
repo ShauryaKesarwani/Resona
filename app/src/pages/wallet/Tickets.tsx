@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CaretRightIcon, TicketIcon } from '../../components/icons'
 import { StatusPill, WalletChip } from '../../components/Bits'
+import { AttendeeTabs } from '../../components/AttendeeTabs'
 import { Button } from '../../components/Button'
 import { SignOutButton } from '../../components/SignOutButton'
 import { Figure } from '../../components/Figure'
@@ -51,7 +52,7 @@ export default function Tickets() {
   const past = tickets.filter((t) => t.past)
 
   return (
-    <Screen>
+    <Screen tabs>
       <TopBar back="/" right={<WalletChip />} />
       <Figure ratio="16 / 7" position="50% 45%" />
       <div className="flex items-center justify-between gap-2">
@@ -105,8 +106,9 @@ export default function Tickets() {
       )}
 
       <div className="flex-1" />
-      <Button to="/wallet/events">Buy tickets</Button>
+      <Button to="/events">Buy tickets</Button>
       <SignOutButton />
+      <AttendeeTabs />
     </Screen>
   )
 }

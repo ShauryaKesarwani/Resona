@@ -99,6 +99,7 @@ Tokens are in `app/src/index.css`.
 |---|---|---|
 | `/` | Landing | Built, with the redesigned problem, benefits, how it works and limits sections |
 | `/signin` | Sign in with World ID once, or skip for the demo | Real, built by Person A |
+| `/events`, `/e/:id`, `/e/:id/buy` | Events list, event page, buy | Built, on real Arkiv data and a real test network payment |
 | `/enter` | Role picker | Built |
 | `/wallet` | Tickets, upcoming then past | Real, read from Arkiv |
 | `/wallet/events` | Upcoming events and buying | Real testnet payment |
@@ -128,7 +129,7 @@ Stage 1 first, as in `docs/BUILD_PLAN.md`:
 3. Door camera scan, with the typed number as backup.
 4. Wire check in on both phones and link the Arkiv record after a pass.
 5. ENS names across the screens.
-6. Event page `/e/:name` and the testnet buy flow, then the profile.
+6. Event page and buy flow: built on real data. Next: the profile, and showing a bought ticket's payment record on the ticket.
 
 ## How to run and verify
 

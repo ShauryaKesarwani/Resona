@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RequireSignIn } from './components/RequireSignIn'
 import Enter from './pages/Enter'
 import Lab from './pages/Lab'
@@ -10,7 +10,9 @@ import Door from './pages/door/Door'
 import Recent from './pages/door/Recent'
 import CheckIn from './pages/wallet/CheckIn'
 import Claim from './pages/wallet/Claim'
-import Events from './pages/wallet/Events'
+import Buy from './pages/events/Buy'
+import Event from './pages/events/Event'
+import Events from './pages/events/Events'
 import Purchases from './pages/wallet/Purchases'
 import Ticket from './pages/wallet/Ticket'
 import Tickets from './pages/wallet/Tickets'
@@ -43,6 +45,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/e/:id" element={<Event />} />
         <Route path="/lab" element={<Lab />} />
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
@@ -51,7 +55,8 @@ export default function App() {
           <Route path="/door" element={<Door />} />
           <Route path="/door/recent" element={<Recent />} />
           <Route path="/wallet" element={<Tickets />} />
-          <Route path="/wallet/events" element={<Events />} />
+          <Route path="/wallet/events" element={<Navigate to="/events" replace />} />
+          <Route path="/e/:id/buy" element={<Buy />} />
           <Route path="/wallet/purchases" element={<Purchases />} />
           <Route path="/wallet/ticket/:id" element={<Ticket />} />
           <Route path="/wallet/claim/:id" element={<Claim />} />

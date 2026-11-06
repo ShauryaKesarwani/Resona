@@ -69,6 +69,9 @@ export function Footer() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 border-t border-line pt-8 sm:flex-row sm:items-center sm:justify-between">
         <p className="caption-2 text-text-muted">Resona is a hackathon demo built for ETHGlobal Mumbai.</p>
         <nav aria-label="Footer" className="flex flex-wrap gap-2">
+          <Link to="/events" className="body-5 rounded-lg px-3 py-3 text-text-muted hover:text-text">
+            Events
+          </Link>
           <Link to="/enter" className="body-5 rounded-lg px-3 py-3 text-text-muted hover:text-text">
             Door staff and organizers
           </Link>
