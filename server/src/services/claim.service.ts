@@ -17,7 +17,7 @@ export async function claim(
   const ticket = await tickets.ticket(input.passId);
   if (!ticket) return { status: 404, error: "ticket_not_found" };
   if (ticket.holder !== wallet) return { status: 403, error: "not_ticket_holder" };
-  if (ticket.status === "claimed") return { status: 409, error: "already_claimed" };
+  if (ticket.status !== "issued" && ticket.status !== "skipped") return { status: 409, error: "already_claimed" };
 
   const account = await registry.findByWallet(wallet);
   if (account) {

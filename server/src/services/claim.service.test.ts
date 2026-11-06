@@ -25,7 +25,7 @@ beforeEach(() => {
   const userClaims = new Set<string>();
   tickets = {
     ready: true,
-    issue: async () => undefined,
+    issue: async () => { throw new Error("Not used in this test"); },
     ticket: async (id) => rows.find((row) => row.passId === id),
     ticketsOf: async () => rows,
     hasClaimed: async (userId) => userClaims.has(userId),
@@ -79,6 +79,15 @@ test("only the ticket's holder can claim it", async () => {
   rows.push({ ...rows[0], passId: theirs, holder: "0xaaaa000000000000000000000000000000000001" });
   const out = await claim(tickets, withAccount, false, await signedClaim(theirs));
   assert.deepEqual(out, { status: 403, error: "not_ticket_holder" });
+});
+
+test("checked-in and revoked tickets cannot be claimed or skipped", async () => {
+  for (const status of ["checked_in", "revoked"] as const) {
+    rows[0].status = status;
+    const out = await claim(tickets, noAccount, true, await signedClaim(passId));
+    assert.deepEqual(out, { status: 409, error: "already_claimed" });
+    assert.equal((await tickets.ticket(passId))?.status, status);
+  }
 });
 
 test("a guest is marked skipped only when skip is on, and can claim properly later", async () => {

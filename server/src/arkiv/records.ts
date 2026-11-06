@@ -1,6 +1,6 @@
 import { addr, defineSchema, str } from "@arkiv-network/sdk/schema";
 
-/** Small demo event record. eventHash is a stable hash, so related entities can refer to it. */
+/** Small demo event record. eventId is the SHA-256 hash used by related entities. */
 export const EventSchema = defineSchema("resona.event", {
   eventId: str().indexed(),
   eventName: str(),
@@ -8,7 +8,7 @@ export const EventSchema = defineSchema("resona.event", {
   eventDate: str(),
 });
 
-/** One payment per transaction: transaction hash, event hash, user hash and creation time. */
+/** One payment per transaction: transaction hash, event ID hash, user ID hash, and creation time. */
 export const PaymentSchema = defineSchema("resona.payment", {
   txnHash: str().indexed(),
   eventId: str().indexed(),

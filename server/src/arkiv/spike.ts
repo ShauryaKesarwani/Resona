@@ -1,21 +1,17 @@
-// A disposable testnet lifecycle test, deliberately separate from the API's store.
-import { randomUUID } from "node:crypto";
+// Disposable one-day Rabdi integration check for the production Arkiv schemas.
+import { createHash, randomUUID } from "node:crypto";
 import { createPublicClient, createWalletClient, ExpirationTime } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
 import { eq } from "@arkiv-network/sdk/query";
-import { addr, defineSchema, str } from "@arkiv-network/sdk/schema";
-import { http, isHex, type Hex } from "viem";
+import { addr } from "@arkiv-network/sdk/schema";
+import { http, isHex, keccak256, stringToBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { Accounts } from "./accounts.ts";
+import { createArkivTickets } from "./tickets.ts";
+import { EventSchema, PaymentSchema } from "./records.ts";
 
-const Tickets = defineSchema("resona.spike.ticket", {
-  passId: str().indexed(),
-  holder: addr().indexed(),
-  status: str().indexed(),
-});
-const Checkins = defineSchema("resona.spike.checkin", {
-  passId: str().indexed(),
-  holder: addr().indexed(),
-});
+const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+let stage = "configuration";
 
 async function main() {
   const key = process.env.ARKIV_PRIVATE_KEY;
@@ -24,46 +20,88 @@ async function main() {
   }
   const account = privateKeyToAccount(key as Hex);
   const chain = rabdi({ accessKey: process.env.ARKIV_ACCESS_KEY ?? "" });
-  const publicClient = createPublicClient({ chain, transport: http() });
-  const wallet = createWalletClient({ chain, transport: http(), account });
-  const passId = randomUUID();
+  const reader = createPublicClient({ chain, transport: http() });
+  const writer = createWalletClient({ chain, transport: http(), account });
   const expiration = ExpirationTime.fromDays(1);
-  console.log(`Organizer: ${account.address}; spike pass: ${passId}`);
+  const suffix = randomUUID();
+  const eventId = digest(`resona-spike-event:${suffix}`);
+  const eventIdentifier = `resona-spike-event:${suffix}`;
+  const nullifierHash = digest(`resona-spike-nullifier:${suffix}`);
+  const userId = digest(nullifierHash);
+  const operationId = randomUUID();
+  const tickets = createArkivTickets(key as Hex, process.env.ARKIV_ACCESS_KEY ?? "", eventIdentifier, 1);
+  console.log(`Arkiv schema check using organizer ${account.address}; event ${eventId}`);
 
-  const ticket = await wallet.createEntity(Tickets, {
-    passId, holder: addr(account.address), status: "issued",
-  }, { expiration });
-  console.log(`Ticket: ${ticket.entityKey}; transaction: ${ticket.txHash}`);
-
-  async function readTicket(expectedStatus: string) {
-    const { entities } = await publicClient.select({ $key: true, status: true })
-      .from(Tickets).ownedBy(account.address).where(eq("passId", passId)).fetch();
-    if (entities.length !== 1 || entities[0].$key !== ticket.entityKey || entities[0].status.value !== expectedStatus) {
-      throw new Error(`Expected the organizer-owned ticket with status ${expectedStatus}; check indexing and retry with a new spike.`);
-    }
-    console.log(`Read organizer-owned ticket: ${expectedStatus}`);
-  }
-
-  await readTicket("issued");
-  await wallet.patchEntity(Tickets, ticket.entityKey, { set: { status: "checked_in" } });
-  await readTicket("checked_in");
-
-  const checkin = await wallet.createEntity(Checkins, {
-    passId, holder: addr(account.address),
+  stage = "event create";
+  const event = await writer.createEntity(EventSchema, {
+    eventId,
+    eventName: "Resona disposable schema check",
+    organiser: addr(account.address),
+    eventDate: new Date().toISOString(),
   }, { expiration, flags: { readonly: true } });
-  console.log(`Read-only check-in: ${checkin.entityKey}; transaction: ${checkin.txHash}`);
-  const { entities } = await publicClient.select({ $key: true }).from(Checkins)
-    .ownedBy(account.address).where(eq("passId", passId)).fetch();
-  if (entities.length !== 1 || entities[0].$key !== checkin.entityKey) {
-    throw new Error("Could not read the organizer-owned check-in; check indexing.");
+  const { entities: events } = await reader.select({ $key: true, eventName: true })
+    .from(EventSchema, { onMismatch: "throw" }).ownedBy(account.address).where(eq("eventId", eventId)).fetch();
+  if (events.length !== 1 || events[0].$key !== event.entityKey || events[0].eventName.value !== "Resona disposable schema check") {
+    throw new Error("Event schema create/read failed.");
   }
-  console.log("Arkiv lifecycle spike passed.");
+
+  stage = "account create";
+  const user = await writer.createEntity(Accounts, {
+    wallet: addr(account.address), nullifierHash, userId,
+  }, { expiration, flags: { readonly: true } });
+  const { entities: users } = await reader.select({ $key: true, userId: true })
+    .from(Accounts, { onMismatch: "throw" }).ownedBy(account.address).where(eq("wallet", addr(account.address))).fetch();
+  if (!users.some((row) => row.$key === user.entityKey && row.userId?.value === userId)) {
+    throw new Error("Account schema create/read failed.");
+  }
+
+  stage = "ticket issue and read";
+  const ticket = await tickets.issue(account.address, "schema-check");
+  if (ticket.eventId !== eventId) throw new Error("Ticket used an unexpected event ID hash.");
+  let storedTicket;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    storedTicket = await tickets.ticket(ticket.passId);
+    if (storedTicket) break;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  if (!storedTicket || storedTicket.status !== "issued") throw new Error("Ticket schema create/read failed.");
+  if (await tickets.hasClaimed(userId)) throw new Error("New user unexpectedly has a claim.");
+  stage = "claim create and status patch";
+  await tickets.commitClaim(ticket.passId, operationId, account.address, userId);
+  if (!(await tickets.hasClaimed(userId)) || (await tickets.ticket(ticket.passId))?.status !== "claimed") {
+    throw new Error("Claim schema create and ticket claim batch failed.");
+  }
+  stage = "duplicate-claim check";
+  const secondTicket = await tickets.issue(account.address, "schema-check");
+  let duplicateRejected = false;
+  try {
+    await tickets.commitClaim(secondTicket.passId, randomUUID(), account.address, userId);
+  } catch (error) {
+    duplicateRejected = error instanceof Error && error.message === "Human already claimed";
+  }
+  if (!duplicateRejected) throw new Error("A second ticket claim for the same user was not rejected.");
+  const holderTickets = await tickets.ticketsOf(account.address);
+  if (!holderTickets.some((row) => row.passId === secondTicket.passId && row.status === "issued")) {
+    throw new Error("Ticket list query failed.");
+  }
+
+  stage = "payment create and read";
+  const txnHash = keccak256(stringToBytes(`resona-spike-payment:${suffix}`));
+  const createdAt = new Date().toISOString();
+  const payment = await writer.createEntity(PaymentSchema, { txnHash, eventId, userId, createdAt }, { expiration, flags: { readonly: true } });
+  const { entities: payments } = await reader.select({ $key: true, txnHash: true, eventId: true, userId: true, createdAt: true })
+    .from(PaymentSchema, { onMismatch: "throw" }).ownedBy(account.address).where(eq("txnHash", txnHash)).fetch();
+  if (payments.length !== 1 || payments[0].$key !== payment.entityKey || payments[0].eventId.value !== eventId || payments[0].userId.value !== userId) {
+    throw new Error("Payment schema create/read failed.");
+  }
+
+  console.log("Account, event, ticket, claim, and payment schema checks passed. Entities expire after one day.");
 }
 
 main().catch((error: unknown) => {
-  // RPC errors may include an access key in the URL; do not print them verbatim.
+  // RPC errors may contain access keys in URLs; never print the access key.
   const message = error instanceof Error ? error.message : "Unknown error";
   const accessKey = process.env.ARKIV_ACCESS_KEY;
-  console.error("Arkiv spike failed:", accessKey ? message.replaceAll(accessKey, "[redacted]") : message);
+  console.error(`Arkiv schema check failed at ${stage}:`, accessKey ? message.replaceAll(accessKey, "[redacted]") : message);
   process.exitCode = 1;
 });

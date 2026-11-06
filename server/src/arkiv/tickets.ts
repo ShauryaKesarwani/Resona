@@ -12,9 +12,10 @@ export type Ticket = {
   passId: string; eventId: string; holder: string; tier: string; status: TicketStatus;
   entityKey: Hex; ensName?: string; ensNode?: string; ensRegistry?: string; ensChainId?: string;
 };
+export type IssuedTicket = Ticket & { transactionHash: Hex };
 export type TicketStore = {
   ready: boolean;
-  issue(holder: string, tier: string): Promise<unknown>;
+  issue(holder: string, tier: string): Promise<IssuedTicket>;
   ticket(passId: string): Promise<Ticket | undefined>;
   ticketsOf(holder: string): Promise<Ticket[]>;
   hasClaimed(userId: string): Promise<boolean>;
