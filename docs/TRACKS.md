@@ -6,13 +6,15 @@ Resona is being built from scratch at the event, so the Continuity Track prizes 
 
 **Prior work:** [enconomy](https://github.com/tawago/enconomy) has no license and the Arkiv track requires building from scratch, so use it for ideas only, and credit it in the README.
 
+**Order:** the team is building sonar and Arkiv first, then World ID, then ENS, as set out in [BUILD_PLAN.md](BUILD_PLAN.md#build-order). Finishing stage 1 keeps only the Arkiv track possible, and each later stage adds one more.
+
 ## Summary
 
 | Sponsor | Track | Prize pool | Fit |
 |---|---|---|---|
-| ENS | Best Use of ENSv2 | $7,000 ($3,000, $2,000, $1,000, $1,000) | Strong if tickets are subnames |
-| Arkiv | Build on Arkiv (from scratch) | $4,000 ($3,000, $1,000) | Strong |
-| World | Best Use of IDKit | $2,500 (up to 2 teams, $1,250 each) | Strong |
+| ENS | Best Use of ENSv2 | $7,000 ($3,000, $2,000, $1,000, $1,000) | Stage 3. Strong if passes are subnames with blocked transfers; simpler names alone may be judged cosmetic |
+| Arkiv | Build on Arkiv (from scratch) | $4,000 ($3,000, $1,000) | Stage 1. Strong: the wallet and door read tickets from Arkiv, and a sonar pass updates it |
+| World | Best Use of IDKit | $2,500 (up to 2 teams, $1,250 each) | Stage 2. Strong |
 | World | World ID Agent Pass | $5,000 | **Skip.** It's built around the Agent Pass product, and Resona has no use for it |
 | Arkiv | Arkiv + Swarm bonus | $500 | **Skip,** since it adds another integration for little |
 

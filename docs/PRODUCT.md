@@ -17,7 +17,7 @@ Sections marked **(proposed)** were added while writing this up and were not in 
 ### 1. Organizer creates an event
 
 - Sets up the event, its ticket tiers and its transfer policy.
-- Gets an event ENS name that points to the purchase page and has its own registry for passes, for example `devcon8-demo.eth` on Sepolia.
+- Gets an event ENS name that points to the purchase page and has its own registry for passes, for example `ethglobal-mumbai.eth` on Sepolia.
 
 ### 2. Tickets are issued
 
@@ -29,14 +29,14 @@ There are three routes, and all of them end in the same ticket record.
 | **Public purchase** | Attendee uses the event's purchase link | Ticket is added to the attendee's wallet |
 | **Company checkout** | Company enters employee ENS names while buying | Each employee receives a ticket immediately |
 
-Example: pass `7`, held by `skes.eth`, wallet `0x7…`. The pass is an ENSv2 subname, `7.devcon8-demo.eth`, owned by that wallet, and its details are stored in Arkiv.
+Example: pass `7`, held by `skes.eth`, wallet `0x7…`. The pass is an ENSv2 subname, `7.ethglobal-mumbai.eth`, owned by that wallet, and its details are stored in Arkiv.
 
 ### 3. Attendee claims the ticket (proposed detail)
 
 The brief says tickets are tied to a holder and bots should be blocked. Claiming is where that takes effect:
 
 1. The attendee opens the Resona wallet, which holds a wallet address and a key locked to that phone.
-2. They prove they are a unique human with World ID's Proof of Human, once per event. A second claim by the same person is rejected.
+2. They verify with World ID, at the level the ticket requires, once per event. A second claim by the same person is rejected.
 3. Their ENS name is checked: it must resolve to their Resona wallet address.
 4. The ticket is locked to that address and that phone's key.
 
@@ -62,7 +62,7 @@ The details and security reasoning are in [SONAR.md](SONAR.md).
 
 ### 6. Attendance trophy
 
-- Each ENS holder has a profile listing the events they attended, as Resona's own badges read from Arkiv. POAP minting can follow after the hackathon.
+- Each ENS holder has a profile listing the events they attended, read from Arkiv, with POAPs. This comes in [stage 4](#later-stages).
 - A trophy combines the holder's ENS avatar, a short hash and an ordinal, such as "11th person to buy" or "11th person through the door".
 - A shareable link opens the profile.
 
@@ -70,35 +70,65 @@ The details and security reasoning are in [SONAR.md](SONAR.md).
 
 Because a ticket is locked to one phone, a lost phone would otherwise lose the ticket. The holder asks the organizer to re-bind it, proves they are the same human with World ID on the new phone, and the old key is revoked.
 
-## Scope for ETHGlobal Mumbai (proposed)
+## Scope for ETHGlobal Mumbai
 
-The target tracks are World ID, ENS and Arkiv, the demo is a PWA on two Android phones, and the build has 9 hours. [TRACKS.md](TRACKS.md) has each track's checklist.
+The demo is a PWA on two Android phones. Sonar check-in comes first, and nothing else starts until it works. [BUILD_PLAN.md](BUILD_PLAN.md) has the phases, and [TRACKS.md](TRACKS.md) has each track's checklist.
 
-| Priority | Feature | Needed for |
+| Stage | Feature | Why |
 |---|---|---|
-| **Must** | Sound-based distance check between two Android phones | The core claim |
-| **Must** | Live demo of rejected attacks: a QR code alone, and a relay over Google Meet | The core claim |
-| **Must** | Pass issued as an ENSv2 subname, with non-transferable tiers enforced by the contract | ENS |
-| **Must** | Tickets and check-ins in Arkiv, read by the wallet, door and profile | Arkiv |
-| **Must** | World ID at claim, with duplicate claims rejected | World |
-| **Must** | Deployed PWA as the live demo | ENS, Arkiv |
-| **Should** | Browser device key that signs the check-in report | Forwarded tickets fail |
-| **Should** | Trophy page with ENS avatar, hash and ordinal | Team's feature; another Arkiv read |
-| **Should** | Organizer-approved transfer | ENS |
-| **Could** | Company checkout with employee ENS names | Team's feature; a list of names on the issuing form |
-| **Could** | Event purchase pages linked from the event's ENS name | ENS |
-| **After** | Native app with attestation and hardware keys, sound challenge with a deadline, iOS, and real POAP minting | Stopping modified clients in a real product |
+| **1** | Sound-based distance check between two Android phones | The core product |
+| **1** | Tickets issued directly by the organizer, and stored on Arkiv | Tickets exist without any checkout |
+| **1** | A sonar pass updates Arkiv, and a repeat check-in is rejected | The check-in record, and the Arkiv track |
+| **1** | Live demo of rejected attacks: a QR code alone, and a relay over Google Meet | Proves the core claim |
+| **1** | Deployed PWA as the live demo | Judges can try it |
+| **2** | World ID at claim, with a repeat claim rejected | One ticket per person, and the World track |
+| **3** | Names replace wallet addresses, and passes are ENSv2 subnames the holder can't transfer | Simpler names, and the ENS track |
+| **After** | Native app with attestation and hardware keys, sound challenge with a deadline, iOS | Stopping modified clients in a real product |
 
-## Demo script (proposed)
+## Later stages
 
-1. Organizer issues a pass, which appears on-chain as `7.devcon8-demo.eth` and in the attendee's wallet.
-2. The attendee claims it with World ID, and a second claim by the same person is **rejected**.
-3. The attendee checks in with the phones about 30 cm apart: **pass**, with the distance shown.
+These come only after sonar check-in, World ID and ENS are working.
+
+### Stage 4: Event pages and profiles
+
+- **Event page:** the event's ENS name is its home page and ticket page, for example `ethglobal-mumbai.eth`. The `ethglobal.mumbai.eth` style also works, but needs control of `mumbai.eth`. On Sepolia, the simplest approach is a page on our site, `/e/<name>`, that reads the event's ENS records.
+- **Attendee profile:** `/u/<name>` shows which events a person attended and checked in to, read from Arkiv, with their ENS avatar and arrival number, such as "11th through the door".
+- **POAPs:** each check-in earns a POAP on the attendee's profile. [POAP's mint links go through a review](https://documentation.poap.tech/docs/popular-flow), so request them well before an event. Resona's own badge can show until they arrive.
+
+### Stage 5: Buying tickets on testnet
+
+Testnet tokens only, with no real money. Tickets reach people in one of two ways, and each ticket records which one was used:
+
+| Route | How it works | Verification |
+|---|---|---|
+| **Company distribution** | A company buys passes and enters its employees' ENS names at checkout. Each name resolves to the wallet attached to it, and the ticket arrives in that wallet | Each employee verifies for themselves when claiming, so a company can't hoard passes |
+| **Individual purchase** | A person opens the event's ENS page, buys a ticket with testnet tokens, and it goes to their own wallet | The buyer verifies when buying |
+
+### Verification levels
+
+The ticketing provider chooses what each ticket tier requires. It can be one level, or all of them, and the ticket and door screen show what was verified. This is also what the World track rewards: picking the credential that's proportionate to the ticket.
+
+| Shown as | [World ID credential](https://docs.world.org/world-id/idkit/credentials) | What it proves |
+|---|---|---|
+| **Camera verified** | Selfie Check | Liveness and facial similarity. Medium assurance, available to anyone with the World app, with no Orb or document needed |
+| **Government ID** | Passport | Holds a verified NFC passport. The docs don't say whether this ensures uniqueness across users, so check before relying on it for one-per-person |
+| **Orb verified** | Proof of Human | A unique human, verified by the Orb. The highest assurance |
+
+## Demo script
+
+**Stage 1, the main demo:**
+
+1. The organizer issues a ticket, and it appears in the attendee's wallet and on Arkiv.
+2. The attendee checks in with the phones about 30 cm apart: **pass**, with the distance shown and a link to the Arkiv record.
+3. The same ticket tries again: **rejected**, because Arkiv shows it's already checked in.
 4. The attendee stands across the room: **fail**.
-5. Someone streams the QR code over Google Meet: **fail**.
-6. Someone relays the sound over Google Meet: **fail**, with a huge apparent distance on screen.
-7. The attendee tries to send the ticket to a friend: **the transaction reverts**, and it can only move through organizer approval.
-8. The attendee's profile shows the new trophy, read from Arkiv.
+5. Someone streams the QR code over Google Meet, and another phone tries to use it: **fail**, because that phone doesn't have the holder's wallet key.
+6. Someone relays the sound over Google Meet: **fail**, with a large apparent distance or no sound found.
+
+**If stages 2 and 3 are built:**
+
+7. A second claim by the same person is **rejected** by World ID.
+8. The attendee tries to send the pass to a friend: **the transaction reverts**.
 
 ## Limits to be honest about
 

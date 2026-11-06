@@ -21,11 +21,20 @@ The living record of what is settled and what isn't. Update it whenever the team
 | Team and deadline | 3.5 people, 9 hours as of 6 November 2026 | Confirmed by team |
 | Demo platform | **PWA on Android Chrome** | Decided by team. Replaces React Native for the demo |
 | Real product platform | Native app with attestation and hardware keys | Proposed |
+| Build order | Sonar and Arkiv, then World ID, then ENS, then event pages, profiles and POAPs, then payments | Decided by team |
+| Check-in record | A sonar pass updates the ticket on Arkiv | Decided by team |
+| Database | Arkiv only, including hashed World ID nullifiers | Decided by team |
+| Offline | Web manifest only for now, with no service worker | Decided by team |
+| ENS naming | Separate names for the event and for people | Decided by team |
+| Checkout | None for now; the organizer issues tickets directly | Decided by team |
+| Future buying | Testnet only, from the event's ENS page, or companies distributing to employees' ENS names | Decided by team |
+| Verification levels | The ticketing provider chooses camera, government ID, Orb, or all, and the level is shown | Decided by team, for a later stage |
+| Holder proof at check-in | The wallet key signs the report, so a streamed QR code alone can't pass | **Proposed, needs team sign-off** |
 | Tickets as ENSv2 subnames on Sepolia | Pass is a subname, and the contract blocks non-transferable tiers | **Proposed, needs team sign-off** |
-| World ID credential | Proof of Human only | **Proposed, needs team sign-off** |
+| First World ID credential | Proof of Human, before levels are added | **Proposed, needs team sign-off** |
 | Security additions | Sound challenge with a deadline, attestation, hardware device key | **Proposed for the real product;** not in the demo |
 | Timing method | Matched filter for timing; spectrogram only for visuals and optional same-room check | **Proposed, needs team sign-off** |
-| POAP | Moved to after the hackathon; own badges first | **Proposed, needs team sign-off** |
+| POAP | Stage 4, on attendee profiles | Decided by team |
 
 ## Open questions
 
@@ -36,8 +45,8 @@ The living record of what is settled and what isn't. Update it whenever the team
 
 ### Product
 
-3. **How is a ticket paid for?** Crypto, card or both? None of the three target tracks needs real payment, so the demo can issue tickets and show a mock checkout.
-4. **What happens to people without Orb verification?** Proof of Human needs the Orb. One option is requiring it for discounted tickets only, with public-price tickets open to everyone.
+3. **Which testnet token pays for tickets in stage 5,** and who pays the gas? MockUSDC and Sepolia ETH are both options. Decide this when stage 5 starts.
+4. **Which verification level should the first event use?** Proof of Human is the proposed start, but it needs an Orb-verified World ID. For the demo, the simulator avoids this.
 5. **How much of the attendee list should be public?** Arkiv and ENS are public, so a pass reveals its holder's wallet. Encrypting holder fields protects privacy but limits queries.
 6. **Can a company reassign a ticket** if an employee leaves before the event?
 7. **Does the trophy ordinal count purchases or check-ins?** The brief mentions both. We've assumed check-ins, since that better proves attendance.
@@ -84,6 +93,11 @@ Each of these keeps the team's goal but changes how it's reached.
 | React Native for the demo | PWA for the demo, native for a real product | Only 9 hours left, and browser ranging has been shown to work |
 | 17–20 kHz chirps | Audible 2–18 kHz noise-like codes for the demo | Sharper timing; enconomy's approach |
 | Arkiv facts from a third-party FAQ | Official Arkiv docs | Official docs are now read |
+| ENS, World ID and sonar in parallel | Sonar and Arkiv first, then World ID, then ENS | Team decision |
+| SQLite for nullifiers | Hashed nullifiers on Arkiv | Team decision. An earlier claim here that nullifiers must stay private was too strong |
+| One shared Sepolia name | Separate event and people names | Team decision |
+| A mocked Pay button | No checkout until stage 5 | Team decision |
+| Device key signing, listed as optional | The wallet key signs check-in reports, and this can't be cut | Without it, anyone with a streamed QR code could act as the holder |
 
 ## Sources
 

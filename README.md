@@ -38,6 +38,14 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 
 [TRACKS.md](docs/TRACKS.md) has the submission checklists.
 
+## Roadmap
+
+1. **Sonar + Arkiv:** tickets are checked in only through sonar, and the result is stored on Arkiv.
+2. **World ID:** one ticket per person, at the verification level the ticketing provider chooses.
+3. **ENS:** names replace wallet addresses, and passes can't be transferred without the organizer.
+4. **Event pages and profiles:** the event's ENS page, and attendee profiles with POAPs.
+5. **Testnet ticket buying:** companies distribute to employees' ENS names, or individuals buy from the event's page.
+
 ## Documents
 
 | File | What it covers |
