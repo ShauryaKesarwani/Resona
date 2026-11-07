@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { TabLayout } from './components/AppTabs'
 import { RequireSignIn } from './components/RequireSignIn'
+import { AttendeeOnly, OrganizerOnly } from './components/RoleGuards'
 import Lab from './pages/Lab'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
@@ -61,26 +62,34 @@ export default function App() {
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
           <Route path="/enter" element={<Navigate to="/account" replace />} />
-          <Route path="/wallet/events" element={<Navigate to="/events" replace />} />
-          <Route path="/e/:id/buy" element={<Buy />} />
-          <Route path="/wallet/purchases" element={<Purchases />} />
-          <Route path="/wallet/receipt/:txn" element={<Receipt />} />
-          <Route path="/wallet/ticket/:id" element={<Ticket />} />
-          <Route path="/wallet/claim/:id" element={<Claim />} />
-          <Route path="/wallet/checkin/:id" element={<CheckIn />} />
-          <Route path="/wallet/transfer/:id" element={<Transfer />} />
+          <Route element={<AttendeeOnly />}>
+            <Route path="/wallet/events" element={<Navigate to="/events" replace />} />
+            <Route path="/e/:id/buy" element={<Buy />} />
+            <Route path="/wallet/purchases" element={<Purchases />} />
+            <Route path="/wallet/receipt/:txn" element={<Receipt />} />
+            <Route path="/wallet/ticket/:id" element={<Ticket />} />
+            <Route path="/wallet/claim/:id" element={<Claim />} />
+            <Route path="/wallet/checkin/:id" element={<CheckIn />} />
+            <Route path="/wallet/transfer/:id" element={<Transfer />} />
+          </Route>
           {screens.filter((s) => !isPublic(s)).map(stub)}
         </Route>
         <Route element={<TabLayout />}>
-          <Route path="/events" element={<Events />} />
+          <Route element={<AttendeeOnly />}>
+            <Route path="/events" element={<Events />} />
+          </Route>
           <Route element={<RequireSignIn />}>
-            <Route path="/wallet" element={<Tickets />} />
+            <Route element={<AttendeeOnly />}>
+              <Route path="/wallet" element={<Tickets />} />
+            </Route>
             <Route path="/account" element={<Account />} />
             <Route path="/door" element={<Door />} />
             <Route path="/door/recent" element={<Recent />} />
-            <Route path="/organizer" element={<Organizer />} />
-            <Route path="/organizer/attendees" element={<Attendees />} />
-            <Route path="/organizer/transfers" element={<Transfers />} />
+            <Route element={<OrganizerOnly />}>
+              <Route path="/organizer" element={<Organizer />} />
+              <Route path="/organizer/attendees" element={<Attendees />} />
+              <Route path="/organizer/transfers" element={<Transfers />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

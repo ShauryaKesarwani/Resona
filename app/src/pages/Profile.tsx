@@ -8,40 +8,19 @@ import { Screen, TopBar } from '../components/Screen'
 import { RowsSkeleton } from '../components/Skeleton'
 import { ordinal, short, wallet } from '../data/mock'
 import { allEvents, checkinsFor, type ArkivEvent } from '../services/arkiv'
-import { api, type EnsResolvedName } from '../services/api'
 import { prettyDate } from './events/art'
 import { EventImage } from './events/EventImage'
 
 type Trophy = Awaited<ReturnType<typeof checkinsFor>>[number]
 
-/** Public trophy page. ENS names are forward-resolved before reading the wallet's Arkiv history. */
+/** Public trophy page for a wallet address, read from Arkiv. */
 export default function Profile() {
   const { name = '' } = useParams()
-  const validAddress = isAddress(name)
-  const [resolved, setResolved] = useState<EnsResolvedName | null>(null)
-  const [lookupError, setLookupError] = useState('')
-  const address = validAddress ? name : resolved?.address
+  const address = isAddress(name) ? name : undefined
   const [trophies, setTrophies] = useState<Trophy[]>()
   const [events, setEvents] = useState<ArkivEvent[]>([])
   const [failed, setFailed] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    let current = true
-    setResolved(null)
-    setLookupError('')
-    if (validAddress) return () => { current = false }
-    api.ensResolve(name).then((result) => {
-      if (current) setResolved(result)
-    }).catch((error: Error) => {
-      if (!current) return
-      setLookupError(error.message === 'ens_name_not_found' ? 'We could not find that ENS name.'
-        : error.message === 'ens_address_not_set' ? 'That ENS name has no wallet address set.'
-          : error.message === 'invalid_ens_name' ? 'That is not a valid ENS name.'
-            : 'ENS could not be reached. Try again in a moment.')
-    })
-    return () => { current = false }
-  }, [name, validAddress])
 
   useEffect(() => {
     if (!address) return
@@ -63,13 +42,13 @@ export default function Profile() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (!address && lookupError) {
+  if (!address) {
     return (
       <Screen>
         <TopBar back="/" />
         <section className="flex flex-1 flex-col justify-center gap-2" role="alert">
           <h1 className="heading-5">We could not find this profile</h1>
-          <p className="body-3 text-text-muted">{lookupError}</p>
+          <p className="body-3 text-text-muted">The link may be old or mistyped.</p>
         </section>
         <Button to="/">Go to Resona</Button>
       </Screen>
@@ -83,13 +62,12 @@ export default function Profile() {
         <div className="relative grid h-44 w-full place-items-center">
           <GatewayFlow className="absolute inset-0 size-full" />
           <span className="relative rounded-full bg-surface p-2">
-            <Avatar name={resolved ? resolved.name.split('.')[0]! : name.slice(2)} size={80} />
+            <Avatar name={name.slice(2)} size={80} />
           </span>
         </div>
-        <h1 className="heading-4 font-mono">{resolved?.name ?? short(address ?? name)}</h1>
-        {resolved && <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{short(resolved.address)}</p>}
+        <h1 className="heading-4 font-mono">{short(address)}</h1>
         <p className="body-5 text-text-muted tabular-nums">
-          {trophies ? `${trophies.length} ${trophies.length === 1 ? 'event' : 'events'} attended` : address ? 'Reading Arkiv' : 'Looking up ENS name'}
+          {trophies ? `${trophies.length} ${trophies.length === 1 ? 'event' : 'events'} attended` : 'Reading Arkiv'}
         </p>
       </header>
 

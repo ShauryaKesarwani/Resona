@@ -7,7 +7,6 @@ import { DetailSkeleton } from '../../components/Skeleton'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { short, useTickets, useTicketsState, wallet } from '../../data/mock'
-import { api, type EnsPass } from '../../services/api'
 import { myPurchases } from '../../services/arkiv'
 import { EventImage } from '../events/EventImage'
 
@@ -17,18 +16,7 @@ export default function Ticket() {
   const ticket = useTickets().find((t) => t.id === id)
   const state = useTicketsState()
   const [gloss, setGloss] = useState(false)
-  const [ens, setEns] = useState<EnsPass | null>(null)
-  const [ensError, setEnsError] = useState('')
   const [receipt, setReceipt] = useState<string>()
-
-  useEffect(() => {
-    if (!id) return
-    let current = true
-    api.ensPass(id).then((result) => { if (current) setEns(result) }).catch((error: Error) => {
-      if (current && error.message !== 'ens_not_configured') setEnsError('ENS ownership could not be checked.')
-    })
-    return () => { current = false }
-  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -73,7 +61,7 @@ export default function Ticket() {
           <div className="min-w-0">
             <p className="caption-4 text-text-muted">{ticket.tier}</p>
             <p className="title-2 tabular-nums">Pass&nbsp;{ticket.pass}</p>
-            <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{ens?.name ?? ticket.ens}</p>
+            <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{ticket.id.slice(0, 8)}…</p>
           </div>
           <StatusPill status={ticket.status} past={ticket.past} />
         </div>
@@ -103,12 +91,6 @@ export default function Ticket() {
               <InfoIcon size={16} className="text-text-muted" aria-hidden="true" />
             </button>
           </Row>
-          {ens && <Row label="ENSv2 pass">
-            <span className={ens.active && ens.linked && ens.matchesHolder ? 'text-success' : 'text-danger'}>
-              {ens.active && ens.linked && ens.matchesHolder ? `Verified on Sepolia · ${short(ens.owner)}` : 'Ownership does not match this ticket'}
-            </span>
-          </Row>}
-          {ensError && <p role="status" className="body-6 border-t border-line px-4 py-3 text-danger">{ensError}</p>}
           <Collapse open={gloss}>
             <p className="body-6 border-t border-line px-4 py-3 text-text-muted">
               You cannot send this ticket straight to someone. You ask the organizer, and they approve or deny. A

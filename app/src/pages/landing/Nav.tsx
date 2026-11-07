@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { WaveformIcon } from '../../components/icons'
 
 const links = [
   { href: '#how', label: 'How it works' },
@@ -30,7 +29,7 @@ export function Nav() {
           className="flex w-full items-center justify-between gap-6 rounded-2xl border border-line bg-surface-raised/70 p-2 pl-4 backdrop-blur-md sm:w-auto"
         >
           <Link to="/" className="title-2 flex items-center gap-2 rounded-lg">
-            <WaveformIcon size={24} className="text-accent" aria-hidden="true" />
+            <img src="/icon-192.png" alt="" className="size-8 mix-blend-screen" />
             Resona
           </Link>
           <ul className="hidden items-center gap-1 sm:flex">

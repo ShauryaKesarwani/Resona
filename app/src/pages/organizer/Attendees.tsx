@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { isAddress } from 'viem'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { api } from '../../services/api'
 import { RowsSkeleton } from '../../components/Skeleton'
 import { organizerEvents, organizerAttendees, type ArkivEvent, type AttendeeTicket } from '../../services/arkiv'
 
@@ -15,9 +13,6 @@ export default function Attendees() {
   const [eventId, setEventId] = useState('')
   const [data, setData] = useState<Attendees>()
   const [search, setSearch] = useState('')
-  const [resolvedSearch, setResolvedSearch] = useState<{ query: string; name: string; address: string } | null>(null)
-  const [searchError, setSearchError] = useState('')
-  const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
 
@@ -44,30 +39,8 @@ export default function Attendees() {
   const checked = useMemo(() => new Set(data?.checkins.map((c) => `${c.passId}:${c.holder.toLowerCase()}`) ?? []), [data])
   const isChecked = (t: AttendeeTicket) => checked.has(`${t.passId}:${t.holder.toLowerCase()}`)
   const searchKey = search.trim().toLowerCase()
-  const rows = data?.tickets.filter((t) => `${t.holder} ${t.passId} ${t.tier}`.toLowerCase().includes(searchKey)
-    || (resolvedSearch?.query.toLowerCase() === searchKey && t.holder.toLowerCase() === resolvedSearch.address.toLowerCase()))
+  const rows = data?.tickets.filter((t) => `${t.holder} ${t.passId} ${t.tier}`.toLowerCase().includes(searchKey))
   const count = data?.tickets.filter(isChecked).length ?? 0
-
-  async function resolveSearch(e: FormEvent) {
-    e.preventDefault()
-    const query = search.trim()
-    setSearchError('')
-    setResolvedSearch(null)
-    if (!query || isAddress(query)) return
-    setSearching(true)
-    try {
-      const resolved = await api.ensResolve(query)
-      setResolvedSearch({ query, ...resolved })
-    } catch (error) {
-      const code = (error as Error).message
-      setSearchError(code === 'ens_name_not_found' ? 'That ENS name could not be found.'
-        : code === 'ens_address_not_set' ? 'That ENS name has no wallet address set.'
-          : code === 'invalid_ens_name' ? 'Enter a valid ENS name.'
-            : 'ENS lookup is unavailable. Try again in a moment.')
-    } finally {
-      setSearching(false)
-    }
-  }
 
   return (
     <Screen tabs>
@@ -85,15 +58,10 @@ export default function Attendees() {
       {events?.length === 0 && <p className="body-6 text-text-muted">No organizer events found on Arkiv.</p>}
       {data && <p className="title-3" role="status">{data.tickets.length} confirmed tickets · {count} checked in</p>}
       {data && (
-        <form onSubmit={resolveSearch} className="flex flex-col gap-2">
-          <label className="flex flex-col gap-2">
-            <span className="title-4">Search wallet, ticket, tier or ENS name</span>
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setSearchError('') }} autoComplete="off" placeholder="Wallet, ticket ID or name.eth" className="field" />
-          </label>
-          {search.includes('.') && !isAddress(search.trim()) && <Button type="submit" variant="secondary" size="md" busy={searching}>{searching ? 'Resolving name' : 'Resolve ENS name'}</Button>}
-          {resolvedSearch?.query.toLowerCase() === searchKey && <p role="status" className="caption-5 text-text-muted">{resolvedSearch.name} resolves to {resolvedSearch.address}</p>}
-          {searchError && <p role="alert" className="body-6 text-danger">{searchError}</p>}
-        </form>
+        <label className="flex flex-col gap-2">
+          <span className="title-4">Search wallet, ticket or tier</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} autoComplete="off" placeholder="Wallet address or ticket ID" className="field" />
+        </label>
       )}
       {error && <p role="alert" className="body-6 text-danger">{error}</p>}
       {!data && !error && (!events || eventId) && <RowsSkeleton label="Loading attendees" />}

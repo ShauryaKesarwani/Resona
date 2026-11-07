@@ -32,7 +32,7 @@ export function Hero() {
             <Button to="/wallet" onLinkClick={openWallet} aria-disabled={leaving}>
               Open your wallet
             </Button>
-            <p className="caption-2 text-text-muted">Built on ENS, Arkiv and World ID</p>
+            <p className="caption-2 text-text-muted">Built on Arkiv and World ID</p>
           </div>
         </div>
       </div>
@@ -48,7 +48,6 @@ export function Hero() {
 }
 
 const stack = [
-  { name: 'ENS', job: 'Each pass is a name the holder owns. The contract blocks transfers on locked tiers.' },
   { name: 'Arkiv', job: 'Tickets and check ins live where anyone can verify them, not only on our server.' },
   { name: 'World ID', job: 'One person gets one claim per event, and we never collect who they are.' },
 ]
@@ -56,8 +55,8 @@ const stack = [
 export function BuiltOn() {
   return (
     <Section className="py-8! lg:py-12!">
-      <h2 className="heading-5 mb-6">Three layers. One job each.</h2>
-      <dl className="grid gap-6 sm:grid-cols-3">
+      <h2 className="heading-5 mb-6">Two layers. One job each.</h2>
+      <dl className="grid gap-6 sm:grid-cols-2">
         {stack.map((s) => (
           <div key={s.name} className="flex flex-col gap-1">
             <dt className="title-1">{s.name}</dt>

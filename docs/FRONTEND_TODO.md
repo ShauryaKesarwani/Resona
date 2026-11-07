@@ -17,10 +17,8 @@ Nothing here needs new screens. It needs two real phones and a public HTTPS URL.
 
 | Item | Why | Notes |
 |---|---|---|
-| ENS names for people | The top right chip already shows a name when there is one | Assign a name to each attendee wallet and set `wallet.ens` in `data/mock.ts`. The chip, Account and the avatar pick it up |
-| ENS names and search across the screens | The ENS track needs names visible where people see them and clear name lookup | ENS lookup now resolves names to their Rabdi address record for organizer ticket issue/lookup, attendee search and `/u/:name` profiles. The event and purchase-success screens show the configured ENS event and active pass names; wallet ticket and door results show the pass name. Verify against the configured ENSNode. Door ownership enforcement is implemented in code; tests and live Sepolia verification remain. |
 | Claim screen: real phone lock | The claim's phone lock step is still simulated, and shows as such | Depends on the server's claim route |
-| Transfer: organizer approval | Wallet request and organizer review screens now call signed server routes; ENS reassignment and Arkiv updates are implemented in code | Build/tests, live Sepolia roles and transfer, Arkiv reconciliation, and phone flow remain |
+| Transfer: organizer approval | Wallet request and organizer review screens now call signed server routes; Arkiv updates are implemented in code | Build/tests, live Sepolia roles and transfer, Arkiv reconciliation, and phone flow remain |
 | Organizer page: pending requests and an event list | Organizer transfer review screen lists per-event requests and supports approve/decline | Verify with a signed-in organizer and live request |
 | Event page: more than name, date and price | Judges see a thin page | Needs description and venue fields on the Arkiv event first |
 

@@ -3,16 +3,20 @@ import { Link, useLocation } from 'react-router-dom'
 import { Avatar, Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { ArrowRightIcon, ArrowSquareOutIcon, CheckCircleIcon, CopyIcon } from '../../components/icons'
-import { rememberRole, ROLES, roleFor, type Role } from '../../components/roles'
+import { rememberRole, ROLES, type Role } from '../../components/roles'
 import { Screen, TopBar } from '../../components/Screen'
 import { SignOutButton } from '../../components/SignOutButton'
 import { avatarName, displayName, wallet } from '../../data/mock'
 import { explorerAddress } from '../../services/arkiv'
+import { useIsOrganizer, useRole } from '../../services/organizerStatus'
 
 /** The home for everything about you: how you are using the app, your wallet on chain, and moving it to another device. */
 export default function Account() {
   const { pathname } = useLocation()
-  const current = roleFor(pathname)
+  const current = useRole(pathname)
+  const organizer = useIsOrganizer()
+  // Organizers and attendees are separate flows, so each only sees their own. Anyone can staff a door with the PIN.
+  const roles: Role[] = organizer ? ['organizer', 'door'] : ['attendee', 'door']
   const [copied, setCopied] = useState('')
 
   async function copy(what: string, value: string) {
@@ -26,7 +30,7 @@ export default function Account() {
       <TopBar right={null} />
       <header className="flex flex-col items-center gap-2 pt-2 text-center">
         <Avatar name={avatarName()} size={64} />
-        <h1 className={`heading-4 ${wallet.ens ? '' : 'font-mono'}`}>{displayName()}</h1>
+        <h1 className="heading-4 font-mono">{displayName()}</h1>
         <button
           type="button"
           onClick={() => copy('address', wallet.address)}
@@ -46,7 +50,7 @@ export default function Account() {
           How you are using Resona
         </h2>
         <ul className="stagger flex flex-col border-y border-line">
-          {(Object.keys(ROLES) as Role[]).map((role) => {
+          {roles.map((role) => {
             const r = ROLES[role]
             const on = role === current
             return (
@@ -83,16 +87,20 @@ export default function Account() {
               <ArrowSquareOutIcon size={16} aria-hidden="true" />
             </a>
           </Row>
-          <Row label="Payments">
-            <Link to="/wallet/purchases" state={{ back: '/account' }} className="inline-flex min-h-12 items-center text-accent">
-              See purchases
-            </Link>
-          </Row>
-          <Row label="Attendance">
-            <Link to={`/u/${wallet.address}`} className="inline-flex min-h-12 items-center text-accent">
-              See your trophies
-            </Link>
-          </Row>
+          {!organizer && (
+            <>
+              <Row label="Payments">
+                <Link to="/wallet/purchases" state={{ back: '/account' }} className="inline-flex min-h-12 items-center text-accent">
+                  See purchases
+                </Link>
+              </Row>
+              <Row label="Attendance">
+                <Link to={`/u/${wallet.address}`} className="inline-flex min-h-12 items-center text-accent">
+                  See your trophies
+                </Link>
+              </Row>
+            </>
+          )}
         </div>
       </section>
 

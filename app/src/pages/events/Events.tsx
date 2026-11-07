@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRightIcon, PlusIcon } from '../../components/icons'
+import { ArrowRightIcon } from '../../components/icons'
 import { EventCardsSkeleton } from '../../components/Skeleton'
 import { Screen, TopBar } from '../../components/Screen'
 import { SceneHeading } from '../../components/SceneHeading'
@@ -31,7 +31,7 @@ function EventCard({ event, featured }: { event: ArkivEvent; featured: boolean }
   )
 }
 
-/** The attendee's way in: events still on sale, then a row for hosting your own. */
+/** The attendee's way in: events still on sale. */
 export default function Events() {
   const { events, failed } = useEvents()
   const open = events?.filter(isUpcoming).sort((a, b) => a.eventDate.localeCompare(b.eventDate))
@@ -58,19 +58,6 @@ export default function Events() {
             <EventCard event={e} featured={i === 0} />
           </li>
         ))}
-        <li>
-          <Link
-            to="/organizer"
-            className="group flex min-h-16 items-center gap-4 transition duration-300 ease-base active:scale-[0.99]"
-          >
-            <PlusIcon size={24} aria-hidden="true" className="shrink-0 text-accent" />
-            <span className="min-w-0 flex-1">
-              <span className="title-2 block">Host your own event</span>
-              <span className="body-6 block text-text-muted">Issue tickets to wallets from the organizer page.</span>
-            </span>
-            <ArrowRightIcon size={20} aria-hidden="true" className="shrink-0 text-accent transition-transform duration-300 ease-base group-hover:translate-x-1 group-active:translate-x-1" />
-          </Link>
-        </li>
       </ul>
     </Screen>
   )

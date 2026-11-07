@@ -12,7 +12,7 @@ import { signedBy } from '../../services/auth'
 type Phase = 'idle' | 'busy' | 'rejected' | 'done'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** W3. Two steps: confirm name, then claim. The wallet proves who you are, so there is no World ID step here. */
+/** W3. Two steps: confirm the wallet, then claim. The wallet proves who you are, so there is no World ID step here. */
 export default function Claim() {
   const { id } = useParams()
   const ticket = useTickets().find((t) => t.id === id)
@@ -125,9 +125,9 @@ export default function Claim() {
 
       {step === 1 && (
         <section className="flex flex-col gap-4">
-          <h1 className="heading-4">Confirm your name</h1>
+          <h1 className="heading-4">Confirm your wallet</h1>
           <p className="body-3 text-text-muted">
-            The ticket goes to the wallet your name points to. Check that it matches this phone.
+            The ticket goes to this wallet. Check that it matches this phone.
           </p>
           <div className="border-y border-line">
             <div className="flex flex-col gap-1 py-4">
@@ -135,7 +135,7 @@ export default function Claim() {
               <p className="body-6 font-mono text-text-muted">{short(wallet.address)}</p>
               <p className="caption-1 mt-2 flex items-center gap-1 text-success">
                 <CheckCircleIcon size={16} aria-hidden="true" />
-                Name points to this wallet
+                This wallet holds the ticket
               </p>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function Claim() {
 
       {step === 1 && (
         <Button busy={busy} onClick={() => next(2, 600)}>
-          {busy ? 'Checking name' : 'Confirm name'}
+          {busy ? 'Checking wallet' : 'Confirm wallet'}
         </Button>
       )}
       {step === 2 && (

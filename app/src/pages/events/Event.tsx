@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
@@ -6,7 +5,7 @@ import { Screen, TopBar } from '../../components/Screen'
 import { DetailSkeleton } from '../../components/Skeleton'
 import { wallet } from '../../data/mock'
 import { isUpcoming } from '../../services/arkiv'
-import { api } from '../../services/api'
+import { useIsOrganizer } from '../../services/organizerStatus'
 import { prettyDate, tokens } from './art'
 import { EventImage } from './EventImage'
 import { useEvents } from './useEvents'
@@ -15,12 +14,8 @@ import { useEvents } from './useEvents'
 export default function Event() {
   const { id } = useParams()
   const { events, failed } = useEvents()
+  const organizer = useIsOrganizer()
   const event = events?.find((e) => e.eventId === id)
-  const [ensEventName, setEnsEventName] = useState('')
-
-  useEffect(() => {
-    api.config().then((config) => setEnsEventName(config.ensEventName ?? '')).catch(() => {})
-  }, [])
 
   if (!event) {
     return (
@@ -47,7 +42,7 @@ export default function Event() {
   const open = isUpcoming(event)
   return (
     <Screen>
-      <TopBar back="/events" />
+      <TopBar back={organizer ? '/organizer' : '/events'} />
       <EventImage eventId={event.eventId} ratio="4 / 3" />
       <h1 className="heading-3">{event.eventName}</h1>
       <div className="border-y border-line">
@@ -57,12 +52,17 @@ export default function Event() {
             <span className="tabular-nums">{tokens(event.priceWei)}</span>
           </Row>
           <Row label="Network">{wallet.network} test network</Row>
-          {ensEventName && <Row label="Configured ENS namespace">{ensEventName}</Row>}
         </div>
       </div>
-      <p className="body-6 max-w-prose text-text-muted">You pay with free test tokens. If your wallet is short, Resona adds some first. No real money moves.</p>
+      {!organizer && <p className="body-6 max-w-prose text-text-muted">You pay with free test tokens. If your wallet is short, Resona adds some first. No real money moves.</p>}
       <div className="flex-1" />
-      {open ? <Button to={`/e/${event.eventId}/buy`}>Buy a ticket</Button> : <p className="body-5 text-center text-text-muted">This event has ended.</p>}
+      {!open ? (
+        <p className="body-5 text-center text-text-muted">This event has ended.</p>
+      ) : organizer ? (
+        <Button to="/organizer">Manage your events</Button>
+      ) : (
+        <Button to={`/e/${event.eventId}/buy`}>Buy a ticket</Button>
+      )}
     </Screen>
   )
 }

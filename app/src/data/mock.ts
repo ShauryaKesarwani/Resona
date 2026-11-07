@@ -12,7 +12,6 @@ export type Ticket = {
   id: string
   eventId: string
   pass: number
-  ens: string
   event: string
   tier: string
   level: Level
@@ -27,13 +26,11 @@ export const wallet = {
   name: 'Resona wallet',
   address: walletAddress(),
   network: 'Rabdi',
-  /** The person's ENS name. Nothing assigns one yet, so this stays empty until that feature lands. */
-  ens: null as string | null,
 }
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
-export const displayName = () => wallet.ens ?? short(wallet.address)
-export const avatarName = () => wallet.ens ?? wallet.address.slice(2)
+export const displayName = () => short(wallet.address)
+export const avatarName = () => wallet.address.slice(2)
 
 let tickets: Ticket[] = []
 let ticketsState: 'loading' | 'ready' | 'failed' = 'loading'
@@ -72,7 +69,6 @@ async function loadTickets() {
         id: row.passId,
         eventId: row.eventId,
         pass: index + 1,
-        ens: row.ensName ?? `${row.passId.slice(0, 8)}…`,
         event: event?.eventName ?? 'Event details not published',
         tier: tierNames[row.tier] ?? row.tier,
         level: row.status === 'claimed' || row.status === 'checked_in' ? 'Orb verified' : 'Not verified',

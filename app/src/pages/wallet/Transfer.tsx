@@ -9,11 +9,11 @@ import { api, type TransferRequest } from '../../services/api'
 import { signedBy } from '../../services/auth'
 
 const explain: Record<string, string> = {
-  ens_name_not_found: 'That ENS name could not be found.',
-  ens_address_not_set: 'That ENS name has no Rabdi wallet address set.',
-  ens_lookup_unavailable: 'ENS lookup is unavailable. Try again shortly.',
-  ens_pass_not_verified: 'The ENS pass does not currently match this ticket.',
-  ens_write_not_configured: 'The organizer has not enabled ENS transfers yet.',
+  invalid_transfer: 'Enter a wallet address that starts with 0x and has 42 characters.',
+  same_recipient: 'This ticket is already in that wallet.',
+  ens_pass_not_verified: 'This ticket cannot be moved right now. Contact the event organizer.',
+  ens_not_configured: 'Ticket transfers are not available right now.',
+  ens_write_not_configured: 'Ticket transfers are not available right now.',
   transfer_needs_review: 'The transfer needs organizer review. Contact the event organizer before trying again.',
   transfer_already_pending: 'This ticket already has an open transfer request.',
   ticket_not_transferable: 'Only a claimed, unused ticket can be sent.',
@@ -68,8 +68,8 @@ export default function Transfer() {
     setBusy(true)
     setError('')
     try {
-      const resolved = await api.ensResolve(to.trim())
-      const created = await api.requestTransfer(id, resolved.address, await signedBy(`transfer:${id}:${resolved.address.toLowerCase()}`))
+      const recipient = to.trim()
+      const created = await api.requestTransfer(id, recipient, await signedBy(`transfer:${id}:${recipient.toLowerCase()}`))
       setRequest(created)
       setTo('')
     } catch (cause) {
@@ -111,7 +111,7 @@ export default function Transfer() {
     declined: 'The organizer declined this request. You still hold the ticket.',
     cancelled: 'You cancelled this request. You still hold the ticket.',
     expired: 'This request expired. You still hold the ticket.',
-    needs_review: 'The ENS and ticket records may need to be reconciled. Contact the organizer before taking another action.',
+    needs_review: 'This transfer needs checking by hand. Contact the organizer before taking another action.',
   }
 
   return <Screen>
@@ -126,11 +126,11 @@ export default function Transfer() {
       <Button variant="secondary" size="md" onClick={refresh} disabled={busy}>Refresh status</Button>
     </section> : <form onSubmit={submit} noValidate className="flex flex-1 flex-col gap-4">
       <h1 className="heading-4">Send Pass&nbsp;{ticket.pass} to someone</h1>
-      <p className="body-3 text-text-muted">The organizer reviews the request. If approved, the ENS pass and ticket move to the wallet mapped from this ENS name.</p>
+      <p className="body-3 text-text-muted">The organizer reviews the request. If approved, the ticket moves to this wallet.</p>
       <label className="flex flex-col gap-2">
-        <span className="title-4">Recipient ENS name</span>
+        <span className="title-4">Their wallet address</span>
         <input value={to} onChange={(event) => setTo(event.target.value)} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-          placeholder="sam.eth" aria-invalid={!!error} className="field placeholder:text-text-muted" />
+          placeholder="0x…" aria-invalid={!!error} className="field font-mono placeholder:text-text-muted" />
       </label>
       {error && <p role="alert" className="body-6 text-danger">{error}</p>}
       {request && terminalMessage[request.status] && <p role="status" className="body-6 text-text-muted">{terminalMessage[request.status]}</p>}

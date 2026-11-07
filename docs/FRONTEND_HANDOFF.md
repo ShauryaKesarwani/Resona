@@ -106,7 +106,9 @@ Tokens are in `app/src/index.css`.
 
 - **Components:** `Button`, `Screen` and `TopBar`, `SceneHeading`, `Bits` (status pill, simulated tag, wallet chip, row, avatar), `Segmented` (sliding switch), `Collapse`, `Skeleton`, `GatewayFlow`, `Sonar`, `Waveform`, and `Reveal`. Landing sections are in `app/src/pages/landing/`.
 - **Navigation:** `components/roles.ts` lists the three roles and their tabs. `TabLayout` in `components/AppTabs.tsx` wraps every tab screen. Never render tabs from a page. A screen in the middle of a task calls `useHideTabs`.
-- **Top right chip:** `TopBar` shows `WalletChip` by default. Pass `right={null}` during a task or before sign in. Its name comes from `displayName()` in `data/mock.ts`. When ENS names for people arrive, set `wallet.ens` and every screen picks it up.
+- **Role separation:** `services/organizerStatus.ts` asks the server whether this wallet organizes, and `components/RoleGuards.tsx` keeps organizers out of buying and everyone else out of organizer screens. Any new route goes inside the right guard in `App.tsx`.
+- **Top right chip:** `TopBar` shows `WalletChip` by default. Pass `right={null}` during a task or before sign in. It shows the short wallet address.
+- **No ENS in the frontend:** the app never mentions ENS, by decision, and takes wallet addresses only. The server still has its ENS code. Only its error codes and the optional fields on the Arkiv ticket schema appear in `app/src`, and neither reaches the screen.
 - **Loading:** a screen that reads data shows a `Skeleton` shaped like its content, never a spinner or a "not found" flash. `useEvents` keeps the last result, so opening an event is instant.
 - **Ticket data:** `app/src/data/mock.ts` holds the ticket state read through `app/src/services/arkiv.ts`, plus the simulated check ins, which reset on reload.
 - **Real data so far:** sign in, the signed claim, the organizer page, wallet tickets, buying and purchases. The door and check ins are still simulated.
@@ -122,10 +124,10 @@ Tokens are in `app/src/index.css`.
 | `/wallet` | Tickets, upcoming then past | Real, read from Arkiv |
 | `/account` | Role switch, on chain details, move the account, sign out | Built. The third tab in every role, and where the top right chip goes |
 | `/wallet/purchases`, `/wallet/receipt/:txn` | Purchase history, receipt | Real, read from Arkiv |
-| `/wallet/ticket/:id` | Ticket as a physical pass | Real. Shows the ENS pass check and a link to the receipt |
+| `/wallet/ticket/:id` | Ticket as a physical pass | Real. Shows a link to the receipt |
 | `/wallet/claim/:id` | Claim | Two steps with a real signed claim. The phone lock step is simulated |
 | `/wallet/checkin/:id` | Holder check in | Real sound, wallet signed. "Before you check in", then QR and 6 digit code, sonar rings, live mic waveform, result with the sound trace |
-| `/wallet/transfer/:id` | Send ticket | Real signed request to an ENS name. The organizer decides on `/organizer/transfers`. Not verified live |
+| `/wallet/transfer/:id` | Send ticket | Real signed request to a wallet address. The organizer decides on `/organizer/transfers`. The server refuses it while its ENS settings are off |
 | `/door` | Door check in | Real sound. Scan or type the holder's code, with a door PIN |
 | `/door/recent` | Recent check ins | Real, read from Arkiv. A tab beside the door |
 | `/organizer`, `/organizer/attendees` | Issue, Look up, New event, Live door, add an organizer; attendee list | Real. Issue and New event need a listed organizer wallet's signature |
@@ -142,7 +144,7 @@ Every screen's buttons and where they lead are in [FRONTEND_FLOWS.md](FRONTEND_F
 
 ## What is next
 
-The full list, with the demo blockers first, is in [FRONTEND_TODO.md](FRONTEND_TODO.md). In short: run the whole journey on two real phones, show ENS names on the event page and at the door, and match the screens to whatever server policy changes.
+The full list, with the demo blockers first, is in [FRONTEND_TODO.md](FRONTEND_TODO.md). In short: run the whole journey on two real phones, and match the screens to whatever server policy changes.
 
 ## How to run and verify
 

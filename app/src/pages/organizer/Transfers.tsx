@@ -45,7 +45,7 @@ export default function Transfers() {
     } catch (cause) {
       const code = (cause as Error).message
       setError(code === 'transfer_needs_review'
-        ? 'The request needs manual review. Check the ENS registry and Arkiv ticket before taking another action.'
+        ? 'The request needs manual review. Check the Arkiv ticket before taking another action.'
         : code === 'transfer_recipient_not_registered'
           ? 'The recipient must sign in with World ID before this ticket can be transferred.'
           : code === 'transfer_recipient_already_claimed'
@@ -60,7 +60,7 @@ export default function Transfers() {
   return <Screen tabs>
     <TopBar back="/organizer" title="Ticket transfers" />
     <h1 className="heading-4">Transfer requests</h1>
-    <p className="body-6 text-text-muted">Approve or decline requests to move an issued ticket and its ENS pass.</p>
+    <p className="body-6 text-text-muted">Approve or decline requests to move an issued ticket.</p>
     <label className="flex flex-col gap-2">
       <span className="title-4">Event</span>
       <select value={eventId} onChange={(event) => setEventId(event.target.value)} className="field">

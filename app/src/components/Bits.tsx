@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { CheckCircleIcon, CircleDashedIcon, FlaskIcon, SealCheckIcon, WarningCircleIcon } from './icons'
 import { Link, useLocation } from 'react-router-dom'
-import { avatarName, displayName, wallet, type Status } from '../data/mock'
+import { avatarName, displayName, type Status } from '../data/mock'
 import { useSignedIn } from '../services/auth'
 
 const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: string }> = {
@@ -34,7 +34,7 @@ export function SimTag({ children = 'Simulated' }: { children?: ReactNode }) {
 }
 
 /**
- * Top right of every screen: who this wallet is. Shows the person's ENS name once they have one, otherwise the short address.
+ * Top right of every screen: who this wallet is. Shows the short wallet address.
  * It opens Account, where the role switch and the on chain details are.
  */
 export function WalletChip() {
@@ -51,7 +51,7 @@ export function WalletChip() {
   return (
     <Link to="/account" aria-label={`Account, ${displayName()}`} className={look}>
       <Avatar name={avatarName()} size={28} />
-      <span className={`body-5 max-w-36 truncate pr-1 ${wallet.ens ? '' : 'font-mono'}`}>{displayName()}</span>
+      <span className="body-5 max-w-36 truncate pr-1 font-mono">{displayName()}</span>
     </Link>
   )
 }
@@ -66,7 +66,7 @@ export function Row({ label, children }: { label: string; children: ReactNode })
   )
 }
 
-/** Initial in a circle. Stands in for the ENS avatar until real avatars are read. */
+/** Initial in a circle. Stands in for a picture. */
 export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <span

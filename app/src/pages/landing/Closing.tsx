@@ -11,9 +11,9 @@ const faqs = [
   { q: 'What if the room is loud or my speaker is broken?', a: 'Hold the phones closer and try again. The door can run another check straight away, with no new code.' },
   { q: 'Do I need crypto or a wallet app?', a: 'No. Resona creates a wallet in your browser the first time you open it. This demo runs on test networks, so no real money is involved.' },
   { q: 'Does it work on iPhone?', a: 'The demo is built for Chrome on Android. iPhone support needs a native app, which comes after the hackathon.' },
-  { q: 'Can I lend my ticket to a friend?', a: 'Moving a ticket to someone else needs the organizer’s approval, and the contract rejects any other transfer. You could still hand your unlocked phone to someone at the door, because Resona proves the phone is there and not who carries it.' },
+  { q: 'Can I lend my ticket to a friend?', a: 'Moving a ticket to someone else needs the organizer’s approval. You could still hand your unlocked phone to someone at the door, because Resona proves the phone is there and not who carries it.' },
   { q: 'Can I resell my ticket?', a: 'Only if the organizer allows it for your ticket tier, and only through an approved transfer.' },
-  { q: 'What is public?', a: 'ENS names and Arkiv records are public, so a pass shows its holder’s wallet and the event it belongs to. Your email, audio recordings and World ID proof stay off the public record.' },
+  { q: 'What is public?', a: 'Arkiv records are public, so a pass shows its holder’s wallet and the event it belongs to. Your email, audio recordings and World ID proof stay off the public record.' },
   { q: 'What if I lose my phone?', a: 'Save an encrypted account file from Account ahead of time. It moves your wallet to a new phone with a password.' },
 ]
 

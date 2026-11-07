@@ -33,10 +33,6 @@ const MESSAGES: Record<string, string> = {
   world_account_not_found: 'That wallet has no World-linked Resona account yet. Ask them to sign in first.',
   arkiv_write_failed: 'The organizer could not be saved to Arkiv. Try again in a moment.',
   bad_signature: 'The server could not confirm this wallet. Check the phone clock, then try again.',
-  ens_name_not_found: 'That ENS name could not be found.',
-  ens_address_not_set: 'That ENS name has no wallet address set.',
-  invalid_ens_name: 'Enter a valid ENS name or wallet address.',
-  ens_lookup_unavailable: 'ENS lookup is unavailable. Try again in a moment.',
 }
 const explain = (err: unknown) =>
   MESSAGES[(err as Error).message] ??
@@ -53,7 +49,6 @@ export default function Organizer() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [issued, setIssued] = useState<ServerTicket[]>([])
-  const [issuedName, setIssuedName] = useState('')
   const [events, setEvents] = useState<ArkivEvent[]>([])
   const [eventId, setEventId] = useState('')
   const [eventsError, setEventsError] = useState('')
@@ -71,24 +66,21 @@ export default function Organizer() {
 
   const [lookup, setLookup] = useState('')
   const [found, setFound] = useState<ServerTicket[] | null>(null)
-  const [lookupResolved, setLookupResolved] = useState<{ name: string; address: string } | null>(null)
   const [lookupError, setLookupError] = useState('')
   const [looking, setLooking] = useState(false)
 
   async function issue(e: FormEvent) {
     e.preventDefault()
     const target = holder.trim()
-    if (!target) return setError('Enter the wallet address or ENS name to send the ticket to.')
+    if (!target) return setError('Enter the wallet address to send the ticket to.')
+    if (!isAddress(target)) return setError('A wallet address starts with 0x and has 42 characters.')
     if (!eventId) return setError('Create or choose an event before issuing tickets.')
     setError('')
-    setIssuedName('')
     setBusy(true)
     try {
-      const resolved = isAddress(target) ? undefined : await api.ensResolve(target)
-      const address = resolved?.address ?? target
+      const address = target
       const ticket = await api.issue(address, tier, eventId, await signedBy(`issue:${eventId}:${address.toLowerCase()}:${tier}`))
       setIssued((list) => [ticket, ...list])
-      setIssuedName(resolved?.name ?? '')
       setHolder('')
     } catch (err) {
       setError(explain(err))
@@ -100,15 +92,11 @@ export default function Organizer() {
   async function search(e: FormEvent) {
     e.preventDefault()
     const query = lookup.trim()
-    if (!query) return setLookupError('Enter a wallet address or ENS name.')
+    if (!query) return setLookupError('Enter a wallet address.')
     setLookupError('')
-    setLookupResolved(null)
     setLooking(true)
     try {
-      const resolution = isAddress(query) ? undefined : await api.ensResolve(query)
-      const address = resolution?.address ?? query
-      if (resolution) setLookupResolved(resolution)
-      setFound(await api.tickets(address))
+      setFound(await api.tickets(query))
     } catch (err) {
       setFound(null)
       setLookupError(explain(err))
@@ -176,7 +164,7 @@ export default function Organizer() {
 
       {mode === 'issue' && (
         <form onSubmit={issue} noValidate className="flex flex-1 flex-col gap-4">
-          <p className="body-3 max-w-prose text-text-muted">Send a ticket to a wallet address or ENS name. ENS names resolve to the Rabdi wallet address record.</p>
+          <p className="body-3 max-w-prose text-text-muted">Send a ticket to a wallet address. It shows up in that person’s wallet.</p>
           <label className="flex flex-col gap-2">
             <span className="title-4">Event</span>
             <select value={eventId} onChange={(e) => setEventId(e.target.value)} disabled={events.length === 0} className="field">
@@ -187,7 +175,7 @@ export default function Organizer() {
             {events.length === 0 && !eventsError && <span className="body-6 text-text-muted">Publish an event before issuing tickets.</span>}
           </label>
           <label className="flex flex-col gap-2">
-            <span className="title-4">Wallet address or ENS name</span>
+            <span className="title-4">Wallet address</span>
             <input
               value={holder}
               onChange={(e) => setHolder(e.target.value)}
@@ -200,7 +188,6 @@ export default function Organizer() {
               aria-describedby="issue-error"
               className="field font-mono placeholder:text-text-muted"
             />
-            <span className="caption-5 text-text-muted">An ENS name is looked up through its Rabdi wallet address record.</span>
           </label>
           <button type="button" onClick={() => setHolder(walletAddress())} className="body-5 min-h-12 self-start rounded-md px-1 text-accent">
             Use this phone’s wallet
@@ -227,7 +214,7 @@ export default function Organizer() {
           {issued[0] && (
             <p role="status" className="body-5 flex items-center gap-2 text-success">
               <CheckCircleIcon size={20} aria-hidden="true" />
-              {tierName(issued[0].tier)} ticket sent to {issuedName || short(issued[0].holder)}
+              {tierName(issued[0].tier)} ticket sent to {short(issued[0].holder)}
             </p>
           )}
           <div className="flex-1" />
@@ -259,7 +246,7 @@ export default function Organizer() {
           )}
           <form onSubmit={search} noValidate className="flex flex-1 flex-col gap-4">
             <label className="flex flex-col gap-2">
-              <span className="title-4">Wallet address or ENS name</span>
+              <span className="title-4">Wallet address</span>
               <input
                 value={lookup}
                 onChange={(e) => setLookup(e.target.value)}
@@ -267,11 +254,10 @@ export default function Organizer() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="0x… or sam.resona-id.eth"
+                placeholder="0x…"
                 className="field font-mono placeholder:text-text-muted"
               />
             </label>
-            {lookupResolved && <p role="status" className="caption-5 text-text-muted">{lookupResolved.name} resolves to {lookupResolved.address}</p>}
             <p role={lookupError ? 'alert' : undefined} className="body-6 text-danger empty:hidden">
               {lookupError}
             </p>

@@ -33,7 +33,7 @@ export const Transfers = defineSchema('resona.transfer', {
 })
 
 export type ArkivEvent = { eventId: string; eventName: string; eventDate: string; priceWei: string; organiser: string }
-export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }
+export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; createdAt: number }
 export type ArkivCheckin = { eventId?: string; passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
 export type ArkivPayment = { txnHash: string; eventId: string; passId: string; amountWei: string; createdAt: string }
 export type AttendeeTicket = { passId: string; holder: string; tier: string; status: string; source: 'issued' | 'purchased' }
@@ -126,7 +126,7 @@ export async function myTickets(): Promise<ArkivTicket[]> {
   const holder = getAddress(walletAddress())
   const query = () =>
     reader
-      .select({ passId: true, eventId: true, tier: true, status: true, ensName: true, $createdAt: true })
+      .select({ passId: true, eventId: true, tier: true, status: true, $createdAt: true })
       .from(Tickets)
       .where(eq('holder', addr(holder)))
       .limit(100)
@@ -134,7 +134,7 @@ export async function myTickets(): Promise<ArkivTicket[]> {
   return [...issued.entities, ...bought.entities]
     .map((t) => ({
       passId: t.passId.value, eventId: t.eventId.value, tier: t.tier.value, status: t.status.value,
-      ensName: t.ensName?.value, createdAt: Number(t.$createdAt),
+      createdAt: Number(t.$createdAt),
     }))
     .sort((a, b) => a.createdAt - b.createdAt)
 }

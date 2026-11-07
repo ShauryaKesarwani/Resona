@@ -21,6 +21,14 @@ export function ticketRoutes(tickets: TicketStore & CheckinStore, registry: Acco
     return account?.sessionHash ? undefined : "organizer_login_required";
   };
 
+  // Public, like the promotions themselves. The app uses it to keep organizers and attendees in separate flows.
+  router.get("/organizers/status", async (req, res) => {
+    const wallet = String(req.query.wallet ?? "").toLowerCase();
+    if (!isAddress(wallet)) return void res.status(400).json({ error: "invalid_wallet" });
+    const access = await organizerLogin(wallet);
+    res.set("Cache-Control", "no-store").json({ organizer: access !== "not_organizer" });
+  });
+
   router.post("/organizers/promote", async (req, res) => {
     if (!tickets.ready) return void res.status(503).json({ error: "arkiv_not_configured" });
     const { targetWallet, ...signed } = req.body ?? {};

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { WalletChip } from './Bits'
-import { ArrowLeftIcon, WaveformIcon } from './icons'
+import { ArrowLeftIcon } from './icons'
 
 /** One phone screen: safe areas respected, 16px side padding, content column capped on wide screens. */
 export function Screen({ children, tabs = false }: { children: ReactNode; tabs?: boolean }) {
@@ -21,7 +21,7 @@ export function Screen({ children, tabs = false }: { children: ReactNode; tabs?:
 function Brand() {
   return (
     <Link to="/" className="flex min-h-12 items-center gap-2 rounded-md">
-      <WaveformIcon size={24} className="text-accent" aria-hidden="true" />
+      <img src="/icon-192.png" alt="" className="size-8 mix-blend-screen" />
       <span className="title-2">Resona</span>
     </Link>
   )

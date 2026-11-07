@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
-import { rememberRole, ROLES, roleFor } from './roles'
+import { useRole } from '../services/organizerStatus'
+import { rememberRole, ROLES } from './roles'
 
 /** Stays mounted across tab screens, so the marker slides between tabs and the bar never flickers. */
 export function TabLayout() {
   const { pathname } = useLocation()
   const [hidden, setHidden] = useState(false)
-  const role = roleFor(pathname)
+  const role = useRole(pathname)
   const tabs = ROLES[role].tabs
   const active = tabs.findIndex((t) => t.to === pathname)
 

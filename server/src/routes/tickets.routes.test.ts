@@ -142,3 +142,14 @@ test("purchase list requires an authorized organizer and checks the payment", as
   assert.deepEqual(body.tickets.map((item: { passId: string }) => item.passId), ["paid"]);
   assert.equal(purchaseChecks, 2);
 });
+
+test("organizer status says which wallets organize, and rejects anything else", async () => {
+  const { port } = server.address() as { port: number };
+  const status = async (wallet: string) => {
+    const res = await fetch(`http://127.0.0.1:${port}/api/organizers/status?wallet=${wallet}`);
+    return { code: res.status, body: await res.json() };
+  };
+  assert.deepEqual(await status(organizer.address), { code: 200, body: { organizer: true } });
+  assert.deepEqual(await status(stranger.address), { code: 200, body: { organizer: false } });
+  assert.equal((await status("nobody")).code, 400);
+});

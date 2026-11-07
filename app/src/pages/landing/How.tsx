@@ -5,9 +5,9 @@ import { Section } from './Section'
 /** Small stand ins for the real screens. Simulated names, decorative only. */
 function IssueVisual() {
   const rows = [
-    ['skes.eth', 'General admission'],
-    ['mira.eth', 'Partner discount'],
-    ['devansh.eth', 'Builder'],
+    ['0x7a3f…91c2', 'General admission'],
+    ['0x2be8…04d7', 'Partner discount'],
+    ['0xc41d…e6a0', 'Builder'],
   ]
   return (
     <div className="mx-auto w-full max-w-sm rounded-2xl border border-line bg-surface-raised p-2">
@@ -16,7 +16,7 @@ function IssueVisual() {
         <ul>
           {rows.map(([name, tier]) => (
             <li key={name} className="flex items-center gap-3 px-4 py-3 not-first:border-t not-first:border-line">
-              <Avatar name={name} size={32} />
+              <Avatar name={name.slice(2)} size={32} />
               <span className="min-w-0 flex-1">
                 <span className="body-5 block font-mono">{name}</span>
                 <span className="caption-5 block text-text-muted">{tier}</span>
@@ -80,7 +80,7 @@ function CheckInVisual() {
 const steps = [
   {
     title: 'Issue',
-    body: 'The organizer enters ENS names and picks a tier. Each person gets a pass in their wallet.',
+    body: 'The organizer enters wallet addresses and picks a tier. Each person gets a pass in their wallet.',
     visual: <IssueVisual />,
   },
   {
