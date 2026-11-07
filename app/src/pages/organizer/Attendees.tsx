@@ -6,7 +6,7 @@ import { organizerEvents, organizerAttendees, type ArkivEvent, type AttendeeTick
 
 type Attendees = { tickets: AttendeeTicket[]; checkins: { passId: string; holder: string }[] }
 
-/** Current organizer-issued tickets and check-ins, read from Arkiv. */
+/** Issued and payment-checked purchased tickets and check-ins. */
 export default function Attendees() {
   const [events, setEvents] = useState<ArkivEvent[]>()
   const [eventId, setEventId] = useState('')
@@ -31,7 +31,7 @@ export default function Attendees() {
     setData(undefined)
     setError('')
     organizerAttendees(eventId).then((rows) => { if (active) setData(rows) })
-      .catch(() => { if (active) setError('Could not load the full list from Arkiv. Try again.') })
+      .catch((err: Error) => { if (active) setError(err.message === 'not_organizer' || err.message === 'organizer_login_required' ? 'Sign in with an authorized organizer account to verify purchased tickets.' : err.message === 'event_not_owned' ? 'This organizer cannot manage the selected event.' : err.message === 'purchase_list_too_large' ? 'This event has too many purchase records to show safely. Ask the organizer to review the list.' : 'Could not load or verify the full list. Check your connection and try again.') })
     return () => { active = false }
   }, [eventId, reload])
 
@@ -44,7 +44,7 @@ export default function Attendees() {
     <Screen>
       <TopBar back="/organizer" title="Attendees" />
       <h1 className="heading-4">Tickets and check-ins</h1>
-      <p className="body-6 text-text-muted">Read from Arkiv. This list only includes tickets issued by the organizer; purchased tickets are not included.</p>
+      <p className="body-6 text-text-muted">Read from Arkiv. Purchased tickets appear when their payment passes the server’s checks; a payment that cannot be checked may be missing. The door checks eligibility again.</p>
       {events && events.length > 0 && (
         <label className="flex flex-col gap-2">
           <span className="title-4">Event</span>
@@ -54,7 +54,7 @@ export default function Attendees() {
         </label>
       )}
       {events?.length === 0 && <p className="body-6 text-text-muted">No organizer events found on Arkiv.</p>}
-      {data && <p className="title-3" role="status">{data.tickets.length} issued · {count} checked in</p>}
+      {data && <p className="title-3" role="status">{data.tickets.length} confirmed tickets · {count} checked in</p>}
       {data && (
         <label className="flex flex-col gap-2">
           <span className="title-4">Search wallet, ticket or tier</span>
@@ -69,7 +69,7 @@ export default function Attendees() {
           <li key={t.passId} className="rounded-xl border border-line bg-surface-raised p-4">
             <p className="title-3">{isChecked(t) ? 'Checked in' : t.status.replaceAll('_', ' ')}</p>
             <p className="body-6 font-mono text-text-muted [overflow-wrap:anywhere]">{t.holder}</p>
-            <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">Ticket {t.passId} · {t.tier}</p>
+            <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">Ticket {t.passId} · {t.tier} · {t.source}</p>
             {!isChecked(t) && <Link to={`/door?passId=${encodeURIComponent(t.passId)}`} className="body-5 mt-2 inline-flex min-h-12 items-center text-accent">Select for check-in</Link>}
           </li>
         ))}

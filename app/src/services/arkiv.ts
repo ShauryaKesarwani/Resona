@@ -31,7 +31,7 @@ export type ArkivEvent = { eventId: string; eventName: string; eventDate: string
 export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }
 export type ArkivCheckin = { eventId?: string; passId: string; holder: string; ordinal: number; distanceCm: string; checkedInAt: string }
 export type ArkivPayment = { txnHash: string; eventId: string; passId: string; amountWei: string; createdAt: string }
-export type AttendeeTicket = { passId: string; holder: string; tier: string; status: string }
+export type AttendeeTicket = { passId: string; holder: string; tier: string; status: string; source: 'issued' | 'purchased' }
 
 // The access key can't ship in a browser. Reads go through a small server relay that adds it, because
 // the keyless endpoint runs out after a few pages. The wallet's own writes go straight to Arkiv.
@@ -53,7 +53,7 @@ const organizer = () =>
     return c.organizer as Hex
   }))
 
-/** Bounded current-state reads: these lists cover organizer-issued tickets, not purchases. */
+/** Read issued tickets and ask the server to verify buyer-written payment records. */
 export async function organizerAttendees(eventId: string): Promise<{ tickets: AttendeeTicket[]; checkins: { passId: string; holder: string }[] }> {
   const owner = await organizer()
   const tickets: AttendeeTicket[] = []
@@ -64,11 +64,19 @@ export async function organizerAttendees(eventId: string): Promise<{ tickets: At
       .from(Tickets, { onMismatch: 'throw' }).createdBy(owner).ownedBy(owner)
       .where(eq('eventId', eventId)).orderBy(asc('$key')).limit(100)
     const { entities } = await (last ? query.where(gt('$key', key(last))) : query).fetch()
-    tickets.push(...entities.map((t) => ({ passId: t.passId.value, holder: String(t.holder.value).toLowerCase(), tier: t.tier.value, status: t.status.value })))
+    tickets.push(...entities.map((t) => ({ passId: t.passId.value, holder: String(t.holder.value).toLowerCase(), tier: t.tier.value, status: t.status.value, source: 'issued' as const })))
     if (entities.length < 100) break
     const next = entities.at(-1)?.$key
     if (!next || (last && next.toLowerCase() <= last.toLowerCase()) || page === 9) throw new Error('ticket_list_incomplete')
     last = next
+  }
+  const payments = await reader.select({ $creator: true, passId: true }).from(Payments, { onMismatch: 'throw' })
+    .where(eq('eventId', eventId)).limit(51).fetch()
+  if (payments.entities.length > 50) throw new Error('purchase_list_too_large')
+  const candidates = payments.entities.map((p) => ({ passId: p.passId.value, holder: String(p.$creator).toLowerCase() }))
+  if (candidates.length) {
+    const verified = await api.verifyPurchases(eventId, candidates, await signedBy(`organizer-purchases:${eventId}`))
+    tickets.push(...verified.tickets.map((t) => ({ ...t, holder: t.holder.toLowerCase(), source: 'purchased' as const })))
   }
   last = undefined
   for (let page = 0; page < 10; page++) {

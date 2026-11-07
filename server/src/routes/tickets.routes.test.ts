@@ -23,9 +23,16 @@ const express = (await import("express")).default;
 
 const issued: string[] = [];
 const promoted: string[] = [];
-const tickets = { ready: true, canManageEvent: async (id: string, wallet: string) =>
-  (id === eventId && wallet === organizer.address.toLowerCase()) || (id === "target-event" && wallet === target.address.toLowerCase()),
-issue: async (to: string) => { issued.push(to); return { holder: to }; } };
+let purchaseChecks = 0;
+const purchaseEvent = "a".repeat(64);
+const tickets = {
+  ready: true,
+  canManageEvent: async (id: string, wallet: string) =>
+    ((id === eventId || id === purchaseEvent) && wallet === organizer.address.toLowerCase()) || (id === "target-event" && wallet === target.address.toLowerCase()),
+  issue: async (to: string) => { issued.push(to); return { holder: to }; },
+  doorTicket: async (passId: string, wallet: string) => ({ passId, holder: wallet.toLowerCase(), eventId: passId === "wrong-event" ? "b".repeat(64) : purchaseEvent, tier: "general", status: "claimed", bought: passId !== "issued" }),
+  paymentIsValid: async (ticket: { passId: string }) => { purchaseChecks++; return ticket.passId === "paid"; },
+};
 const app = express();
 app.use(express.json());
 const registry = {
@@ -107,4 +114,31 @@ test("a promoted World-linked account can issue for its own event", async () => 
 test("an organizer cannot issue against an event assigned to another wallet", async () => {
   const id = "someone-elses-event";
   await rejected({ holder, tier: "general", ...(await signed(organizer, holder, "general", id)) }, 403, "event_not_owned");
+});
+
+test("purchase list requires an authorized organizer and checks the payment", async () => {
+  const { port } = server.address() as { port: number };
+  const send = (body: unknown) => fetch(`http://127.0.0.1:${port}/api/organizer/verify-purchases`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const candidates = ["paid", "paid", "unpaid", "wrong-event", "issued"].map((passId) => ({ passId, holder }));
+  const wallet = organizer.address.toLowerCase();
+  const timestamp = Date.now();
+  const signature = await organizer.signMessage({ message: signedMessage(`organizer-purchases:${purchaseEvent}`, wallet, timestamp) });
+  purchaseChecks = 0;
+  assert.equal((await send({ eventId: purchaseEvent, candidates })).status, 401);
+  assert.equal(purchaseChecks, 0);
+  const otherWallet = stranger.address.toLowerCase();
+  const otherSignature = await stranger.signMessage({ message: signedMessage(`organizer-purchases:${purchaseEvent}`, otherWallet, timestamp) });
+  assert.equal((await send({ eventId: purchaseEvent, candidates, wallet: otherWallet, timestamp, signature: otherSignature })).status, 403);
+  assert.equal(purchaseChecks, 0);
+  const otherEvent = "b".repeat(64);
+  const otherEventSignature = await organizer.signMessage({ message: signedMessage(`organizer-purchases:${otherEvent}`, wallet, timestamp) });
+  const refused = await send({ eventId: otherEvent, candidates, wallet, timestamp, signature: otherEventSignature });
+  assert.equal(refused.status, 403);
+  assert.equal((await refused.json()).error, "event_not_owned");
+  assert.equal(purchaseChecks, 0);
+  const res = await send({ eventId: purchaseEvent, candidates, wallet, timestamp, signature });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.deepEqual(body.tickets.map((item: { passId: string }) => item.passId), ["paid"]);
+  assert.equal(purchaseChecks, 2);
 });

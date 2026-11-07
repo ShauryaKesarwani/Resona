@@ -35,6 +35,8 @@ export const api = {
   issue: (holder: string, tier: string, eventId: string, signed: Signed) => request<ServerTicket>('/api/issue', { holder, tier, eventId, ...signed }),
   createEvent: (eventName: string, eventDate: string, price: string, signed: Signed) => request<{ eventId: string; transactionHash: string }>('/api/event', { eventName, eventDate, price, ...signed }),
   promoteOrganizer: (targetWallet: string, signed: Signed) => request<{ wallet: string; promoted: boolean }>('/api/organizers/promote', { targetWallet, ...signed }),
+  verifyPurchases: (eventId: string, candidates: { passId: string; holder: string }[], signed: Signed) =>
+    request<{ tickets: ServerTicket[] }>('/api/organizer/verify-purchases', { eventId, candidates, ...signed }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),

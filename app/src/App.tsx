@@ -5,6 +5,7 @@ import Lab from './pages/Lab'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
 import SignIn from './pages/SignIn'
+import AccountTransfer from './pages/AccountTransfer'
 import { Stub } from './pages/Stub'
 import Door from './pages/door/Door'
 import Recent from './pages/door/Recent'
@@ -50,6 +51,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/account-transfer" element={<AccountTransfer />} />
         <Route path="/events" element={<Events />} />
         <Route path="/e/:id" element={<Event />} />
         <Route path="/u/:name" element={<Profile />} />
