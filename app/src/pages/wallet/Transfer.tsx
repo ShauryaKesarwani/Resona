@@ -45,7 +45,7 @@ export default function Transfer() {
 
   useEffect(() => {
     let current = true
-    if (id) api.transferStatus(id, signedBy(`transfer-status:${id}`)).then(async (result) => {
+    if (id) signedBy(`transfer-status:${id}`).then((signature) => api.transferStatus(id, signature)).then(async (result) => {
       if (current) {
         setRequest(result)
         if (result?.status === 'approved') await refreshTickets()
@@ -104,7 +104,6 @@ export default function Transfer() {
     approved: 'The organizer approved this request. The new holder can claim the ticket after the update appears in Arkiv.',
     declined: 'The organizer declined this request. You still hold the ticket.',
     cancelled: 'You cancelled this request. You still hold the ticket.',
-    expired: 'This request expired. You still hold the ticket.',
     expired: 'This request expired. You still hold the ticket.',
     needs_review: 'The ENS and ticket records may need to be reconciled. Contact the organizer before taking another action.',
   }

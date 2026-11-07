@@ -89,7 +89,7 @@ export default function Attendees() {
             <span className="title-4">Search wallet, ticket, tier or ENS name</span>
             <input value={search} onChange={(e) => { setSearch(e.target.value); setSearchError('') }} autoComplete="off" placeholder="Wallet, ticket ID or name.eth" className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base" />
           </label>
-          {search.includes('.') && !isAddress(search.trim()) && <Button type="submit" variant="secondary" size="sm" busy={searching}>{searching ? 'Resolving name' : 'Resolve ENS name'}</Button>}
+          {search.includes('.') && !isAddress(search.trim()) && <Button type="submit" variant="secondary" size="md" busy={searching}>{searching ? 'Resolving name' : 'Resolve ENS name'}</Button>}
           {resolvedSearch?.query.toLowerCase() === searchKey && <p role="status" className="caption-5 text-text-muted">{resolvedSearch.name} resolves to {resolvedSearch.address}</p>}
           {searchError && <p role="alert" className="body-6 text-danger">{searchError}</p>}
         </form>
