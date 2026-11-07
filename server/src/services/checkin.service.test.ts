@@ -27,7 +27,22 @@ let paymentOk: boolean;
 let ended: boolean;
 let account: Account | null;
 let humanClaimed: boolean;
+let ensPassVerified: boolean;
+let ensReadFails: boolean;
+let ensChecks: number;
+let transferPending: boolean;
 const registry = { ready: true, findByWallet: async () => account };
+const ens = {
+  configured: true,
+  pass: async (_passId: string, _holder: string) => {
+    ensChecks++;
+    if (ensReadFails) throw new Error("rpc unavailable");
+    return { enabled: true as const, name: `${passId}.demo-event.eth`, chainId: 11155111 as const,
+      registry: "0x0000000000000000000000000000000000000022" as const,
+      owner: wallet as `0x${string}`, expiry: "9999999999",
+      active: ensPassVerified, linked: ensPassVerified, matchesHolder: ensPassVerified };
+  },
+};
 
 beforeEach(() => {
   ticket = { passId, eventId: "event", holder: wallet, tier: "general", status: "claimed", entityKey: "0x1", bought: false };
@@ -38,6 +53,10 @@ beforeEach(() => {
   ended = false;
   account = { wallet, userId: "human-a", nullifierHash: "hash" };
   humanClaimed = false;
+  ensPassVerified = true;
+  ensReadFails = false;
+  ensChecks = 0;
+  transferPending = false;
   const exclusive = createQueue();
   store = {
     hasClaimed: async () => humanClaimed,
@@ -45,6 +64,7 @@ beforeEach(() => {
     paymentIsValid: async () => paymentOk,
     eventEnded: async () => ended,
     hasCheckedIn: async () => written.length > 0,
+    hasPendingTransfer: async () => transferPending,
     commitCheckin: (door, cm, revalidate) => exclusive(async () => {
       const current = await revalidate();
       if (writeFails) throw new Error("write failed");
@@ -53,7 +73,7 @@ beforeEach(() => {
       return { ordinal: written.length, transactionHash: "0xabc", entityKey: "0xdef" };
     }),
   };
-  checkins = createCheckins({ store, registry, allowSkip: false, doorPin: "1234", now: () => clock });
+  checkins = createCheckins({ store, registry, allowSkip: false, doorPin: "1234", ens, now: () => clock });
 });
 
 const started = async () => {
@@ -84,6 +104,52 @@ test("close phones pass, and the check-in is written to Arkiv", async () => {
   assert.equal(out.ordinal, 1);
   assert.equal(out.transactionHash, "0xabc");
   assert.equal(written.length, 1);
+});
+
+test("a missing, expired, unlinked, or mismatched ENS pass is refused at session start", async () => {
+  ensPassVerified = false;
+  assert.deepEqual(await checkins.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 403, error: "ens_pass_not_verified" });
+  assert.equal(written.length, 0);
+});
+
+test("the door receives the verified pass name with the check-in session", async () => {
+  const { code } = await started();
+  const joined = checkins.join({ code, pin: "1234" });
+  assert.equal(joined.status, 200);
+  if (joined.status === 200) assert.equal(joined.ensName, `${passId}.demo-event.eth`);
+});
+
+test("an ENS read failure fails closed", async () => {
+  ensReadFails = true;
+  assert.deepEqual(await checkins.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 403, error: "ens_verification_failed" });
+  assert.equal(written.length, 0);
+});
+
+test("check-in is refused while a ticket transfer request is pending", async () => {
+  transferPending = true;
+  assert.deepEqual(await checkins.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 409, error: "transfer_pending" });
+  assert.equal(written.length, 0);
+});
+
+test("a transfer request added during sonar is rechecked before admission", async () => {
+  const session = await joined();
+  transferPending = true;
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await holderReport(session.id, 1.5);
+  assert.equal(checkins.status(session.id)!.state, "failed");
+  assert.equal(checkins.status(session.id)!.problem, "transfer_pending");
+  assert.equal(written.length, 0);
+});
+
+test("ENS ownership is checked again immediately before the admission write", async () => {
+  const session = await joined();
+  ensPassVerified = false;
+  await checkins.report(session.id, { role: "door", attempt: 1, elapsedSeconds: 1.50175, doorToken: session.doorToken });
+  await holderReport(session.id, 1.5);
+  assert.equal(checkins.status(session.id)!.state, "failed");
+  assert.equal(checkins.status(session.id)!.problem, "ens_pass_not_verified");
+  assert.equal(ensChecks, 2);
+  assert.equal(written.length, 0);
 });
 
 test("phones across the room fail, and nothing is written", async () => {

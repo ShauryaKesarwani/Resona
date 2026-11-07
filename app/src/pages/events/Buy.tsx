@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { CheckCircleIcon, WarningCircleIcon } from '../../components/icons'
 import { Row } from '../../components/Bits'
@@ -6,6 +6,7 @@ import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { refreshTickets, wallet } from '../../data/mock'
 import { buy, explorerTx, isUpcoming, PurchaseError, type BuyStep } from '../../services/arkiv'
+import { api } from '../../services/api'
 import { prettyDate, tokens } from './art'
 import { useEvents } from './useEvents'
 
@@ -33,7 +34,13 @@ export default function Buy() {
   const [step, setStep] = useState<BuyStep>()
   const [error, setError] = useState<{ message: string; txnHash?: string }>()
   const [passId, setPassId] = useState<string>()
+  const [ensEventName, setEnsEventName] = useState('')
+  const [ensPassName, setEnsPassName] = useState('')
   const busy = step !== undefined
+
+  useEffect(() => {
+    api.config().then((config) => setEnsEventName(config.ensEventName ?? '')).catch(() => {})
+  }, [])
 
   async function pay() {
     setError(undefined)
@@ -41,6 +48,8 @@ export default function Buy() {
       const newPass = await buy(event!, setStep)
       await refreshTickets()
       setPassId(newPass)
+      const ensPass = await api.ensPass(newPass).catch(() => null)
+      if (ensPass?.active && ensPass.linked && ensPass.matchesHolder) setEnsPassName(ensPass.name)
     } catch (err) {
       setError({ message: explain(err), txnHash: err instanceof PurchaseError ? err.txnHash : undefined })
     } finally {
@@ -78,6 +87,8 @@ export default function Buy() {
           <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
           <h1 className="heading-4">You have a ticket</h1>
           <p className="body-3 max-w-prose text-text-muted">{event.eventName} on {prettyDate(event.eventDate)}. It is in your wallet, ready to check in.</p>
+          {ensEventName && <p className="caption-5 font-mono text-text-muted">Configured ENS namespace: {ensEventName}</p>}
+          {ensPassName && <p className="caption-5 font-mono text-text-muted">ENS pass: {ensPassName}</p>}
         </section>
         <Button to={`/wallet/ticket/${passId}`}>Open your ticket</Button>
         <Button variant="secondary" size="md" to="/events">

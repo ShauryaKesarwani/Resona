@@ -15,6 +15,11 @@ export type Ticket = {
   entityKey: Hex; ensName?: string; ensNode?: string; ensRegistry?: string; ensChainId?: string;
 };
 export type IssuedTicket = Ticket & { transactionHash: Hex };
+export type TransferStatus = "pending" | "processing" | "approved" | "declined" | "cancelled" | "expired" | "needs_review";
+export type TransferRequest = {
+  requestId: string; eventId: string; passId: string; fromHolder: string; toHolder: string;
+  status: TransferStatus; requestedAt: string; expiresAt: string; unregisterTxHash?: string; registerTxHash?: string;
+};
 export type TicketStore = {
   ready: boolean;
   issue(holder: string, tier: string, eventId?: string): Promise<IssuedTicket>;
@@ -23,6 +28,14 @@ export type TicketStore = {
   ticketsOf(holder: string): Promise<Ticket[]>;
   hasClaimed(userId: string, eventId: string): Promise<boolean>;
   setStatus(passId: string, status: TicketStatus): Promise<Ticket>;
+  transfer(passId: string): Promise<TransferRequest | undefined>;
+  requestTransfer(passId: string, fromHolder: string, toHolder: string, requestId: string, now: string, expiresAt: string): Promise<TransferRequest>;
+  cancelTransfer(passId: string, fromHolder: string): Promise<void>;
+  declineTransfer(passId: string, requestId: string): Promise<void>;
+  transfersForEvent(eventId: string): Promise<TransferRequest[]>;
+  beginTransfer(passId: string, requestId: string): Promise<TransferRequest>;
+  finishTransfer(passId: string, requestId: string, unregisterTxHash: string, registerTxHash: string): Promise<void>;
+  reviewTransfer(passId: string, requestId: string): Promise<void>;
   commitClaim(passId: string, operationId: string, holder: string, userId: string): Promise<Ticket>;
   /** Tops a wallet up to a fixed amount of test tokens. A funded wallet gets nothing more. */
   fund(wallet: string): Promise<void>;
@@ -41,6 +54,7 @@ export type CheckinStore = Pick<TicketStore, "hasClaimed"> & {
   paymentIsValid(ticket: DoorTicket): Promise<boolean>;
   eventEnded(eventId: string): Promise<boolean>;
   hasCheckedIn(eventId: string, holder: string): Promise<boolean>;
+  hasPendingTransfer(passId: string): Promise<boolean>;
   /** Revalidate inside the serialized write, not before waiting for its queue. */
   commitCheckin(ticket: DoorTicket, distanceCm: number, revalidate: () => Promise<AdmissionEligibility>): Promise<Admission>;
 };
@@ -53,6 +67,14 @@ export const unconfiguredTickets: TicketStore & CheckinStore = {
   ticketsOf: async () => [],
   hasClaimed: async () => false,
   setStatus: notConfigured,
+  transfer: async () => undefined,
+  requestTransfer: notConfigured,
+  cancelTransfer: notConfigured,
+  declineTransfer: notConfigured,
+  transfersForEvent: async () => [],
+  beginTransfer: notConfigured,
+  finishTransfer: notConfigured,
+  reviewTransfer: notConfigured,
   commitClaim: notConfigured,
   fund: notConfigured,
   createEvent: notConfigured,
@@ -60,6 +82,7 @@ export const unconfiguredTickets: TicketStore & CheckinStore = {
   paymentIsValid: async () => false,
   eventEnded: async () => false,
   hasCheckedIn: async () => false,
+  hasPendingTransfer: async () => false,
   commitCheckin: notConfigured,
 };
 
@@ -71,6 +94,11 @@ export const TicketSchema = defineSchema("resona.ticket", {
 export const ClaimSchema = defineSchema("resona.claim", {
   operationId: str().indexed(), eventId: str().indexed(), passId: str().indexed(),
   holder: addr().indexed(), userId: str().indexed(),
+});
+export const TransferSchema = defineSchema("resona.transfer", {
+  requestId: str().indexed(), eventId: str().indexed(), passId: str().indexed(),
+  fromHolder: addr().indexed(), toHolder: addr().indexed(), status: str().indexed(),
+  requestedAt: str().indexed(), expiresAt: str().indexed(), unregisterTxHash: str().optional(), registerTxHash: str().optional(),
 });
 
 const TICKET_FIELDS = { $key: true, passId: true, eventId: true, holder: true, tier: true, status: true, ensName: true, ensNode: true, ensRegistry: true, ensChainId: true } as const;
@@ -147,6 +175,36 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
     return entities.length > 0;
   }
 
+  const TRANSFER_FIELDS = { $key: true, requestId: true, eventId: true, passId: true, fromHolder: true, toHolder: true,
+    status: true, requestedAt: true, expiresAt: true, unregisterTxHash: true, registerTxHash: true } as const;
+  const activeTransfer = (status: string, expiresAt: string) =>
+    ["pending", "processing", "needs_review"].includes(status) && (status !== "pending" || expiresAt > new Date().toISOString());
+  const toTransfer = (row: any): TransferRequest => ({
+    requestId: row.requestId.value, eventId: row.eventId.value, passId: row.passId.value,
+    fromHolder: row.fromHolder.value.toLowerCase(), toHolder: row.toHolder.value.toLowerCase(),
+    status: row.status.value === "pending" && row.expiresAt.value <= new Date().toISOString() ? "expired" : row.status.value as TransferStatus,
+    requestedAt: row.requestedAt.value, expiresAt: row.expiresAt.value,
+    unregisterTxHash: row.unregisterTxHash?.value, registerTxHash: row.registerTxHash?.value,
+  });
+  async function transfer(passId: string): Promise<TransferRequest | undefined> {
+    const { entities } = await reader.select(TRANSFER_FIELDS).from(TransferSchema, { onMismatch: "throw" })
+      .createdBy(account.address).ownedBy(account.address).where(eq("passId", passId)).limit(10).fetch();
+    const rows = entities.map(toTransfer).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+    return rows.find((row) => activeTransfer(row.status, row.expiresAt)) ?? rows[0];
+  }
+  async function hasPendingTransfer(passId: string): Promise<boolean> {
+    const current = await transfer(passId);
+    return !!current && activeTransfer(current.status, current.expiresAt);
+  }
+  async function transferEntity(passId: string, requestId?: string) {
+    const query = reader.select(TRANSFER_FIELDS).from(TransferSchema, { onMismatch: "throw" })
+      .createdBy(account.address).ownedBy(account.address).where(eq("passId", passId));
+    const { entities } = await (requestId ? query.where(eq("requestId", requestId)) : query).limit(10).fetch();
+    const row = entities.find((item: any) => !requestId || item.requestId.value === requestId);
+    if (!row) throw new Error("Transfer request not found");
+    return { row, request: toTransfer(row) };
+  }
+
   return {
     ready: true as const,
     organizer: account.address,
@@ -187,6 +245,55 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       await write(`status ${passId}`, 1, (tx) => writer.patchEntity(TicketSchema, existing.entityKey, { set: { status } }, tx));
       return { ...existing, status };
     },
+    transfer,
+    requestTransfer: (passId: string, fromHolder: string, toHolder: string, requestId: string, requestedAt: string, expiresAt: string) => exclusive(async () => {
+      const existing = await ticket(passId);
+      if (!existing || existing.holder !== fromHolder.toLowerCase() || existing.status !== "claimed") throw new Error("ticket_not_transferable");
+      const eventDetails = await event(existing.eventId);
+      if (!eventDetails || eventDetails.eventDate.value < new Date().toISOString().slice(0, 10)) throw new Error("event_ended");
+      if (await hasCheckedIn(existing.eventId, existing.holder)) throw new Error("ticket_already_used");
+      if (await hasPendingTransfer(passId)) throw new Error("transfer_already_pending");
+      const values = { requestId, eventId: existing.eventId, passId, fromHolder: addr(getAddress(fromHolder)), toHolder: addr(getAddress(toHolder)), status: "pending", requestedAt, expiresAt };
+      await write(`transfer request ${requestId}`, 1, (tx) => writer.createEntity(TransferSchema, values, keep, tx));
+      return { ...values, fromHolder: fromHolder.toLowerCase(), toHolder: toHolder.toLowerCase(), status: "pending" as const };
+    }),
+    cancelTransfer: (passId: string, fromHolder: string) => exclusive(async () => {
+      const { row, request } = await transferEntity(passId);
+      if (request.fromHolder !== fromHolder.toLowerCase() || request.status !== "pending") throw new Error("transfer_not_cancellable");
+      await write(`transfer cancel ${request.requestId}`, 1, (tx) => writer.patchEntity(TransferSchema, row.$key, { set: { status: "cancelled" } }, tx));
+    }),
+    declineTransfer: (passId: string, requestId: string) => exclusive(async () => {
+      const { row, request } = await transferEntity(passId, requestId);
+      if (request.status !== "pending" || request.expiresAt <= new Date().toISOString()) throw new Error("transfer_not_pending");
+      await write(`transfer decline ${requestId}`, 1, (tx) => writer.patchEntity(TransferSchema, row.$key, { set: { status: "declined" } }, tx));
+    }),
+    transfersForEvent: async (eventId: string) => {
+      const { entities } = await reader.select(TRANSFER_FIELDS).from(TransferSchema, { onMismatch: "throw" })
+        .createdBy(account.address).ownedBy(account.address).where(eq("eventId", eventId)).limit(100).fetch();
+      return entities.map(toTransfer).filter((row) => activeTransfer(row.status, row.expiresAt) || row.status === "approved");
+    },
+    beginTransfer: (passId: string, requestId: string) => exclusive(async () => {
+      const { row, request } = await transferEntity(passId, requestId);
+      if (request.status !== "pending" || request.expiresAt <= new Date().toISOString()) throw new Error("transfer_not_pending");
+      await write(`transfer processing ${requestId}`, 1, (tx) => writer.patchEntity(TransferSchema, row.$key, { set: { status: "processing" } }, tx));
+      return { ...request, status: "processing" };
+    }),
+    finishTransfer: (passId: string, requestId: string, unregisterTxHash: string, registerTxHash: string) => exclusive(async () => {
+      const { row, request } = await transferEntity(passId, requestId);
+      if (request.status !== "processing") throw new Error("transfer_not_processing");
+      const existing = await ticket(passId);
+      if (!existing || existing.holder !== request.fromHolder || existing.status !== "claimed") throw new Error("ticket_changed_during_transfer");
+      const hashes = { unregisterTxHash, registerTxHash };
+      await write(`transfer complete ${requestId}`, 2, (tx) => writer.executeBatch({ patches: [
+        { schema: TicketSchema, entityKey: existing.entityKey, set: { holder: addr(getAddress(request.toHolder)), status: "issued" } },
+        { schema: TransferSchema, entityKey: row.$key, set: { status: "approved", ...hashes } },
+      ] }, tx));
+    }),
+    reviewTransfer: (passId: string, requestId: string) => exclusive(async () => {
+      const { row, request } = await transferEntity(passId, requestId);
+      if (request.status === "approved" || request.status === "declined" || request.status === "cancelled") return;
+      await write(`transfer review ${requestId}`, 1, (tx) => writer.patchEntity(TransferSchema, row.$key, { set: { status: "needs_review" } }, tx));
+    }),
     commitClaim: (passId: string, operationId: string, holder: string, userId: string) => exclusive(async () => {
       const existing = await ticket(passId);
       if (!existing || existing.holder !== holder.toLowerCase() || !["issued", "skipped"].includes(existing.status)) {
@@ -239,9 +346,11 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       return !!details && details.eventDate.value < new Date().toISOString().slice(0, 10);
     },
     hasCheckedIn,
+    hasPendingTransfer,
     /** The admission and the ticket's new status land together. A failure here is never written twice. */
     commitCheckin: (door: DoorTicket, distanceCm: number, revalidate: () => Promise<AdmissionEligibility>) => exclusive(async (): Promise<Admission> => {
       if (await hasCheckedIn(door.eventId, door.holder)) throw new Error("Already checked in");
+      if (!door.bought && await hasPendingTransfer(door.passId)) throw new Error("Ticket transfer is pending review");
       const page = await reader.select({ passId: true }).from(CheckinSchema, { onMismatch: "throw" }).createdBy(account.address)
         .where(eq("eventId", door.eventId)).limit(1).withCount().fetch();
       // Arkiv's index can lag behind a write that just landed, so the count never goes backwards.

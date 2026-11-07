@@ -16,7 +16,7 @@ import { measure, micError, openMic, problemText } from '../../sonar/run'
 import { checkinCode } from '../../utils/checkinCode'
 
 const PIN_KEY = 'resona.doorPin'
-type Holder = { holder: string; tier: string }
+type Holder = { holder: string; tier: string; ensName?: string }
 type Phase = { name: 'ready' } | { name: 'scanning' } | { name: 'running'; step: number } | { name: 'done'; result: CheckinResult; who: Holder }
 
 const steps = ['Connecting to the holder’s phone', 'Playing and listening', 'Checking the distance']
@@ -34,6 +34,8 @@ const fails: Record<string, { title: string; body: string }> = {
   invalid: { title: 'That reading was not valid', body: 'Hold both phones still, then try again.' },
   expired: { title: 'The check took too long', body: 'The other phone did not finish. Try again.' },
   failed: { title: 'Could not save this check in', body: 'The distance passed, but Arkiv did not confirm it. Do not admit yet. Ask the organizer to check.' },
+  ens_pass_not_verified: { title: 'ENS pass does not match', body: 'The pass is expired, unlinked, or held by a different wallet. Do not admit; ask the organizer to check.' },
+  ens_verification_failed: { title: 'ENS could not be checked', body: 'Check-in stopped because the ENS service could not be reached. Try again when the connection is back.' },
 }
 
 /** D1. The real door: joins the holder's check in, exchanges sound, and shows the server's decision. */
@@ -156,8 +158,9 @@ export default function Door() {
             <div className="rounded-2xl border border-line bg-surface-raised p-2">
               <div className="rounded-lg bg-surface-inset">
                 <Row label="Holder">
-                  <span className="font-mono">{short(who.holder)}</span>
+                  <span>{who.ensName ?? short(who.holder)}</span>
                 </Row>
+                {who.ensName && <Row label="Wallet"><span className="font-mono">{short(who.holder)}</span></Row>}
                 <Row label="Place through the door">
                   <span className="tabular-nums">{ordinal(result.ordinal ?? 0)}</span>
                 </Row>
@@ -175,7 +178,7 @@ export default function Door() {
       )
     }
     const f = result.state === 'failed' && result.problem
-      ? { title: 'Ticket no longer eligible', body: 'The ticket, World eligibility or payment changed during this check. Do not admit. Ask the organizer to check.' }
+      ? fails[result.problem] ?? { title: 'Ticket no longer eligible', body: 'The ticket, World eligibility or payment changed during this check. Do not admit. Ask the organizer to check.' }
       : fails[result.state] ?? fails.expired
     return (
       <Screen>

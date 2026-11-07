@@ -13,15 +13,16 @@ import { env } from "./config/env.ts";
 
 export function createApp(tickets: TicketStore & CheckinStore, registry: AccountRegistry) {
   const app = express();
+  const ens = createEnsService(env.ens);
   // Liveness only: this does not check external services.
   app.get("/api/health", (_req, res) => res.set("Cache-Control", "no-store").json({ status: "ok" }));
   app.use(express.json({ limit: "256kb" }));
   app.use("/api", worldRoutes);
   app.use("/api", labRoutes);
-  app.use("/api", ticketRoutes(tickets, registry, createEnsService(env.ens)));
+  app.use("/api", ticketRoutes(tickets, registry, ens));
   app.use("/api", authRoutes(registry));
   app.use("/api", arkivRoutes());
-  app.use("/api", checkinRoutes(tickets, registry));
+  app.use("/api", checkinRoutes(tickets, registry, ens));
 
   const dist = path.resolve(import.meta.dirname, "../../app/dist");
   // Built files have hashed names, but the page that points at them must never be cached, or phones keep an old build.

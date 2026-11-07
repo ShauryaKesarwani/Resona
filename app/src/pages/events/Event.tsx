@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Row, WalletChip } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { wallet } from '../../data/mock'
 import { isUpcoming } from '../../services/arkiv'
+import { api } from '../../services/api'
 import { prettyDate, tokens } from './art'
 import { EventImage } from './EventImage'
 import { useEvents } from './useEvents'
@@ -13,6 +15,11 @@ export default function Event() {
   const { id } = useParams()
   const { events, failed } = useEvents()
   const event = events?.find((e) => e.eventId === id)
+  const [ensEventName, setEnsEventName] = useState('')
+
+  useEffect(() => {
+    api.config().then((config) => setEnsEventName(config.ensEventName ?? '')).catch(() => {})
+  }, [])
 
   if (!event) {
     return (
@@ -49,6 +56,7 @@ export default function Event() {
             <span className="tabular-nums">{tokens(event.priceWei)}</span>
           </Row>
           <Row label="Network">{wallet.network} test network</Row>
+          {ensEventName && <Row label="Configured ENS namespace">{ensEventName}</Row>}
         </div>
       </div>
       <p className="body-6 max-w-prose text-text-muted">You pay with free test tokens. If your wallet is short, Resona adds some first. No real money moves.</p>

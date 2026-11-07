@@ -98,3 +98,34 @@ test("ENS pass ownership and transfer policy flow through the API against a Sepo
     await new Promise<void>((resolve) => rpc.server.close(() => resolve()));
   }
 });
+
+test("ENS name lookup normalizes input and reads the address record through ENSNode", async () => {
+  let received: { query: string; variables: { name: string; coinType: string | number } } | undefined;
+  const node: Server = createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    received = JSON.parse(Buffer.concat(chunks).toString());
+    const exists = received.variables.name !== "missing.resona-id.eth";
+    res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({
+      data: { domain: exists ? {
+        canonical: { name: { interpreted: received.variables.name } },
+        resolve: { records: { addresses: [{ address: holder }] } },
+      } : null },
+    }));
+  });
+  await new Promise<void>((resolve) => node.listen(0, "127.0.0.1", resolve));
+  const address = node.address();
+  assert.ok(address && typeof address !== "string");
+  const { createEnsService } = await import("../ens/service.ts");
+  const ens = createEnsService({ enabled: false, ensNodeUrl: `http://127.0.0.1:${address.port}` });
+
+  try {
+    assert.deepEqual(await ens.resolveName("Sam.Resona-id.eth"), { name: "sam.resona-id.eth", address: holder });
+    assert.equal(received?.variables.name, "sam.resona-id.eth");
+    assert.equal(String(received?.variables.coinType), "2155277743");
+    assert.match(received?.query ?? "", /addresses\(coinTypes:\s*\[\$coinType\]\)/);
+    await assert.rejects(ens.resolveName("missing.resona-id.eth"), { message: "ens_name_not_found" });
+  } finally {
+    await new Promise<void>((resolve) => node.close(() => resolve()));
+  }
+});

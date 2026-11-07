@@ -33,6 +33,8 @@ const START_ERRORS: Record<string, string> = {
   payment_not_found: 'We could not find the payment for this ticket on chain. Ask the organizer.',
   not_ticket_holder: 'This ticket belongs to a different wallet.',
   ticket_not_found: 'We could not find this ticket on Arkiv.',
+  ens_pass_not_verified: 'The ENS pass is expired, unlinked, or held by a different wallet. Ask the organizer to check it.',
+  ens_verification_failed: 'ENS could not be reached, so check-in stopped. Try again when the connection is back.',
 }
 
 const fails: Record<string, { title: string; body: string }> = {

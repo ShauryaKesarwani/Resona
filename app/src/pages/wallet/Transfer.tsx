@@ -1,163 +1,139 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
-import { ClockIcon, ProhibitIcon } from '../../components/icons'
-import { SimTag } from '../../components/Bits'
+import { ClockIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { transferWindowMs, updateTicket, useTickets } from '../../data/mock'
-import { api } from '../../services/api'
+import { refreshTickets, useTickets } from '../../data/mock'
+import { api, type TransferRequest } from '../../services/api'
+import { signedBy } from '../../services/auth'
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-function left(ms: number) {
-  const m = Math.max(0, Math.floor(ms / 60000))
-  return `${Math.floor(m / 60)}h\u00a0${m % 60}m`
+const explain: Record<string, string> = {
+  ens_name_not_found: 'That ENS name could not be found.',
+  ens_address_not_set: 'That ENS name has no Rabdi wallet address set.',
+  ens_lookup_unavailable: 'ENS lookup is unavailable. Try again shortly.',
+  ens_pass_not_verified: 'The ENS pass does not currently match this ticket.',
+  ens_write_not_configured: 'The organizer has not enabled ENS transfers yet.',
+  transfer_needs_review: 'The transfer needs organizer review. Contact the event organizer before trying again.',
+  transfer_already_pending: 'This ticket already has an open transfer request.',
+  ticket_not_transferable: 'Only a claimed, unused ticket can be sent.',
+  ticket_already_used: 'A ticket that has checked in cannot be sent.',
 }
 
-/** W5. Send a ticket. A direct transfer is blocked by the contract, so the path is a request to the organizer. */
+function remaining(expiresAt: string, now: number) {
+  const ms = Math.max(0, Date.parse(expiresAt) - now)
+  const hours = Math.floor(ms / 3_600_000)
+  const minutes = Math.floor((ms % 3_600_000) / 60_000)
+  return `${hours}h ${minutes}m`
+}
+
 export default function Transfer() {
   const { id } = useParams()
-  const ticket = useTickets().find((t) => t.id === id)
+  const ticket = useTickets().find((item) => item.id === id)
   const [to, setTo] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [blocked, setBlocked] = useState(false)
-  const [directError, setDirectError] = useState('')
+  const [request, setRequest] = useState<TransferRequest | null>(null)
   const [now, setNow] = useState(Date.now())
   const back = `/wallet/ticket/${id}`
 
+  async function refresh() {
+    if (!id) return
+    const result = await api.transferStatus(id, await signedBy(`transfer-status:${id}`))
+    setRequest(result)
+    if (result?.status === 'approved') await refreshTickets()
+  }
+
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30000)
-    return () => clearInterval(t)
+    let current = true
+    if (id) api.transferStatus(id, signedBy(`transfer-status:${id}`)).then(async (result) => {
+      if (current) {
+        setRequest(result)
+        if (result?.status === 'approved') await refreshTickets()
+      }
+    })
+      .catch(() => { if (current) setError('Could not load the transfer request.') })
+    return () => { current = false }
+  }, [id])
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(timer)
   }, [])
 
-  if (!ticket || ticket.status !== 'claimed') {
-    return (
-      <Screen>
-        <TopBar back={back} title="Send ticket" />
-        <section className="flex flex-1 flex-col justify-center gap-2">
-          <h1 className="heading-5">This ticket cannot be sent right now</h1>
-          <p className="body-3 text-text-muted">Only a claimed ticket that has not been used can be sent.</p>
-        </section>
-        <Button to={back}>Back to ticket</Button>
-      </Screen>
-    )
-  }
-
-  const pending = ticket.transferExpires !== undefined && ticket.transferExpires > now
-
-  function validate() {
-    const v = to.trim().toLowerCase()
-    if (!v) return 'Enter the ENS name of the person you are sending to.'
-    if (!/^[a-z0-9]+(\.[a-z0-9]+)*\.eth$/.test(v)) return 'That is not an ENS name. It should end in .eth, for example sam.eth.'
-    return ''
-  }
-
-  async function request(e: FormEvent) {
-    e.preventDefault()
-    const msg = validate()
-    setError(msg)
-    if (msg) return
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!id) return
     setBusy(true)
-    await wait(800)
-    updateTicket(ticket!.id, { transferExpires: Date.now() + transferWindowMs })
-    setBusy(false)
-    setBlocked(false)
-  }
-
-  async function direct() {
-    setBusy(true)
-    setDirectError('')
+    setError('')
     try {
-      const result = await api.ensTransferCheck(ticket!.id, '0x000000000000000000000000000000000000dEaD')
-      setBlocked(result.result === 'blocked')
-      if (result.result !== 'blocked') setDirectError(result.result === 'transferable' ? 'This pass appears transferable.' : 'The ENS pass is missing, expired, unlinked, or owned by a different wallet.')
-    } catch (err) {
-      setBlocked(false)
-      setDirectError((err as Error).message === 'ens_not_configured' ? 'ENSv2 is not configured on this server.' : 'Could not check the ENSv2 transfer policy.')
+      const resolved = await api.ensResolve(to.trim())
+      const created = await api.requestTransfer(id, resolved.address, await signedBy(`transfer:${id}:${resolved.address.toLowerCase()}`))
+      setRequest(created)
+      setTo('')
+    } catch (cause) {
+      const code = (cause as Error).message
+      setError(explain[code] ?? 'Could not submit the transfer request. Try again shortly.')
     } finally {
       setBusy(false)
     }
   }
 
-  if (pending) {
-    return (
-      <Screen>
-        <TopBar back={back} title="Send ticket" />
-        <section className="flex flex-1 flex-col justify-center gap-4" role="status">
-          <ClockIcon size={48} className="text-accent" aria-hidden="true" />
-          <h1 className="heading-4">Waiting for the organizer</h1>
-          <p className="body-3 text-text-muted">
-            Your request to send Pass&nbsp;{ticket.pass} is with the organizer. It lapses in{' '}
-            <span className="font-mono tabular-nums text-text">{left(ticket.transferExpires! - now)}</span> if nobody answers. You
-            still hold the ticket until it is approved.
-          </p>
-          <SimTag>Simulated request</SimTag>
-        </section>
-        <Button variant="secondary" onClick={() => updateTicket(ticket.id, { transferExpires: undefined })}>
-          Cancel request
-        </Button>
-        <Button to={back}>Back to ticket</Button>
-      </Screen>
-    )
+  async function cancel() {
+    if (!id) return
+    setBusy(true)
+    setError('')
+    try {
+      await api.cancelTransfer(id, await signedBy(`transfer-cancel:${id}`))
+      await refresh()
+    } catch {
+      setError('Could not cancel this request. Refresh the page to check its status.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  return (
-    <Screen>
-      <TopBar back={back} title="Send ticket" />
-      <form onSubmit={request} noValidate className="flex flex-1 flex-col gap-4">
-        <h1 className="heading-4">Send Pass&nbsp;{ticket.pass} to someone</h1>
-        <p className="body-3 text-text-muted">
-          Only the organizer can move a ticket. Tell us who should get it, and the organizer approves or denies.
-        </p>
+  if (!ticket || ticket.status !== 'claimed') {
+    return <Screen><TopBar back={back} title="Send ticket" /><section className="flex flex-1 flex-col justify-center gap-2">
+      <h1 className="heading-5">This ticket cannot be sent right now</h1>
+      <p className="body-3 text-text-muted">Only a claimed ticket that has not been used can be sent.</p>
+    </section><Button to={back}>Back to ticket</Button></Screen>
+  }
 
-        <label className="flex flex-col gap-2">
-          <span className="title-4">Their ENS name</span>
-          <input
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            inputMode="email"
-            autoComplete="off"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="sam.eth"
-            aria-invalid={!!error}
-            aria-describedby={error ? 'to-error' : undefined}
-            className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base placeholder:text-text-muted"
-          />
-          {error && (
-            <span id="to-error" role="alert" className="body-6 text-danger">
-              {error}
-            </span>
-          )}
-        </label>
+  const active = request && ['pending', 'processing', 'needs_review'].includes(request.status)
+  const terminalMessage: Record<string, string> = {
+    approved: 'The organizer approved this request. The new holder can claim the ticket after the update appears in Arkiv.',
+    declined: 'The organizer declined this request. You still hold the ticket.',
+    cancelled: 'You cancelled this request. You still hold the ticket.',
+    expired: 'This request expired. You still hold the ticket.',
+    expired: 'This request expired. You still hold the ticket.',
+    needs_review: 'The ENS and ticket records may need to be reconciled. Contact the organizer before taking another action.',
+  }
 
-        {blocked && (
-          <div role="alert" className="flex gap-3 rounded-2xl border border-line bg-surface-raised p-4">
-            <ProhibitIcon size={24} className="mt-0.5 shrink-0 text-danger" aria-hidden="true" />
-            <div>
-              <p className="title-3">The contract blocks this pass from transfer</p>
-              <p className="body-6 mt-1 text-text-muted">
-                This ticket was issued without the transfer role, so only the organizer can move it. Ask the organizer
-                instead.
-              </p>
-              <div className="mt-2">
-                <SimTag>Read-only Sepolia simulation; no transaction submitted</SimTag>
-              </div>
-            </div>
-          </div>
-        )}
-        {directError && <p role="alert" className="body-6 text-danger">{directError}</p>}
-
-        <div className="flex-1" />
-        <Button type="submit" busy={busy}>
-          {busy ? 'Sending request' : 'Ask the organizer to approve'}
-        </Button>
-        <Button type="button" variant="secondary" size="md" disabled={busy} onClick={direct}>
-          Demo control: check the ENS transfer rule
-        </Button>
-      </form>
-    </Screen>
-  )
+  return <Screen>
+    <TopBar back={back} title="Send ticket" />
+    {active ? <section className="flex flex-1 flex-col justify-center gap-4" role="status">
+      <ClockIcon size={48} className="text-accent" aria-hidden="true" />
+      <h1 className="heading-4">{request.status === 'pending' ? 'Waiting for the organizer' : 'Transfer is being handled'}</h1>
+      <p className="body-3 text-text-muted">
+        {request.status === 'pending' ? <>Your request is with the organizer. It expires in <span className="font-mono tabular-nums text-text">{remaining(request.expiresAt, now)}</span>. You still hold the ticket until approval.</> : terminalMessage[request.status]}
+      </p>
+      <p className="caption-5 font-mono text-text-muted">Recipient: {request.toHolder}</p>
+      <Button variant="secondary" size="md" onClick={refresh} disabled={busy}>Refresh status</Button>
+    </section> : <form onSubmit={submit} noValidate className="flex flex-1 flex-col gap-4">
+      <h1 className="heading-4">Send Pass&nbsp;{ticket.pass} to someone</h1>
+      <p className="body-3 text-text-muted">The organizer reviews the request. If approved, the ENS pass and ticket move to the wallet mapped from this ENS name.</p>
+      <label className="flex flex-col gap-2">
+        <span className="title-4">Recipient ENS name</span>
+        <input value={to} onChange={(event) => setTo(event.target.value)} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+          placeholder="sam.eth" aria-invalid={!!error} className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base placeholder:text-text-muted" />
+      </label>
+      {error && <p role="alert" className="body-6 text-danger">{error}</p>}
+      {request && terminalMessage[request.status] && <p role="status" className="body-6 text-text-muted">{terminalMessage[request.status]}</p>}
+      <div className="flex-1" />
+      <Button type="submit" busy={busy}>{busy ? 'Sending request' : 'Ask the organizer to approve'}</Button>
+    </form>}
+    {active && request.status === 'pending' && <Button variant="secondary" onClick={cancel} busy={busy}>Cancel request</Button>}
+    {error && active && <p role="alert" className="body-6 text-danger">{error}</p>}
+    <Button to={back} variant="secondary">Back to ticket</Button>
+  </Screen>
 }

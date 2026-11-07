@@ -26,6 +26,11 @@ const Payments = defineSchema('resona.payment', {
 const Checkins = defineSchema('resona.checkin', {
   eventId: str().indexed(), passId: str().indexed(), holder: addr().indexed(), ordinal: str(), distanceCm: str(), checkedInAt: str(),
 })
+export const Transfers = defineSchema('resona.transfer', {
+  requestId: str().indexed(), eventId: str().indexed(), passId: str().indexed(),
+  fromHolder: addr().indexed(), toHolder: addr().indexed(), status: str().indexed(),
+  requestedAt: str().indexed(), expiresAt: str().indexed(), unregisterTxHash: str().optional(), registerTxHash: str().optional(),
+})
 
 export type ArkivEvent = { eventId: string; eventName: string; eventDate: string; priceWei: string; organiser: string }
 export type ArkivTicket = { passId: string; eventId: string; tier: string; status: string; ensName?: string; createdAt: number }

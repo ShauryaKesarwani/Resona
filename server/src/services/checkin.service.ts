@@ -3,20 +3,21 @@ import { distanceCm, verdictFor } from "../../../app/src/sonar/distance.ts";
 import type { AccountRegistry } from "../arkiv/accounts.ts";
 import type { CheckinStore, DoorTicket } from "../arkiv/tickets.ts";
 import { isWalletOwner, type Signed } from "../utils/signature.ts";
+import type { EnsService } from "../ens/service.ts";
 
 export type CheckinState = "waiting" | "running" | "saving" | "pass" | "too_far" | "no_sound" | "invalid" | "expired" | "failed";
 type Failure = { status: 400 | 401 | 402 | 403 | 404 | 409 | 410; error: string };
 type Started = { status: 200; id: string; code: string; seed: string; attempt: number };
-type Joined = { status: 200; id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string };
+type Joined = { status: 200; id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string; ensName?: string };
 
 type Session = {
-  id: string; code: string; seed: string; ticket: DoorTicket; state: CheckinState;
+  id: string; code: string; seed: string; ticket: DoorTicket; state: CheckinState; ensName?: string;
   createdAt: number; runningAt?: number; doorToken?: string;
   attempt: number; problem?: string;
   door?: number; holder?: number; cm?: number;
   ordinal?: number; transactionHash?: string; entityKey?: string;
 };
-export type Options = { store: CheckinStore; registry: Pick<AccountRegistry, "ready" | "findByWallet">; allowSkip: boolean; doorPin?: string; now?: () => number };
+export type Options = { store: CheckinStore; registry: Pick<AccountRegistry, "ready" | "findByWallet">; allowSkip: boolean; doorPin?: string; ens?: Pick<EnsService, "configured" | "pass">; now?: () => number };
 
 const CODE_TTL_MS = 2 * 60 * 1000;
 /** The phones record for 6 seconds and then analyse, so a run with no result by now has gone wrong. */
@@ -37,7 +38,7 @@ const sameSecret = (a: string, b: string) => {
 /** Live check-ins, held in memory for a few minutes. Only a passed check-in is permanent, on Arkiv. */
 class EligibilityError extends Error {}
 
-export function createCheckins({ store, registry, allowSkip, doorPin, now = Date.now }: Options) {
+export function createCheckins({ store, registry, allowSkip, doorPin, ens, now = Date.now }: Options) {
   const sessions = new Map<string, Session>();
 
   function refresh(session: Session) {
@@ -48,7 +49,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
   }
 
   /** Shared by session start and the serialized admission write; buyer status is not World evidence. */
-  async function eligible(passId: string, wallet: string): Promise<{ ticket: DoorTicket; userId?: string } | Failure> {
+  async function eligible(passId: string, wallet: string): Promise<{ ticket: DoorTicket; userId?: string; ensName?: string } | Failure> {
     const ticket = await store.doorTicket(passId, wallet);
     if (!ticket) return { status: 404, error: "ticket_not_found" };
     if (ticket.holder !== wallet) return { status: 403, error: "not_ticket_holder" };
@@ -58,6 +59,17 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
     if (ticket.status === "skipped" && !allowSkip) return { status: 403, error: "not_verified" };
     if (await store.eventEnded(ticket.eventId)) return { status: 410, error: "event_ended" };
     if (await store.hasCheckedIn(ticket.eventId, wallet)) return { status: 409, error: "already_checked_in" };
+    if (!ticket.bought && await store.hasPendingTransfer(ticket.passId)) return { status: 409, error: "transfer_pending" };
+    let ensName: string | undefined;
+    if (ens?.configured) {
+      try {
+        const pass = await ens.pass(ticket.passId, wallet);
+        if (!pass.active || !pass.linked || !pass.matchesHolder) return { status: 403, error: "ens_pass_not_verified" };
+        ensName = pass.name;
+      } catch {
+        return { status: 403, error: "ens_verification_failed" };
+      }
+    }
     let userId: string | undefined;
     if (ticket.bought) {
       // Demo skip applies only to organizer-issued tickets, never to self-reported buyer status.
@@ -67,7 +79,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
       if (await store.hasClaimed(userId, ticket.eventId)) return { status: 409, error: "human_already_claimed" };
       if (!(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };
     }
-    return { ticket, userId };
+    return { ticket, userId, ensName };
   }
 
   /** The holder's wallet proves it is here before any sound plays. */
@@ -87,7 +99,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
     const taken = new Set([...sessions.values()].map((item) => item.code));
     let code: string;
     do code = String(randomInt(100_000, 1_000_000)); while (taken.has(code));
-    const session: Session = { id: randomUUID(), code, seed: randomBytes(16).toString("hex"), ticket, state: "waiting", createdAt: now(), attempt: 1 };
+    const session: Session = { id: randomUUID(), code, seed: randomBytes(16).toString("hex"), ticket, ensName: result.ensName, state: "waiting", createdAt: now(), attempt: 1 };
     sessions.set(session.id, session);
     return { status: 200, id: session.id, code, seed: session.seed, attempt: session.attempt };
   }
@@ -116,7 +128,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, now = Date
       session.runningAt = now();
     } else return { status: 404, error: "code_not_found" };
     session.doorToken = randomBytes(16).toString("hex");
-    return { status: 200, id: session.id, seed: session.seed, attempt: session.attempt, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier };
+    return { status: 200, id: session.id, seed: session.seed, attempt: session.attempt, doorToken: session.doorToken, holder: session.ticket.holder, tier: session.ticket.tier, ensName: session.ensName };
   }
 
   function join(input: { code?: string; pin?: string }): Joined | Failure {

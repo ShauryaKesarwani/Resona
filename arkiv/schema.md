@@ -92,7 +92,7 @@ A **bought** ticket is written by the buyer's own wallet with status `claimed`, 
 
 `revoked` is refused at the door, but nothing sets it: revocation is not implemented.
 
-ENS fields are optional for compatibility with existing tickets. The standalone Sepolia CLI can issue a matching ENS pass, but it does not write these fields to Arkiv; the HTTP ticket API does not populate them. Any stored ENS fields are **unverified metadata**, not evidence of ownership. When configured, the read-only `/api/ens/pass/:passId` endpoint derives the expected pass name from the ticket `passId` and compares its current Sepolia registry owner and expiry with the Arkiv holder. This live read does not persist or validate the optional ENS fields. The wallet uses the endpoint to display the result. The transfer-check endpoint runs an `eth_call` and accepts only the exact `TransferDisallowed` error; it does not submit a transaction. There is no ENS/Arkiv write reconciliation.
+ENS fields are optional for compatibility with existing tickets. The standalone Sepolia CLI can issue a matching ENS pass, but it does not write these fields to Arkiv; the HTTP ticket API does not populate them. Any stored ENS fields are **unverified metadata**, not evidence of ownership. When configured, the read-only `/api/ens/pass/:passId` endpoint derives the expected pass name from the ticket `passId` and compares its current Sepolia registry owner and expiry with the Arkiv holder. This live read does not persist or validate the optional ENS fields. The wallet uses the endpoint to display the result. The transfer-check endpoint runs an `eth_call` and accepts only the exact `TransferDisallowed` error; it does not submit a transaction. Organizer-approved pass reassignment and Arkiv update are implemented in code as described under `resona.transfer`, but live write and failure reconciliation remain unverified.
 
 ## Payment — `resona.payment` (partially implemented)
 
@@ -167,7 +167,32 @@ Duplicate prevention and ordinals are not crash-safe. Both are a query followed 
 
 ## ENS and door invariants (partially implemented)
 
-ENSv2 on Sepolia supplies the pass and transfer policy; Arkiv supplies application status. The implementation currently restricts pass labels and event names to a single ASCII `.eth` label; this is the accepted subset for which ASCII case folding is ENSIP-15 safe. The ENS address record is not proof of ownership. A read-only API checks the configured event-registry link, current pass owner, expiry and Arkiv holder match, and the wallet can display that result. **Check-in does not call this check**, so ENS ownership is not enforced at the door. Check-in must fail closed on missing or inconsistent ENS data immediately before its Arkiv write once this is added. Public ENS metadata is not implemented; if added, it should contain only `eventId`, `passId`, and a public link, never mutable status or World ID data as authoritative metadata. Writes to ENS and Arkiv are not atomic and require reconciliation.
+ENSv2 on Sepolia supplies the pass and transfer policy; Arkiv supplies application status. The implementation currently restricts pass labels and event names to a single ASCII `.eth` label; this is the accepted subset for which ASCII case folding is ENSIP-15 safe. A server-side ENSNode lookup normalizes a person's name and reads its Rabdi-specific EVM address record (coin type `2155277743`, derived from Rabdi chain ID `7794095`) for profile and organizer search/issue. This resolved address is a lookup key, not ticket ownership evidence, and is not persisted to Arkiv. The resolved name is also shown on event purchase success, ticket and door screens when the configured pass is active. The ENS address record is not proof of ownership. A separate read-only pass API checks the configured event-registry link, current pass owner, expiry and Arkiv holder match, and the wallet can display that result. When ENS is configured, check-in validates those same facts at session start and again immediately before its Arkiv write. Missing, inconsistent, or unreadable ENS state fails closed. When ENS is not configured, this extra check is skipped for demo compatibility. ENS name lookup and pass-enforcement tests are written but have not been run; live ENSNode/Sepolia verification remains pending. Public ENS metadata is not implemented; if added, it should contain only `eventId`, `passId`, and a public link, never mutable status or World ID data as authoritative metadata. Writes to ENS and Arkiv are not atomic and require reconciliation.
+
+### Forward name lookup and transfer status
+
+ENSNode normalizes names and maps them to the Rabdi address record for organizer search/issue, attendee search, and public wallet profiles. This is an address lookup, not ownership evidence; the result is not persisted to Arkiv. Name lookup and door enforcement tests are written but have not been run, and live ENSNode/Sepolia checks remain pending.
+
+## Organizer-approved transfer — `resona.transfer` (implemented in code; unverified)
+
+The server creates a request only after the current ticket holder signs for the pass and recipient, the pass is active and linked, and the ticket is claimed, organizer-issued, unused, and for an event that has not ended. The recipient is resolved from an ENS name to its Rabdi address before the request. Approval requires the recipient to have a World-linked account and no existing claim for that event, so the ticket will be claimable by that human. Requests expire after 24 hours. A holder can cancel while pending; only an organizer who can manage the event can decide.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `requestId`* | string | Random request identifier |
+| `eventId`* | string | Event the ticket belongs to |
+| `passId`* | string | Ticket and ENS pass label source |
+| `fromHolder`* | address | Current holder at request time |
+| `toHolder`* | address | ENS-resolved recipient wallet |
+| `status`* | string | `pending`, `processing`, `approved`, `declined`, `cancelled`, `expired`, or `needs_review` |
+| `requestedAt`* | string | ISO request time |
+| `expiresAt`* | string | ISO time after which a pending request expires |
+| `unregisterTxHash` | string | Sepolia transaction hash when available |
+| `registerTxHash` | string | Sepolia transaction hash when available |
+
+The server trusts only transfer entities both created and owned by its Arkiv writer. Approval records `processing`, unregisters and re-registers the ENS pass to the recipient with its existing expiry, then atomically patches the Arkiv ticket holder/status and transfer status to `approved`. The recipient must claim the ticket again. The original `resona.claim` remains as history for the former holder; it is not edited or treated as current ticket ownership. A direct pass transfer remains disabled by the pass policy.
+
+Check-in rejects pending, processing, and `needs_review` requests at session start and rechecks inside the serialized Arkiv admission write. Requests and admission share one in-process queue. ENS and Arkiv do not share a transaction: if an ENS write or final Arkiv patch has an uncertain outcome, the request becomes `needs_review`, automatic retries are unsafe, and an operator must compare both systems before resolving it. This server is single-process and query indexing lag can still affect duplicate/race handling. The `ENS_PRIVATE_KEY` signer must hold the required registry roles; configuration alone does not prove it can perform writes. Transfer tests and live role/write/reconciliation checks remain pending.
 
 The demo additionally requires a holder wallet signature and sonar pass. Neither a QR code, ENS name, nor Arkiv record proves proximity. Browser clients cannot attest their timing; modified-client resistance is outside the demo.
 
@@ -182,5 +207,7 @@ The demo additionally requires a holder wallet signature and sonar pass. Neither
 Keep the current schema tags and optional fields readable unless a migration is explicitly implemented. New indexed fields must support a real query. For any schema or status change, update the server, the browser schema copies, API types, tests and this document together. Verify state transitions and reject claims/skips on `checked_in` or `revoked` tickets. Never infer safe concurrency or unique enforcement from a schema field alone.
 
 Existing Arkiv schemas and records remain readable. This change adds the optional-to-existing-data `resona.organizer` tag; no existing record needs a new field or rewrite. Existing events keep their server-wallet organizer and remain shared among authorized admins, while newly published events carry their admin wallet. Older bought-ticket check-ins are not backfilled with claims, and their existing wallet check-in records continue to block repeats while retained. Previously bought tickets now require a trusted account and an unused event claim to be admitted, regardless of their self-reported `claimed` status.
+
+The `resona.transfer` tag is additive; existing ticket and claim records need no rewrite. Existing pass reassignment requires an operator-configured ENS signer and is not enabled by the public read configuration alone.
 
 SQLite data was not migrated. Old demo tickets and nullifiers do not carry over, so create fresh tickets through the Arkiv API.

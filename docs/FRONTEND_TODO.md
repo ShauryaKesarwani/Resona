@@ -17,10 +17,10 @@ Nothing here needs new screens. It needs two real phones and a public HTTPS URL.
 
 | Item | Why | Notes |
 |---|---|---|
-| ENS names across the screens | The ENS track needs names visible where people see them | Show the pass name and the event name on the event page, the buy success screen and the door pass screen. Profile link by name once names resolve: `/u/sam.eth` |
+| ENS names and search across the screens | The ENS track needs names visible where people see them and clear name lookup | ENS lookup now resolves names to their Rabdi address record for organizer ticket issue/lookup, attendee search and `/u/:name` profiles. The event and purchase-success screens show the configured ENS event and active pass names; wallet ticket and door results show the pass name. Verify against the configured ENSNode. Door ownership enforcement is implemented in code; tests and live Sepolia verification remain. |
 | Claim screen: real phone lock | The claim's phone lock step is still simulated, and shows as such | Depends on the server's claim route |
-| Transfer: organizer approval | The request and the organizer's answer are simulated | Needs a server route and an organizer view of pending requests |
-| Organizer page: pending requests and an event list | The organizer can issue and look up a wallet, nothing else | Wait for the server list routes |
+| Transfer: organizer approval | Wallet request and organizer review screens now call signed server routes; ENS reassignment and Arkiv updates are implemented in code | Build/tests, live Sepolia roles and transfer, Arkiv reconciliation, and phone flow remain |
+| Organizer page: pending requests and an event list | Organizer transfer review screen lists per-event requests and supports approve/decline | Verify with a signed-in organizer and live request |
 | Event page: more than name, date and price | Judges see a thin page | Needs description and venue fields on the Arkiv event first |
 
 Done in the remake pass: the check in sonar visuals, the ticket as a pass, Account and backup, Before you check in, Receipt, and the organizer's New event and Live door tabs. `POST /api/event` is a demo stand in like `/api/issue`, with no organizer authorization yet.

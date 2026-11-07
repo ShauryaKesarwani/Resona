@@ -10,7 +10,8 @@ worldRoutes.get("/config", (_req, res) => {
   const { appId, rpId, action, environment, allowSkip } = env.world;
   // The browser reads Arkiv directly, and only trusts records from this public address.
   const organizer = env.arkiv.privateKey ? privateKeyToAddress(env.arkiv.privateKey as Hex) : undefined;
-  res.json({ appId, rpId, action, environment, allowSkip, organizer, doorPinRequired: !!env.doorPin });
+  res.json({ appId, rpId, action, environment, allowSkip, organizer, doorPinRequired: !!env.doorPin,
+    ensEventName: env.ens.enabled ? env.ens.eventName : undefined });
 });
 
 worldRoutes.post("/world/sign", (req, res) => {

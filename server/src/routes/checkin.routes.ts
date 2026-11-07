@@ -3,11 +3,12 @@ import type { AccountRegistry } from "../arkiv/accounts.ts";
 import type { CheckinStore } from "../arkiv/tickets.ts";
 import { env } from "../config/env.ts";
 import { createCheckins } from "../services/checkin.service.ts";
+import type { EnsService } from "../ens/service.ts";
 
 /** Coordinates the two phones. It has to be here: a phone can't be trusted to judge its own distance. */
-export function checkinRoutes(store: CheckinStore, registry: AccountRegistry) {
+export function checkinRoutes(store: CheckinStore, registry: AccountRegistry, ens?: EnsService) {
   const router = Router();
-  const checkins = createCheckins({ store, registry, allowSkip: env.world.allowSkip, doorPin: env.doorPin });
+  const checkins = createCheckins({ store, registry, allowSkip: env.world.allowSkip, doorPin: env.doorPin, ens });
 
   router.post("/checkin/start", async (req, res) => {
     const { status, ...body } = await checkins.start(req.body ?? {});

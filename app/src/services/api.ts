@@ -3,6 +3,12 @@ import type { IDKitResult, RpContext } from '@worldcoin/idkit'
 export type ServerTicket = { passId: string; holder: string; tier: string; status: 'issued' | 'claimed' | 'skipped' }
 export type EnsPass = { enabled: true; name: string; chainId: 11155111; registry: string; owner: string; expiry: string; matchesHolder: boolean; linked: boolean; active: boolean }
 export type EnsTransferCheck = { result: 'blocked' | 'transferable' | 'not_verified'; pass: EnsPass; tokenId?: string; error?: string }
+export type EnsResolvedName = { name: string; address: string }
+export type TransferRequest = {
+  requestId: string; eventId: string; passId: string; fromHolder: string; toHolder: string;
+  status: 'pending' | 'processing' | 'approved' | 'declined' | 'cancelled' | 'expired' | 'needs_review';
+  requestedAt: string; expiresAt: string; unregisterTxHash?: string; registerTxHash?: string;
+}
 export type WorldConfig = {
   appId: `app_${string}`
   action: string
@@ -10,6 +16,7 @@ export type WorldConfig = {
   allowSkip: boolean
   organizer?: string
   doorPinRequired?: boolean
+  ensEventName?: string
 }
 export type CheckinResult = { state: string; cm?: number; ordinal?: number; transactionHash?: string; attempt?: number; seed?: string; problem?: string }
 
@@ -37,13 +44,20 @@ export const api = {
   promoteOrganizer: (targetWallet: string, signed: Signed) => request<{ wallet: string; promoted: boolean }>('/api/organizers/promote', { targetWallet, ...signed }),
   claim: (passId: string, signed: Signed) => request<ServerTicket>('/api/claim', { passId, ...signed }),
   ensPass: (passId: string) => request<EnsPass>(`/api/ens/pass/${encodeURIComponent(passId)}`),
+  ensResolve: (name: string) => request<EnsResolvedName>(`/api/ens/resolve?name=${encodeURIComponent(name)}`),
   ensTransferCheck: (passId: string, recipient: string) => request<EnsTransferCheck>(`/api/ens/pass/${encodeURIComponent(passId)}/transfer-check`, { recipient }),
+  transferStatus: (passId: string, signed: Signed) => request<TransferRequest | null>('/api/transfers/status', { passId, ...signed }),
+  requestTransfer: (passId: string, recipient: string, signed: Signed) => request<TransferRequest>('/api/transfers/request', { passId, recipient, ...signed }),
+  cancelTransfer: (passId: string, signed: Signed) => request<{ cancelled: boolean }>('/api/transfers/cancel', { passId, ...signed }),
+  organizerTransfers: (eventId: string, signed: Signed) => request<TransferRequest[]>('/api/organizers/transfers', { eventId, ...signed }),
+  decideTransfer: (passId: string, requestId: string, decision: 'approve' | 'decline', signed: Signed) =>
+    request<{ status: string; unregisterTxHash?: string; registerTxHash?: string }>('/api/organizers/transfers/decision', { passId, requestId, decision, ...signed }),
   fund: (signed: Signed) => request<{ wallet: string }>('/api/fund', signed),
   checkinStart: (passId: string, signed: Signed) => request<{ id: string; code: string; seed: string; attempt: number }>('/api/checkin/start', { passId, ...signed }),
   checkinJoin: (code: string, pin: string) =>
-    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string }>('/api/checkin/join', { code, pin }),
+    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string; ensName?: string }>('/api/checkin/join', { code, pin }),
   checkinJoinSelected: (passId: string, pin: string) =>
-    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string }>('/api/checkin/join-selected', { passId, pin }),
+    request<{ id: string; seed: string; attempt: number; doorToken: string; holder: string; tier: string; ensName?: string }>('/api/checkin/join-selected', { passId, pin }),
   checkinStatus: (id: string) => request<CheckinResult>(`/api/checkin/${id}`),
   checkinReport: (id: string, report: Record<string, unknown>) => request<object>(`/api/checkin/${id}/report`, report),
   checkinRetry: (id: string, proof: Record<string, unknown>) => request<object>(`/api/checkin/${id}/retry`, proof),

@@ -29,6 +29,8 @@ export const env = {
     eventName: process.env.ENS_EVENT_NAME?.trim().toLowerCase(),
     parentRegistry: process.env.ENS_PARENT_REGISTRY,
     eventRegistry: process.env.ENS_EVENT_REGISTRY,
+    ensNodeUrl: process.env.ENSNODE_URL,
+    privateKey: process.env.ENS_PRIVATE_KEY,
     enabled: process.env.ENS_ENABLED === "true",
   },
 };

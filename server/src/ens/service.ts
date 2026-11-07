@@ -1,8 +1,12 @@
 import {
-  createPublicClient, decodeErrorResult, getAddress, http, isAddress, keccak256,
+  createPublicClient, createWalletClient, decodeErrorResult, getAddress, http, isAddress, keccak256,
   parseAbi, stringToHex, zeroAddress, type Address, type Hex,
 } from "viem";
 import { sepolia } from "viem/chains";
+import { evmChainIdToCoinType, normalizeName } from "enssdk";
+import { createEnsNodeClient } from "enssdk/core";
+import { omnigraph } from "enssdk/omnigraph";
+import { privateKeyToAccount } from "viem/accounts";
 import { passLabel } from "./labels.ts";
 
 const registryAbi = parseAbi([
@@ -10,6 +14,8 @@ const registryAbi = parseAbi([
   "function getOwner(uint256 anyId) view returns (address)",
   "function getTokenId(uint256 anyId) view returns (uint256)",
   "function getExpiry(uint256 anyId) view returns (uint64)",
+  "function unregister(uint256 anyId)",
+  "function register(string label, address owner, address registry, address resolver, uint256 roleBitmap, uint64 expiry) returns (uint256 tokenId)",
   "function safeTransferFrom(address from, address to, uint256 tokenId, uint256 amount, bytes data)",
   "error TransferDisallowed(uint256 tokenId, address owner)",
 ]);
@@ -20,7 +26,24 @@ export type EnsSettings = {
   eventName?: string;
   parentRegistry?: string;
   eventRegistry?: string;
+  ensNodeUrl?: string;
+  privateKey?: string;
 };
+
+const DEFAULT_ENSNODE_URL = "https://api.v2-sepolia.ensnode.io";
+const RABDI_CHAIN_ID = 7794095;
+const RABDI_COIN_TYPE = evmChainIdToCoinType(RABDI_CHAIN_ID);
+const ADDRESS_LOOKUP = `query ResolveName($name: InterpretedName!, $coinType: CoinType!) {
+  domain(by: { name: $name }) {
+    canonical { name { interpreted } }
+    resolve { records { addresses(coinTypes: [$coinType]) { address } } }
+  }
+}`;
+type NameLookupData = { domain?: {
+    canonical?: { name?: { interpreted?: string } } | null;
+    resolve?: { records?: { addresses?: Array<{ address?: string | null }> } | null } | null;
+  } | null };
+type NameLookupResponse = { errors?: unknown[]; data?: NameLookupData | null };
 
 export type EnsPassResult = {
   enabled: true;
@@ -53,6 +76,40 @@ function revertData(error: unknown): Hex | undefined {
 export function createEnsService(settings: EnsSettings) {
   const configured = settings.enabled && !!settings.rpcUrl && !!settings.eventName && !!settings.parentRegistry && !!settings.eventRegistry;
   const client = configured ? createPublicClient({ chain: sepolia, transport: http(settings.rpcUrl!) }) : undefined;
+  const privateKey = settings.privateKey && /^0x[0-9a-fA-F]{64}$/.test(settings.privateKey) ? settings.privateKey as Hex : undefined;
+  const writeClient = client && privateKey
+    ? createWalletClient({ chain: sepolia, transport: http(settings.rpcUrl!), account: privateKeyToAccount(privateKey) })
+    : undefined;
+  const ensNodeUrl = settings.ensNodeUrl?.trim() || DEFAULT_ENSNODE_URL;
+
+  async function resolveName(input: string) {
+    if (!input.trim() || input.trim().length > 255) throw new Error("invalid_ens_name");
+    let name: string;
+    try {
+      name = normalizeName(input.trim());
+    } catch {
+      throw new Error("invalid_ens_name");
+    }
+    let result: NameLookupResponse;
+    try {
+      const client = createEnsNodeClient({ url: ensNodeUrl }).extend(omnigraph);
+      result = await client.omnigraph.query<NameLookupData, { name: typeof name; coinType: typeof RABDI_COIN_TYPE }>({
+        query: ADDRESS_LOOKUP,
+        variables: { name, coinType: RABDI_COIN_TYPE },
+        signal: AbortSignal.timeout(8_000),
+      });
+    } catch {
+      throw new Error("ens_lookup_unavailable");
+    }
+    if (result.errors?.length) throw new Error("ens_lookup_unavailable");
+    const domain = result.data?.domain;
+    const canonicalName = domain?.canonical?.name?.interpreted;
+    if (!domain || !canonicalName) throw new Error("ens_name_not_found");
+    const value = domain.resolve?.records?.addresses?.find((record) => record.address)?.address;
+    if (!value) throw new Error("ens_address_not_set");
+    if (!isAddress(value)) throw new Error("ens_lookup_unavailable");
+    return { name: canonicalName, address: getAddress(value) };
+  }
 
   function addresses() {
     if (!client || !settings.eventName || !settings.parentRegistry || !settings.eventRegistry) throw new Error("ens_not_configured");
@@ -112,7 +169,31 @@ export function createEnsService(settings: EnsSettings) {
     }
   }
 
-  return { configured, pass, transferCheck };
+  async function reassignPass(passId: string, expectedHolder: string, recipient: string) {
+    const info = await pass(passId, expectedHolder);
+    if (!info.active || !info.linked || !info.matchesHolder) throw new Error("ens_pass_not_verified");
+    if (!isAddress(recipient)) throw new Error("invalid_recipient");
+    const nextOwner = getAddress(recipient);
+    if (nextOwner.toLowerCase() === info.owner.toLowerCase()) throw new Error("same_recipient");
+    if (!writeClient || !client) throw new Error("ens_write_not_configured");
+    const { eventRegistry } = addresses();
+    const label = passLabel(passId);
+    const labelId = BigInt(keccak256(stringToHex(label)));
+    const unregisterTxHash = await writeClient.writeContract({
+      address: eventRegistry, abi: registryAbi, functionName: "unregister", args: [labelId],
+    });
+    const unregisterReceipt = await client.waitForTransactionReceipt({ hash: unregisterTxHash });
+    if (unregisterReceipt.status !== "success") throw new Error("ens_unregister_failed");
+    const registerTxHash = await writeClient.writeContract({
+      address: eventRegistry, abi: registryAbi, functionName: "register",
+      args: [label, nextOwner, zeroAddress, zeroAddress, 0n, BigInt(info.expiry)],
+    });
+    const registerReceipt = await client.waitForTransactionReceipt({ hash: registerTxHash });
+    if (registerReceipt.status !== "success") throw new Error("ens_register_failed");
+    return { unregisterTxHash, registerTxHash };
+  }
+
+  return { configured, writeConfigured: !!writeClient, pass, transferCheck, reassignPass, resolveName };
 }
 
 export type EnsService = ReturnType<typeof createEnsService>;
