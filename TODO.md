@@ -6,6 +6,7 @@ The current code is the source for implementation status; planned behavior and s
 
 ## Project and app
 
+- [x] Remove the landing page's “Not covered yet” block and center the remaining demo coverage; production build passes.
 - [x] React/Vite app, web manifest, and Node server that serves the built app exist.
 - [x] `GET /api/health` reports whether the server responds; it does not check Arkiv, World ID or ENS.
 - [~] Browser wallet and wallet-signature sign-in are implemented; verify the full flow on the demo phones and clarify the security and recovery limits.
