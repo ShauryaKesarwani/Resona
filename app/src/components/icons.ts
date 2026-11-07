@@ -3,6 +3,12 @@
  * Importing from the package root makes the dev server bundle all 1,500+ icons into one 6 MB file.
  * Add a line here when you need a new icon.
  */
+export { CalendarBlankIcon } from '@phosphor-icons/react/dist/csr/CalendarBlank'
+export { UserIcon } from '@phosphor-icons/react/dist/csr/User'
+export { UsersIcon } from '@phosphor-icons/react/dist/csr/Users'
+export { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/csr/SlidersHorizontal'
+export { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch'
+export { ArrowSquareOutIcon } from '@phosphor-icons/react/dist/csr/ArrowSquareOut'
 export { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 export { XIcon } from '@phosphor-icons/react/dist/csr/X'
 export { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
@@ -24,6 +30,7 @@ export { DoorOpenIcon } from '@phosphor-icons/react/dist/csr/DoorOpen'
 export { FingerprintIcon } from '@phosphor-icons/react/dist/csr/Fingerprint'
 export { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask'
 export { HandPalmIcon } from '@phosphor-icons/react/dist/csr/HandPalm'
+export { ImageIcon } from '@phosphor-icons/react/dist/csr/Image'
 export { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 export { MinusCircleIcon } from '@phosphor-icons/react/dist/csr/MinusCircle'
 export { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus'

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { CheckCircleIcon, CircleDashedIcon, FlaskIcon, SealCheckIcon, WarningCircleIcon } from './icons'
-import { short, wallet, type Status } from '../data/mock'
+import { Link, useLocation } from 'react-router-dom'
+import { avatarName, displayName, wallet, type Status } from '../data/mock'
+import { useSignedIn } from '../services/auth'
 
 const look: Record<Status, { label: string; icon: typeof CheckCircleIcon; cls: string }> = {
   issued: { label: 'Ready to claim', icon: CircleDashedIcon, cls: 'text-text' },
@@ -31,22 +33,26 @@ export function SimTag({ children = 'Simulated' }: { children?: ReactNode }) {
   )
 }
 
-/** Wallet chip: name, short address, network. Sits top right of wallet screens. */
+/**
+ * Top right of every screen: who this wallet is. Shows the person's ENS name once they have one, otherwise the short address.
+ * It opens Account, where the role switch and the on chain details are.
+ */
 export function WalletChip() {
+  const signedIn = useSignedIn()
+  const { pathname } = useLocation()
+  const look = 'flex min-h-12 min-w-0 items-center gap-2 rounded-md border border-line px-2 transition duration-300 ease-base hover:border-accent active:scale-[0.96]'
+  if (!signedIn) {
+    return (
+      <Link to={`/signin?next=${encodeURIComponent(pathname)}`} className={`${look} body-5 px-4`}>
+        Sign in
+      </Link>
+    )
+  }
   return (
-    <div className="flex min-h-12 items-center gap-2 rounded-xl border border-line bg-surface-raised px-3">
-      <span className="caption-3 grid size-6 place-items-center rounded-full bg-surface-high" aria-hidden="true">
-        {wallet.name[0].toUpperCase()}
-      </span>
-      <span className="min-w-0 leading-none">
-        <span className="body-5 block truncate">{wallet.name}</span>
-        <span className="caption-5 block font-mono text-text-muted">{short(wallet.address)}</span>
-      </span>
-      <span className="caption-5 flex items-center gap-1 whitespace-nowrap text-text-muted">
-        <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
-        {wallet.network}
-      </span>
-    </div>
+    <Link to="/account" aria-label={`Account, ${displayName()}`} className={look}>
+      <Avatar name={avatarName()} size={28} />
+      <span className={`body-5 max-w-36 truncate pr-1 ${wallet.ens ? '' : 'font-mono'}`}>{displayName()}</span>
+    </Link>
   )
 }
 

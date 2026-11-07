@@ -1,124 +1,112 @@
-import { useState, type FormEvent } from 'react'
-import { AttendeeTabs } from '../../components/AttendeeTabs'
+import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Avatar, Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
-import { CheckCircleIcon, CopyIcon, KeyIcon } from '../../components/icons'
+import { ArrowRightIcon, ArrowSquareOutIcon, CheckCircleIcon, CopyIcon } from '../../components/icons'
+import { rememberRole, ROLES, roleFor, type Role } from '../../components/roles'
 import { Screen, TopBar } from '../../components/Screen'
 import { SignOutButton } from '../../components/SignOutButton'
-import { short, wallet } from '../../data/mock'
-import { walletAccount } from '../../utils/wallet'
+import { avatarName, displayName, wallet } from '../../data/mock'
+import { explorerAddress } from '../../services/arkiv'
 
-const WALLET_KEY = 'resona.walletKey'
-
-/** Your wallet is a key on this phone. This screen shows the address and lets you save or restore that key. */
+/** The home for everything about you: how you are using the app, your wallet on chain, and moving it to another device. */
 export default function Account() {
-  const [shown, setShown] = useState(false)
+  const { pathname } = useLocation()
+  const current = roleFor(pathname)
   const [copied, setCopied] = useState('')
-  const [restoring, setRestoring] = useState(false)
-  const [entered, setEntered] = useState('')
-  const [error, setError] = useState('')
 
-  const key = () => {
-    walletAccount() // makes the key if this phone has none yet
-    return localStorage.getItem(WALLET_KEY)!
-  }
   async function copy(what: string, value: string) {
     await navigator.clipboard?.writeText(value).catch(() => {})
     setCopied(what)
     setTimeout(() => setCopied(''), 2000)
   }
 
-  function restore(e: FormEvent) {
-    e.preventDefault()
-    const value = entered.trim()
-    if (!/^0x[a-fA-F0-9]{64}$/.test(value)) return setError('A recovery key starts with 0x and has 66 characters.')
-    localStorage.setItem(WALLET_KEY, value)
-    window.location.assign('/wallet')
-  }
-
   return (
     <Screen tabs>
-      <TopBar back="/" />
+      <TopBar right={null} />
       <header className="flex flex-col items-center gap-2 pt-2 text-center">
-        <Avatar name={wallet.name} size={64} />
-        <h1 className="heading-4">{wallet.name}</h1>
+        <Avatar name={avatarName()} size={64} />
+        <h1 className={`heading-4 ${wallet.ens ? '' : 'font-mono'}`}>{displayName()}</h1>
         <button
           type="button"
           onClick={() => copy('address', wallet.address)}
-          className="body-6 inline-flex min-h-12 max-w-full items-center gap-2 rounded-lg px-2 font-mono text-text-muted [overflow-wrap:anywhere]"
+          className="body-6 inline-flex min-h-12 max-w-full items-center gap-2 rounded-md px-2 text-text-muted transition duration-300 ease-base hover:text-text active:scale-[0.96]"
         >
-          {short(wallet.address)}
-          {copied === 'address' ? <CheckCircleIcon size={16} className="shrink-0 text-success" aria-label="Copied" /> : <CopyIcon size={16} className="shrink-0" aria-hidden="true" />}
+          {copied === 'address' ? 'Address copied' : 'Copy wallet address'}
+          {copied === 'address' ? (
+            <CheckCircleIcon size={16} className="animate-pop shrink-0 text-success" aria-hidden="true" />
+          ) : (
+            <CopyIcon size={16} className="shrink-0" aria-hidden="true" />
+          )}
         </button>
       </header>
 
-      <div className="rounded-2xl border border-line bg-surface-raised p-2">
-        <div className="rounded-lg bg-surface-inset">
-          <Row label="Network">{wallet.network}</Row>
-          <Row label="Public profile">
-            <a href={`/u/${wallet.address}`} className="inline-flex min-h-12 items-center text-accent">
-              Open
+      <section aria-labelledby="role" className="flex flex-col gap-2">
+        <h2 id="role" className="title-4 text-text-muted">
+          How you are using Resona
+        </h2>
+        <ul className="stagger flex flex-col border-y border-line">
+          {(Object.keys(ROLES) as Role[]).map((role) => {
+            const r = ROLES[role]
+            const on = role === current
+            return (
+              <li key={role} className="not-first:border-t not-first:border-line">
+                <Link
+                  to={r.home}
+                  onClick={() => rememberRole(role)}
+                  aria-current={on ? 'true' : undefined}
+                  className="group flex min-h-16 items-center gap-3 py-3 transition duration-300 ease-base active:scale-[0.99]"
+                >
+                  <r.icon size={24} className={`shrink-0 ${on ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="title-3 block">{r.title}</span>
+                    <span className="caption-2 block text-text-muted">{r.caption}</span>
+                  </span>
+                  {on && <span className="caption-4 text-accent">Now</span>}
+                  <ArrowRightIcon size={20} className="shrink-0 text-accent transition-transform duration-300 ease-base group-hover:translate-x-1 group-active:translate-x-1" aria-hidden="true" />
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <section aria-labelledby="chain" className="flex flex-col gap-2">
+        <h2 id="chain" className="title-4 text-text-muted">
+          On chain
+        </h2>
+        <div className="border-y border-line">
+          <Row label="Network">{wallet.network} test network</Row>
+          <Row label="This wallet">
+            <a href={explorerAddress(wallet.address)} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center gap-1 text-accent">
+              See on the explorer
+              <ArrowSquareOutIcon size={16} aria-hidden="true" />
             </a>
           </Row>
+          <Row label="Payments">
+            <Link to="/wallet/purchases" state={{ back: '/account' }} className="inline-flex min-h-12 items-center text-accent">
+              See purchases
+            </Link>
+          </Row>
+          <Row label="Attendance">
+            <Link to={`/u/${wallet.address}`} className="inline-flex min-h-12 items-center text-accent">
+              See your trophies
+            </Link>
+          </Row>
         </div>
-      </div>
+      </section>
 
       <section aria-labelledby="backup" className="flex flex-col gap-3">
-        <h2 id="backup" className="heading-6 flex items-center gap-2">
-          <KeyIcon size={20} className="text-accent" aria-hidden="true" />
-          Recovery key
+        <h2 id="backup" className="title-4 text-text-muted">
+          Keep this account safe
         </h2>
-        <p className="body-6 text-text-muted">
-          This wallet lives on this phone. If you clear the browser or change phones, your tickets stay on Arkiv but you lose the wallet that holds them. Save the key somewhere private. This is a test network key.
-        </p>
-        {shown && (
-          <>
-            <p className="rounded-xl border border-line bg-surface-raised p-4 font-mono text-sm [overflow-wrap:anywhere]">{key()}</p>
-            <Button variant="secondary" size="md" onClick={() => copy('key', key())}>
-              {copied === 'key' ? 'Key copied' : 'Copy key'}
-            </Button>
-          </>
-        )}
-        <Button variant="secondary" size="md" onClick={() => setShown(!shown)} aria-expanded={shown}>
-          {shown ? 'Hide recovery key' : 'Show recovery key'}
+        <p className="body-6 text-text-muted">This wallet lives on this phone. Save an encrypted account file now, so you can move it to a new phone or browser later.</p>
+        <Button variant="secondary" size="md" to="/account-transfer">
+          Save or move this account
         </Button>
       </section>
 
-      <section aria-labelledby="restore" className="flex flex-col gap-3">
-        <h2 id="restore" className="heading-6">
-          Restore a wallet
-        </h2>
-        {!restoring ? (
-          <Button variant="secondary" size="md" onClick={() => setRestoring(true)}>
-            Restore from a key
-          </Button>
-        ) : (
-          <form onSubmit={restore} noValidate className="flex flex-col gap-3">
-            <p className="body-6 text-text-muted">This replaces the wallet on this phone. Save the current key first if you still need it.</p>
-            <input
-              value={entered}
-              onChange={(e) => setEntered(e.target.value)}
-              aria-label="Recovery key"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="0x…"
-              className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 font-mono text-base placeholder:text-text-muted"
-            />
-            <p role={error ? 'alert' : undefined} className="body-6 text-danger empty:hidden">
-              {error}
-            </p>
-            <Button type="submit" size="md">
-              Replace this wallet
-            </Button>
-          </form>
-        )}
-      </section>
-
-      <div className="flex-1" />
       <SignOutButton />
-      <AttendeeTabs />
     </Screen>
   )
 }

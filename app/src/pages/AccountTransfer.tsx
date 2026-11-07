@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Screen, TopBar } from '../components/Screen'
+import { useSignedIn } from '../services/auth'
 import { exportAccount, importAccount } from '../utils/accountTransfer'
 
 export default function AccountTransfer() {
   const navigate = useNavigate()
+  const signedIn = useSignedIn()
   const [password, setPassword] = useState('')
   const [file, setFile] = useState<File>()
   const [busy, setBusy] = useState(false)
@@ -50,12 +52,12 @@ export default function AccountTransfer() {
 
   return (
     <Screen>
-      <TopBar back="/signin" title="Move your account" />
+      <TopBar back={signedIn ? "/account" : "/signin"} title="Move your account" right={null} />
       <h1 className="heading-4">Move your Resona account</h1>
       <p className="body-3 text-text-muted">On your old Resona address, save an encrypted file. On the new address, open this page and import it. You will still need to approve sign-in with World ID.</p>
       <p className="body-3 text-text-muted">Choose a unique password of at least 12 characters. Anyone with the file and password can control your wallet. Keep both private and delete the file after the move.</p>
       <label className="body-3">Transfer password
-        <input className="mt-2 w-full rounded-xl border border-line bg-surface-raised p-3" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input className="field mt-2 w-full" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
       <Button onClick={download} busy={busy} disabled={!walletKey || !session || password.length < 12}>Save encrypted account file</Button>
       {(!walletKey || !session) && <p className="body-6 text-text-muted">To save a file, open this page on the old address where you signed in.</p>}

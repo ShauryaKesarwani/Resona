@@ -4,6 +4,7 @@ import { CheckCircleIcon, WarningCircleIcon } from '../../components/icons'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
+import { DetailSkeleton } from '../../components/Skeleton'
 import { refreshTickets, wallet } from '../../data/mock'
 import { buy, explorerTx, isUpcoming, PurchaseError, type BuyStep } from '../../services/arkiv'
 import { api } from '../../services/api'
@@ -66,7 +67,7 @@ export default function Buy() {
             Could not read this event from Arkiv. Check your connection, then open this page again.
           </p>
         )}
-        {!events && !failed && <div aria-busy="true" aria-label="Loading event" className="h-40 animate-pulse rounded-2xl border border-line bg-surface-raised" />}
+        {!events && !failed && <DetailSkeleton label="Loading event" picture={false} />}
         {events && (
           <section className="flex flex-1 flex-col justify-center gap-2" role="alert">
             <h1 className="heading-5">We could not find this event</h1>
@@ -82,8 +83,8 @@ export default function Buy() {
   if (passId) {
     return (
       <Screen>
-        <TopBar back="/events" title="Buy a ticket" />
-        <section className="flex flex-1 flex-col justify-center gap-4" role="status">
+        <TopBar back="/events" title="Buy a ticket" right={null} />
+        <section className="stagger flex flex-1 flex-col justify-center gap-4" role="status">
           <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
           <h1 className="heading-4">You have a ticket</h1>
           <p className="body-3 max-w-prose text-text-muted">{event.eventName} on {prettyDate(event.eventDate)}. It is in your wallet, ready to check in.</p>
@@ -103,8 +104,8 @@ export default function Buy() {
     <Screen>
       <TopBar back={`/e/${event.eventId}`} title="Buy a ticket" />
       <h1 className="heading-4">Review and pay</h1>
-      <div className="rounded-2xl border border-line bg-surface-raised p-2">
-        <div className="rounded-lg bg-surface-inset">
+      <div className="border-y border-line">
+        <div>
           <Row label="Event">{event.eventName}</Row>
           <Row label="Date">{prettyDate(event.eventDate)}</Row>
           <Row label="Price">

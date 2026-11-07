@@ -4,6 +4,7 @@ import { isAddress } from 'viem'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { api } from '../../services/api'
+import { RowsSkeleton } from '../../components/Skeleton'
 import { organizerEvents, organizerAttendees, type ArkivEvent, type AttendeeTicket } from '../../services/arkiv'
 
 type Attendees = { tickets: AttendeeTicket[]; checkins: { passId: string; holder: string }[] }
@@ -69,14 +70,14 @@ export default function Attendees() {
   }
 
   return (
-    <Screen>
-      <TopBar back="/organizer" title="Attendees" />
+    <Screen tabs>
+      <TopBar />
       <h1 className="heading-4">Tickets and check-ins</h1>
       <p className="body-6 text-text-muted">Read from Arkiv. Purchased tickets appear when their payment passes the server’s checks; a payment that cannot be checked may be missing. The door checks eligibility again.</p>
       {events && events.length > 0 && (
         <label className="flex flex-col gap-2">
           <span className="title-4">Event</span>
-          <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base">
+          <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="field">
             {events.map((event) => <option key={event.eventId} value={event.eventId}>{event.eventName}</option>)}
           </select>
         </label>
@@ -87,7 +88,7 @@ export default function Attendees() {
         <form onSubmit={resolveSearch} className="flex flex-col gap-2">
           <label className="flex flex-col gap-2">
             <span className="title-4">Search wallet, ticket, tier or ENS name</span>
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setSearchError('') }} autoComplete="off" placeholder="Wallet, ticket ID or name.eth" className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setSearchError('') }} autoComplete="off" placeholder="Wallet, ticket ID or name.eth" className="field" />
           </label>
           {search.includes('.') && !isAddress(search.trim()) && <Button type="submit" variant="secondary" size="md" busy={searching}>{searching ? 'Resolving name' : 'Resolve ENS name'}</Button>}
           {resolvedSearch?.query.toLowerCase() === searchKey && <p role="status" className="caption-5 text-text-muted">{resolvedSearch.name} resolves to {resolvedSearch.address}</p>}
@@ -95,11 +96,11 @@ export default function Attendees() {
         </form>
       )}
       {error && <p role="alert" className="body-6 text-danger">{error}</p>}
-      {!data && !error && (!events || eventId) && <p role="status" className="body-6 text-text-muted">Loading from Arkiv…</p>}
+      {!data && !error && (!events || eventId) && <RowsSkeleton label="Loading attendees" />}
       {rows?.length === 0 && <p className="body-6 text-text-muted">No tickets found.</p>}
-      {rows && <ul className="flex flex-col gap-2">
+      {rows && <ul className="stagger flex flex-col">
         {rows.map((t) => (
-          <li key={t.passId} className="rounded-xl border border-line bg-surface-raised p-4">
+          <li key={t.passId} className="border-b border-line py-4">
             <p className="title-3">{isChecked(t) ? 'Checked in' : t.status.replaceAll('_', ' ')}</p>
             <p className="body-6 font-mono text-text-muted [overflow-wrap:anywhere]">{t.holder}</p>
             <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">Ticket {t.passId} · {t.tier} · {t.source}</p>

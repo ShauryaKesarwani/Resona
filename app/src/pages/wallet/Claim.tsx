@@ -4,7 +4,8 @@ import { CheckCircleIcon, SkipForwardIcon, WarningCircleIcon } from '../../compo
 import { SimTag } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { short, updateTicket, useTickets, wallet } from '../../data/mock'
+import { DetailSkeleton } from '../../components/Skeleton'
+import { short, updateTicket, useTickets, useTicketsState, wallet } from '../../data/mock'
 import { api } from '../../services/api'
 import { signedBy } from '../../services/auth'
 
@@ -20,6 +21,16 @@ export default function Claim() {
   const [error, setError] = useState<string>()
   const [verified, setVerified] = useState(false)
   const back = `/wallet/ticket/${id}`
+  const state = useTicketsState()
+
+  if (!ticket && state === 'loading') {
+    return (
+      <Screen>
+        <TopBar back={back} title="Claim ticket" />
+        <DetailSkeleton label="Loading ticket" picture={false} />
+      </Screen>
+    )
+  }
 
   if (!ticket || ticket.past || (ticket.status !== 'issued' && ticket.status !== 'skipped' && phase !== 'done')) {
     return (
@@ -118,8 +129,8 @@ export default function Claim() {
           <p className="body-3 text-text-muted">
             The ticket goes to the wallet your name points to. Check that it matches this phone.
           </p>
-          <div className="rounded-2xl border border-line bg-surface-raised p-2">
-            <div className="flex flex-col gap-1 rounded-lg bg-surface-inset p-4">
+          <div className="border-y border-line">
+            <div className="flex flex-col gap-1 py-4">
               <p className="title-2">{wallet.name}</p>
               <p className="body-6 font-mono text-text-muted">{short(wallet.address)}</p>
               <p className="caption-1 mt-2 flex items-center gap-1 text-success">

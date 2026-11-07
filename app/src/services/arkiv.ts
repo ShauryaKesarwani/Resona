@@ -49,6 +49,7 @@ const MIN_BALANCE = parseEther('0.005') // Covers the two transactions of a purc
 const today = () => new Date().toISOString().slice(0, 10)
 
 export const explorerTx = (hash: string) => `https://rabdi.explorer.arkiv.network/tx/${hash}`
+export const explorerAddress = (address: string) => `https://rabdi.explorer.arkiv.network/address/${address}`
 export const isUpcoming = (event: Pick<ArkivEvent, 'eventDate'>) => event.eventDate >= today()
 
 let organizerAddress: Promise<Hex> | undefined

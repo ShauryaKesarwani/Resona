@@ -2,131 +2,140 @@
 
 Every screen, where its buttons sit, and where each one goes. This is the contract for building and reviewing screens. The routes are in `app/src/App.tsx`.
 
-Last updated on 7 November 2026.
+Last updated on 7 November 2026, after moving the role switch to Account.
 
 ## Rules for every screen
 
-- **Top left:** the Back button, a 48px square. It goes to the screen's parent, never to browser history, so deep links still work.
-- **Top right:** context only: the wallet chip (name, short address, network) on wallet screens, the staff chip on the door. Never an action.
-- **Attendee tab bar:** `/events` and `/wallet` share a fixed bottom bar with three tabs: Events, Tickets and Account. Detail screens drop the bar and put the primary action at the bottom instead.
-- **Bottom:** the one primary action, full width and at least 64px tall, in the thumb zone. A secondary action sits under it at 48px.
+- **Top left:** Back, a 48px square, on any screen with a parent. It goes to the parent, never to browser history, so deep links still work. Home screens have no parent, so they show the Resona wordmark, which goes to `/`.
+- **Top right:** the wallet chip on every screen: avatar and ENS name, or the short address until names exist. It opens `/account`. Signed out, it reads "Sign in". Hidden during a running check and on sign in.
+- **Bottom:** three tabs on every home screen. The primary action, full width and at least 64px tall, sits just above them, or at the very bottom of a detail screen. A secondary action sits under it at 48px.
 - **Names:** a button keeps one name for the whole flow, and says what it does. Sentence case.
 - **Demo only buttons** start with "Demo control:" and sit below the real actions.
 - **Every screen has one `h1`** and an obvious way back or out.
+- **Loading:** the next screen appears at once with a skeleton of its own shape.
+
+## Roles and tabs
+
+There are three ways to use the app. There is no separate role picker. You switch on the Account tab, which is the third tab in every role, and the top right chip gets you there from anywhere.
+
+| Role | Home | Tabs |
+|---|---|---|
+| Attendee | `/wallet` | Events `/events`, Tickets `/wallet`, Account `/account` |
+| Door staff | `/door` | Door `/door`, Check ins `/door/recent`, Account |
+| Organizer | `/organizer` | Manage `/organizer`, Attendees `/organizer/attendees`, Account |
+
+The route decides the tabs. Account keeps the tabs of the role you came from. `/enter` redirects to `/account`.
 
 ## Access
 
 | Who | Routes |
 |---|---|
 | Anyone | `/`, `/signin`, `/lab`, `/privacy`, `/terms`, `/u/:name`, `/events` and `/e/:id`. Browsing events needs no account |
-| Signed in, or a guest | `/enter`, `/wallet`, `/door`, `/organizer`, `/e/:id/buy` and everything under them |
+| Signed in, or a guest | Everything else. Anyone else goes to `/signin?next=<where they were going>` and returns there afterwards. With no `next`, sign in lands on `/wallet` |
 
-Signing in means a World ID check each time (the first creates a World session, later ones prove it again), plus the wallet signature. A reload stays signed in until "Sign out" on the Tickets screen. A guest skipped the check, for the demo only. Anyone else on a guarded route goes to `/signin?next=<where they were going>` and returns there afterwards.
+Signing in means a World ID check each time (the first creates a World session, later ones prove it again), plus the wallet signature. A reload stays signed in until "Sign out" on Account. A guest skipped the check, for the demo only.
 
 ## The map
 
-The attendee's world is two tabs, Events and Tickets, joined by the buy flow.
-
 ```
-                          / Landing   hero and final button: "Open your wallet"
-                          │           footer: Events · Door staff and organizers · Privacy · Terms
-          ┌───────────────┼──────────────────────────────┐
-          ▼               ▼                              ▼
-   /signin?next=/wallet   /events (public)        /signin?next=/enter
-   World ID, or skip         │                            │
-          │                  │                            ▼
-          ▼                  ▼                         /enter  (pick a role)
-   ┌── /wallet ◄── tab ──► /events ──────────┐          ├─► /wallet
-   │   Tickets    bar      Events            │          ├─► /door
-   │      │                  │ tap an event   │          └─► /organizer
-   │      │ tap a ticket     ▼                │
-   │      │            /e/:id  (public)       │  "Host your own event" ─► /organizer
-   │      │                  │ Buy a ticket   │
-   │      │                  ▼ (needs sign in) │
-   │      │            /e/:id/buy             │
-   │      │            review ► pay ► done    │
-   │      │                                  │ Open your ticket
-   │      ▼◄─────────────────────────────────┘
-   │  /wallet/ticket/:id            Purchases: /wallet/purchases (from the Tickets screen)
-   │   Ready to claim ─► /wallet/claim/:id ─► back to ticket
-   │   Claimed ────────► /wallet/checkin/:id ─► back to ticket
-   │                └──► /wallet/transfer/:id ─► back to ticket
-   │   Not verified ───► /signin?next=/wallet/ticket/:id
-   │   Checked in ─────► /u/:name
-   └─ "Buy tickets" ─► /events        (/wallet/events redirects to /events)
+ / Landing ── "Open your wallet" ──► /signin if needed ──► /wallet
+   footer: Events · Door staff and organizers (/account) · Privacy · Terms
 
-   /door  (one page: ready ─► scan or type the holder's code ─► checking ─► pass or fail ─► ready)
-     └─► /door/recent
+ Any screen ── top right chip ──► /account
+   /account ── Attendee ──► /wallet
+            ── Door staff ──► /door
+            ── Organizer ──► /organizer
+            ── On chain: explorer, purchases, trophies
+
+ ATTENDEE  [ Events | Tickets | Account ]
+   /events ──► /e/:id ── Buy a ticket ──► /e/:id/buy ── done ──► /wallet/ticket/:id
+   /wallet ──► /wallet/ticket/:id
+                 Ready to claim ──► /wallet/claim/:id ──► back to ticket
+                 Claimed ─────────► /wallet/checkin/:id ── pass ──► /u/:name (trophy)
+                 Claimed ─────────► /wallet/transfer/:id ──► back to ticket
+                 Not verified ────► /signin?next=this ticket
+                 Checked in ──────► /u/:name
+                 Payment row ─────► /wallet/receipt/:txn ──► back to ticket
+   /wallet ── Purchases ──► /wallet/purchases ──► /wallet/receipt/:txn
+
+ DOOR  [ Door | Check ins | Account ]
+   /door: ready ► scan or type the code ► checking ► pass or fail ► Next person ► ready
+   Tabs hide while checking and on the result.
+
+ ORGANIZER  [ Manage | Attendees | Account ]
+   /organizer: Issue · Look up · New event · Live door · Add an organizer
+   /organizer/attendees ── Select for check in ──► /door?passId=
 ```
 
 ## Screen by screen
 
-"Back" is the top left button. "Primary" is the bottom full width button.
-
 ### Public
 
-| Route | Back | Primary | Other buttons | Notes |
+| Route | Left | Primary | Other | Notes |
 |---|---|---|---|---|
-| `/` Landing | none | "Open your wallet" goes to `/wallet`, after the image pushes in and fades to black | Nav: How it works, What it stops, Questions (scroll). Footer: Events to `/events`, Door staff and organizers to `/enter`, Privacy, Terms. Final section repeats the same primary | The final button must match the hero button |
-| `/signin` | `/` | The World ID action | "Skip for now" (demo). After success go to `next`, else `/enter` | If World says this person already has an account, show "You already have an account" with no way forward except Back |
-| `/privacy`, `/terms` | `/` | "Go back" | None | Placeholder pages |
-| `/u/:name` Profile | `/` | "Share" copies the link | None | Public. The name is a wallet address for now. Avatar, short address, one trophy per event attended with place through the door, distance and date, read from Arkiv |
-| `/events` Events | `/` | None. Each event card goes to its event. The last card, "Host your own event", goes to `/organizer` | Tab bar: Events, Tickets. Right: wallet chip | Read from Arkiv, so it shows loading, failed and empty states. Each event is drawn as a ticket with a perforation, and the price on the stub. Only events that have not happened yet |
-| `/e/:id` Event | `/events` | "Buy a ticket" goes to `/e/:id/buy`. Past events show "This event has ended." instead | Right: wallet chip | Public. Picture, date, ticket price, network |
-| `/e/:id/buy` Buy | `/e/:id` | "Pay and get your ticket". The label follows the real steps: Adding test tokens, Sending payment, Saving your ticket. Done: "Open your ticket" | Done: "Back to events" | Guarded. A real payment on the test network. Errors name the cause and link to the payment when there is one |
-| `/lab` | `/` | Sonar test controls | None | Person 1's page. Its Back currently points to a guarded route |
+| `/` Landing | Wordmark | "Open your wallet" goes to `/wallet`, after the image pushes in and fades to black | Nav: How it works, What it stops, Questions. The sound section has a three way switch. FAQ opens one answer at a time | The final button matches the hero button |
+| `/signin` | Back to `/` | The World ID action | "Skip for now" (demo) | No chip |
+| `/privacy`, `/terms` | Back to `/` | "Go back" | None | Placeholder pages |
+| `/u/:name` Profile | Back to `/account` for your own, `/` for anyone else's | "Share" copies the link | None | Avatar, address, one trophy per event attended, read from Arkiv |
+| `/e/:id` Event | Back to `/events` | "Buy a ticket". Past events say "This event has ended." | None | Picture, date, price, network |
+| `/account-transfer` | Back to `/account`, or `/signin` when signed out | "Save encrypted account file", "Import account and sign in" | None | Moves a wallet and World session between browsers with a password. Linked from sign in and Account |
+| `/lab` | Back to `/` | Sonar test controls | None | A teammate's page, outside the design system |
 
-### Role picker
+### Attendee
 
-| Route | Back | Rows | Notes |
-|---|---|---|---|
-| `/enter` | `/` | Attendee to `/wallet`, Door staff to `/door`, Organizer to `/organizer` | No primary button. Three equal rows is right here, because the roles are equal choices |
-
-### Wallet (attendee)
-
-| Route | Back | Primary | Secondary and other | Notes |
+| Route | Left | Primary | Other | Notes |
 |---|---|---|---|---|
-| `/wallet` Tickets | `/` | "Buy tickets" goes to `/events` | Tab bar: Events, Tickets. "Purchases" link to `/wallet/purchases`. Right: wallet chip | Tickets are read from Arkiv. Empty state: "No tickets yet" |
-| `/account` Account | `/` | "Sign out" at the bottom | "Show recovery key", "Restore from a key", copy the address, open the public profile. Tab bar | The wallet is a key on this phone, so this is where it is saved or restored |
-| `/wallet/receipt/:txn` Receipt | `/wallet/purchases` | "See it on the explorer" | The ticket row links to the pass | One payment drawn as a receipt. Reached from Purchases and from the ticket's Payment row |
-| `/wallet/ticket/:id` | `/wallet` | Depends on status, below | See below | Shows pass, tier, holder, verification, transfer policy |
-| `/wallet/claim/:id` | the ticket | Step 1 "Confirm name", then "Lock ticket to this phone" | Failure: "Try again" and "Back to ticket". Success: "Back to ticket" | Two steps. World ID already happened at sign in |
-| `/wallet/checkin/:id` | the ticket | Ready ("Before you check in"): "Start check in", after a diagram of the 30 cm gap and three tips. Running: sonar rings and the live microphone waveform. Pass or fail also shows the trace of where each sound was heard. Pass: "Back to ticket". Fail: "Try again" | Shows a QR code and a 6 digit code for the door | Real sound, signed by the wallet. Unclaimed ticket shows "Claim ticket" instead |
-| `/wallet/transfer/:id` | the ticket | "Ask the organizer to approve" | "Demo control: check the ENS transfer rule". Pending: "Cancel request" and "Back to ticket" | With ENS configured, the demo runs a read-only transfer simulation and labels that no transaction was sent. The organizer request is still simulated |
+| `/events` | Wordmark | None. Each event row opens it | "Host your own event" goes to `/organizer` | Upcoming only. Skeleton, failed and empty states |
+| `/e/:id/buy` | Back to `/e/:id` | "Pay and get your ticket". Done: "Open your ticket" | Done: "Back to events" | A real payment on the test network. Label follows the steps |
+| `/wallet` | Wordmark | Only when empty: "Buy tickets" goes to `/events` | "Purchases" goes to `/wallet/purchases`. Each row opens the ticket | Upcoming, then past |
+| `/wallet/ticket/:id` | Back to `/wallet` | Depends on status, below | Payment row opens the receipt | The pass: art, event, tier, number, status, then the facts |
+| `/wallet/claim/:id` | Back to the ticket | Step 1 "Confirm name", then "Lock ticket to this phone" | Failure: "Try again" and "Back to ticket" | Two steps |
+| `/wallet/checkin/:id` | Back to the ticket | Ready: "Start check in". Pass: "View your trophy". Fail: "Try again" | Pass: "Back to ticket" | Before you check in, then QR and 6 digit code, then rings and live waveform, then the result with the sound trace |
+| `/wallet/transfer/:id` | Back to the ticket | "Ask the organizer to approve" | "Demo control: check the ENS transfer rule". Pending: "Cancel request", "Back to ticket" | Real signed request. The organizer approves or declines on `/organizer/transfers` |
+| `/wallet/purchases` | Back to where you came from, `/wallet` or `/account` | None | Each row: "See receipt" | Read from Arkiv |
+| `/wallet/receipt/:txn` | Back to where you came from | "See it on the explorer" | Ticket row opens the pass | |
 
 Ticket screen buttons by status:
 
 | Status | Primary | Secondary |
 |---|---|---|
-| Ready to claim | "Claim ticket" to the claim screen | none |
+| Ready to claim | "Claim ticket" | none |
 | Claimed | "Check in" | "Send to someone" |
-| Not verified | "Check in" | "Sign in with World ID" to `/signin?next=` this ticket |
-| Checked in | "View your trophy" to `/u/:name` | none |
+| Not verified | "Check in" | "Sign in with World ID" |
+| Checked in | "View your trophy" | none |
 
-### Door (staff)
+### Account
 
-| Route | Back | Primary | Secondary and other | Notes |
+| Route | Left | Rows | Notes |
+|---|---|---|---|
+| `/account` | Wordmark | Role rows: Attendee, Door staff, Organizer. On chain: Network, See on the explorer, See purchases, See your trophies. "Save or move this account" (`/account-transfer`), "Sign out". "Copy wallet address" under the name | No chip, because this is where the chip goes. ENS name shows here first once it exists |
+
+### Door
+
+| Route | Left | Primary | Other | Notes |
 |---|---|---|---|---|
-| `/door` | `/enter` | Ready: "Check in" with the holder's 6 digit code and the door PIN. Pass: "Next person". Fail: "Try again", or "Next person" when the check could not be saved | "Scan ticket" opens the camera where the browser can read QR codes. "Recent" to `/door/recent` | One page, four states: ready, checking, pass, fail. Real sound exchange and a real Arkiv record. The mic stays open between tries |
-| `/door/recent` | `/door` | "Back to the door" | None | Real, read from Arkiv |
-
-Manual admit was removed as out of scope.
+| `/door` | Wordmark | Ready: "Scan check-in QR code". Pass: "Next person". Fail: "Try again", or "Next person" when the check could not be saved | "Check in with code". With a selected ticket: "Check in selected ticket", "Clear selection" | One page with four states. Tabs hide while checking and on the result. Real sound and a real Arkiv record |
+| `/door/recent` | Wordmark | None | Tab bar | Read from Arkiv |
 
 ### Organizer
 
-| Route | Back | Primary | Other | Notes |
+| Route | Left | Primary | Other | Notes |
 |---|---|---|---|---|
-| `/organizer` | `/enter` | Issue: "Issue ticket". Look up: "Look up". New event: "Publish event". Live door: none, it refreshes every 5 seconds | A switch at the top changes between Issue and Look up. "Use this phone's wallet" fills the address. The Look up view also lists what was issued in this session | The only organizer screen for now. The old sub routes are dropped: transfers arrive with ENS, and manual entries are out of scope |
+| `/organizer` | Wordmark | Issue: "Issue ticket". Look up: "Look up". New event: "Publish event". Live door: none, it refreshes itself | "Add an organizer" opens a form under the title. "Use this phone's wallet" fills the address | A sliding switch changes between the four |
+| `/organizer/transfers` | Back to `/organizer` | "Refresh requests". Each request: "Approve", "Decline" | Reached from "Review ticket transfers" on Manage. Keeps the organizer tabs | Moves an issued ticket and its ENS pass. Signed organizer routes |
+| `/organizer/attendees` | Wordmark | "Refresh from Arkiv" | "Select for check in" goes to `/door?passId=` | Issued tickets only, not purchases |
 
 ## Journeys
 
-**Attendee, first time.** Landing, "Open your wallet", sign in with World ID, land on `/wallet`, tap a ticket, "Claim ticket", confirm name, lock to this phone, back on the ticket, "Check in".
+**Attendee, first time.** Landing, "Open your wallet", sign in with World ID, land on `/wallet`, tap a ticket, "Claim ticket", confirm name, lock to this phone, back on the ticket, "Check in", "View your trophy".
 
 **Attendee, returning.** Landing, "Open your wallet", straight to `/wallet`, because the device wallet is the login.
 
 **Check in, two phones.** The holder opens the ticket and taps "Start check in", which shows a QR code and a 6 digit code. The door scans or types it and enters the PIN. Both phones listen and measure. The door shows the result and "Next person". The holder sees the result and "Back to ticket".
 
-**Organizer.** Landing footer or `/enter`, Organizer, paste an address or tap "Use this phone's wallet", pick a tier, "Issue ticket". The ticket shows in that wallet.
+**Changing role.** Tap the top right chip, then Attendee, Door staff or Organizer. The tabs change with the role.
+
+**Organizer.** Landing footer or the chip, Organizer, paste an address or tap "Use this phone's wallet", pick a tier, "Issue ticket". The ticket shows in that wallet.
 
 **Buying a ticket.** Events tab, tap an event, "Buy a ticket", sign in if needed, review, "Pay and get your ticket", "Open your ticket". The payment is real, on the Rabdi test network, and Resona adds test tokens first if the wallet is short. One human gets one ticket per event.
 
@@ -149,15 +158,6 @@ Manual admit was removed as out of scope.
 | Buy a ticket | Start buying | Event page |
 | Pay and get your ticket | Pay, then receive the ticket | Buy |
 | Open your ticket | See the ticket just bought | Buy, done |
-
-## Fixed in this pass
-
-- The attendee flow is organized around an events hub with a two tab bar. Utkarsh's wallet events screen is replaced by it, and the old `/wallet/events` link redirects. His purchase logic in `services/arkiv.ts` is unchanged.
-
-- The landing page's final button went to the role picker while the hero button went to the wallet. Both now go to `/wallet`.
-- "Page not found" sent people to the guarded role picker. It now goes to `/`.
-- The ticket screen's sign in button is named "Sign in with World ID" (Person A had already renamed it).
-- The wallet's Back button went to the role picker, which a first time attendee never saw. It now goes to `/`.
 
 ## Open
 

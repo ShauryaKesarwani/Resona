@@ -98,7 +98,7 @@ Resona is being built from scratch for ETHGlobal Mumbai, targeting the World ID,
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Platform decision, components, keys, sponsor designs and build order |
 | [docs/TRACKS.md](docs/TRACKS.md) | Prize track requirements and submission checklists |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | What is decided, open questions, corrections to the brief and sources |
-| [docs/AI_TOOLS_SETUP.md](docs/AI_TOOLS_SETUP.md) | Setting up Claude Code with the Arkiv, World and ENS tools |
+| [docs/AI_TOOLS_SETUP.md](docs/AI_TOOLS_SETUP.md) | Setting up AI coding tools (Codex, OpenCode, Claude) with the Arkiv, World and ENS tools |
 
 New information from the team goes into the matching document, and anything undecided goes into `DECISIONS.md`.
 

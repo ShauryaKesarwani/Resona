@@ -32,14 +32,14 @@ export default function SignIn() {
   const next = params.get('next') ?? ''
   const enter = () => {
     markSignedIn()
-    navigate(/^\/(?!\/)/.test(next) ? next : '/enter', { replace: true })
+    navigate(/^\/(?!\/)/.test(next) ? next : '/wallet', { replace: true })
   }
   const session = worldSession()
 
   if (taken) {
     return (
       <Screen>
-        <TopBar back="/" title="Sign in" />
+        <TopBar back="/" title="Sign in" right={null} />
         <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
           <WarningCircleIcon size={48} className="text-danger" aria-hidden="true" />
           <h1 className="heading-4">You already have an account</h1>
@@ -54,7 +54,7 @@ export default function SignIn() {
 
   return (
     <Screen>
-      <TopBar back="/" title="Sign in" />
+      <TopBar back="/" title="Sign in" right={null} />
       <Figure ratio="16 / 7" position="50% 45%" />
       <h1 className="heading-4 mt-2">{session ? 'Welcome back' : 'Sign in with World ID'}</h1>
       <p className="body-3 text-text-muted">
@@ -78,7 +78,7 @@ export default function SignIn() {
             ? undefined
             : () => {
                 continueAsGuest()
-                navigate(/^\/(?!\/)/.test(next) ? next : '/enter', { replace: true })
+                navigate(/^\/(?!\/)/.test(next) ? next : '/wallet', { replace: true })
               }
         }
         onCode={(code) => {

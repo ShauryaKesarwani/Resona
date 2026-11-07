@@ -50,7 +50,7 @@ export function LiveWave({ feed }: { feed: MutableRefObject<((samples: Float32Ar
     }
   }, [feed])
 
-  return <canvas ref={canvas} aria-hidden="true" className="block h-24 w-full rounded-xl border border-line bg-surface-raised" />
+  return <canvas ref={canvas} aria-hidden="true" className="block h-24 w-full border-y border-line" />
 }
 
 /** What this phone heard: how well each sound matched the recording, with a mark where each one arrived. */
@@ -87,7 +87,7 @@ export function TraceChart({ analysis }: { analysis: Analysis }) {
 
   return (
     <figure className="flex flex-col gap-2">
-      <canvas ref={canvas} role="img" aria-label="Where this phone heard each sound" className="block h-24 w-full rounded-xl border border-line bg-surface-raised" />
+      <canvas ref={canvas} role="img" aria-label="Where this phone heard each sound" className="block h-24 w-full border-y border-line" />
       <figcaption className="caption-4 flex flex-wrap gap-x-4 text-text-muted">
         <span className="inline-flex items-center gap-1">
           <span className="size-2 rounded-full bg-accent" aria-hidden="true" />

@@ -13,7 +13,7 @@ const MESSAGES: Record<string, string> = {
   arkiv_not_configured: 'The server cannot reach Arkiv. Check its keys, then try again.',
 }
 
-const input = 'min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base placeholder:text-text-muted'
+const input = 'field placeholder:text-text-muted'
 
 /** Publishes an event on Arkiv. It shows on the events list once Arkiv has indexed it. */
 export function NewEvent() {

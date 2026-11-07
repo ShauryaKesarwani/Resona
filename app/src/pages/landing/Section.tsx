@@ -10,6 +10,11 @@ export function Section({ id, children, className = '' }: { id?: string; childre
   )
 }
 
+/** A tiny faded aside under a heading. Use only where the joke lands on its own. */
+export function Aside({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <p className={`caption-5 text-text-muted/50 ${className}`}>{children}</p>
+}
+
 /** Card with an inset panel. Outer radius 16 and 8px padding, so the inner radius is 8. */
 export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (

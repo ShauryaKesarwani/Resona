@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
+import { RowsSkeleton } from '../../components/Skeleton'
 import { ordinal, short } from '../../data/mock'
 import { recentCheckins, type ArkivCheckin } from '../../services/arkiv'
 
@@ -14,18 +14,18 @@ export default function Recent() {
   }, [])
 
   return (
-    <Screen>
-      <TopBar back="/door" title="Recent check ins" />
+    <Screen tabs>
+      <TopBar />
       <h1 className="heading-4">{rows ? `${rows.length} checked in` : 'Recent check ins'}</h1>
       {failed && (
         <p role="alert" className="body-6 text-danger">
           Could not read check ins from Arkiv. Check your connection, then open this page again.
         </p>
       )}
-      {!rows && !failed && <div aria-busy="true" aria-label="Loading check ins" className="h-24 animate-pulse rounded-2xl border border-line bg-surface-raised" />}
+      {!rows && !failed && <RowsSkeleton label="Loading check ins" />}
       {rows?.length === 0 && <p className="body-6 text-text-muted">Nobody has checked in yet.</p>}
       {rows && rows.length > 0 && (
-        <ul className="flex flex-col">
+        <ul className="stagger flex flex-col">
           {rows.map((c) => (
             <li key={c.passId} className="flex items-center justify-between gap-4 py-3 not-first:border-t not-first:border-line">
               <div className="min-w-0">
@@ -40,8 +40,6 @@ export default function Recent() {
           ))}
         </ul>
       )}
-      <div className="flex-1" />
-      <Button to="/door">Back to the door</Button>
     </Screen>
   )
 }

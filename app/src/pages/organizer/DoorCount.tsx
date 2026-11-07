@@ -37,14 +37,14 @@ export function DoorCount() {
       {events.length > 0 && (
         <label className="flex flex-col gap-2">
           <span className="title-4">Event</span>
-          <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base">
+          <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="field">
             {events.map((event) => <option key={event.eventId} value={event.eventId}>{event.eventName}</option>)}
           </select>
         </label>
       )}
       {events.length === 0 && !failed && <p className="body-6 text-text-muted">Publish an event before viewing door activity.</p>}
-      <div className="flex flex-col items-center gap-1 rounded-2xl border border-line bg-surface-raised py-8 text-center">
-        <p className="heading-1 tabular-nums">{rows ? selectedRows.length : '…'}</p>
+      <div className="flex flex-col items-center gap-1 border-y border-line py-8 text-center">
+        <p key={rows ? selectedRows.length : -1} className="heading-1 animate-pop tabular-nums">{rows ? selectedRows.length : '…'}</p>
         <p className="body-3 text-text-muted">through the door</p>
       </div>
       {failed && (
@@ -53,7 +53,7 @@ export function DoorCount() {
         </p>
       )}
       {rows && selectedRows.length > 0 && (
-        <ul className="flex flex-col">
+        <ul className="stagger flex flex-col">
           {selectedRows.slice(0, 8).map((c) => (
             <li key={c.passId} className="flex items-center justify-between gap-4 py-3 not-first:border-t not-first:border-line">
               <div className="min-w-0">

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { formatEther } from 'viem'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
+import { DetailSkeleton } from '../../components/Skeleton'
 import { short, useTickets } from '../../data/mock'
 import { allEvents, explorerTx, myPurchases, type ArkivEvent, type ArkivPayment } from '../../services/arkiv'
 import { prettyDate } from '../events/art'
@@ -11,6 +12,7 @@ import { prettyDate } from '../events/art'
 /** One payment, drawn as a receipt: what was bought, how much, when, and the proof on the explorer. */
 export default function Receipt() {
   const { txn = '' } = useParams()
+  const back = (useLocation().state as { back?: string } | null)?.back ?? '/wallet/purchases'
   const tickets = useTickets()
   const [payment, setPayment] = useState<ArkivPayment | null>()
   const [events, setEvents] = useState<ArkivEvent[]>([])
@@ -31,7 +33,7 @@ export default function Receipt() {
   if (payment === null || failed) {
     return (
       <Screen>
-        <TopBar back="/wallet/purchases" title="Receipt" />
+        <TopBar back={back} title="Receipt" />
         <section className="flex flex-1 flex-col justify-center gap-2" role="alert">
           <h1 className="heading-5">{failed ? 'We could not read this receipt' : 'We could not find this receipt'}</h1>
           <p className="body-3 text-text-muted">{failed ? 'Check your connection, then open this page again.' : 'It may belong to a different wallet.'}</p>
@@ -43,11 +45,11 @@ export default function Receipt() {
 
   return (
     <Screen>
-      <TopBar back="/wallet/purchases" title="Receipt" />
+      <TopBar back={back} title="Receipt" />
       {!payment ? (
-        <div aria-busy="true" aria-label="Loading receipt" className="h-80 animate-pulse rounded-2xl border border-line bg-surface-raised" />
+        <DetailSkeleton label="Loading receipt" picture={false} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
+        <div className="animate-rise overflow-hidden border border-line">
           <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
             <p className="caption-4 text-text-muted">Paid</p>
             <h1 className="heading-2 tabular-nums">{formatEther(BigInt(payment.amountWei))}&nbsp;tGLM</h1>
@@ -57,7 +59,7 @@ export default function Receipt() {
             <span className="absolute -top-3 -left-3 size-6 rounded-full border border-line bg-surface" />
             <span className="absolute -top-3 -right-3 size-6 rounded-full border border-line bg-surface" />
           </div>
-          <div className="rounded-lg">
+          <div className="rounded-md">
             <Row label="Date">{prettyDate(payment.createdAt.slice(0, 10))}</Row>
             <Row label="Event date">{event ? prettyDate(event.eventDate) : 'Not published'}</Row>
             <Row label="Payment">
@@ -77,7 +79,7 @@ export default function Receipt() {
       )}
       <div className="flex-1" />
       {payment && (
-        <a href={explorerTx(payment.txnHash)} target="_blank" rel="noreferrer" className="inline-flex min-h-16 w-full items-center justify-center rounded-xl border border-line bg-surface-raised button-lg">
+        <a href={explorerTx(payment.txnHash)} target="_blank" rel="noreferrer" className="inline-flex min-h-16 w-full items-center justify-center rounded-md border border-line button-lg transition duration-300 ease-base hover:border-accent active:scale-[0.98]">
           See it on the explorer
         </a>
       )}

@@ -6,7 +6,7 @@ type Group = { name: string; frames: Frame[] }
 
 /** Dev only. Every screen in a phone frame on one page, for looking at the whole app at once. */
 export default function Canvas() {
-  const [scale, setScale] = useState(0.6)
+  const [scale, setScale] = useState(0.9)
   const [width, setWidth] = useState(390)
   const [eventId, setEventId] = useState('missing')
   const [holder, setHolder] = useState('0x0000000000000000000000000000000000000001')
@@ -19,7 +19,7 @@ export default function Canvas() {
 
   const groups: Group[] = [
     { name: 'Start', frames: [
-      { title: 'Landing', path: '/' }, { title: 'Sign in', path: '/signin' }, { title: 'Choose a role', path: '/enter' },
+      { title: 'Landing', path: '/' }, { title: 'Sign in', path: '/signin' }, 
     ] },
     { name: 'Events and buying', frames: [
       { title: 'Events', path: '/events' }, { title: 'Event', path: `/e/${eventId}` }, { title: 'Buy', path: `/e/${eventId}/buy` },
@@ -29,7 +29,7 @@ export default function Canvas() {
       { title: 'Claim, not found', path: '/wallet/claim/none' }, { title: 'Check in, not found', path: '/wallet/checkin/none' }, { title: 'Send, not found', path: '/wallet/transfer/none' },
     ] },
     { name: 'Door and organizer', frames: [
-      { title: 'Door', path: '/door' }, { title: 'Recent check ins', path: '/door/recent' }, { title: 'Organizer', path: '/organizer' }, { title: 'Check in visuals', path: '/preview' },
+      { title: 'Door', path: '/door' }, { title: 'Recent check ins', path: '/door/recent' }, { title: 'Organizer', path: '/organizer' }, { title: 'Attendees', path: '/organizer/attendees' }, { title: 'Check in visuals', path: '/preview' },
     ] },
     { name: 'Public and other', frames: [
       { title: 'Profile', path: `/u/${holder}` }, { title: 'Profile, bad link', path: '/u/nobody' }, { title: 'Privacy', path: '/privacy' },
@@ -60,9 +60,9 @@ export default function Canvas() {
       {groups.map((g) => (
         <section key={g.name} className="mb-12">
           <h2 className="title-1 mb-4">{g.name}</h2>
-          <div className="flex flex-wrap gap-8">
+          <div className="flex flex-wrap gap-8 overflow-x-auto">
             {g.frames.map((f) => (
-              <figure key={f.title} className="flex flex-col gap-2" style={{ width: width * scale }}>
+              <figure key={f.title} className="flex shrink-0 flex-col gap-2" style={{ width: width * scale }}>
                 <figcaption className="flex items-center justify-between gap-2">
                   <span className="body-5">{f.title}</span>
                   <a href={f.path} target="_blank" rel="noreferrer" className="body-6 text-accent">Open</a>

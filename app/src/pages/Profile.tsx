@@ -5,7 +5,8 @@ import { Avatar } from '../components/Bits'
 import { GatewayFlow } from '../components/GatewayFlow'
 import { Button } from '../components/Button'
 import { Screen, TopBar } from '../components/Screen'
-import { ordinal, short } from '../data/mock'
+import { RowsSkeleton } from '../components/Skeleton'
+import { ordinal, short, wallet } from '../data/mock'
 import { allEvents, checkinsFor, type ArkivEvent } from '../services/arkiv'
 import { api, type EnsResolvedName } from '../services/api'
 import { prettyDate } from './events/art'
@@ -77,7 +78,7 @@ export default function Profile() {
 
   return (
     <Screen>
-      <TopBar back="/" />
+      <TopBar back={name.toLowerCase() === wallet.address ? '/account' : '/'} />
       <header className="flex flex-col items-center gap-2 pt-4 text-center">
         <div className="relative grid h-44 w-full place-items-center">
           <GatewayFlow className="absolute inset-0 size-full" />
@@ -97,10 +98,10 @@ export default function Profile() {
           Could not read this profile from Arkiv. Check your connection, then open this page again.
         </p>
       )}
-      {!trophies && !failed && <div aria-busy="true" aria-label="Loading trophies" className="h-24 animate-pulse rounded-2xl border border-line bg-surface-raised" />}
+      {!trophies && !failed && <RowsSkeleton label="Loading trophies" rows={2} />}
       {trophies?.length === 0 && <p className="body-3 text-center text-text-muted">No events attended yet. A trophy appears after the door confirms a check in.</p>}
       {trophies && trophies.length > 0 && (
-        <ul className="flex flex-col">
+        <ul className="stagger flex flex-col">
           {trophies.map((t) => {
             const event = events.find((e) => e.eventId === t.eventId)
             return (

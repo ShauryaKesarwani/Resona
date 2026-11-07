@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { WaveformIcon } from '../../components/icons'
 
 const links = [
   { href: '#how', label: 'How it works' },
-  { href: '#limits', label: 'What it stops' },
+  { href: '#stops', label: 'What it stops' },
   { href: '#faq', label: 'Questions' },
 ]
 
@@ -28,7 +29,8 @@ export function Nav() {
           aria-label="Main"
           className="flex w-full items-center justify-between gap-6 rounded-2xl border border-line bg-surface-raised/70 p-2 pl-4 backdrop-blur-md sm:w-auto"
         >
-          <Link to="/" className="title-2 rounded-lg">
+          <Link to="/" className="title-2 flex items-center gap-2 rounded-lg">
+            <WaveformIcon size={24} className="text-accent" aria-hidden="true" />
             Resona
           </Link>
           <ul className="hidden items-center gap-1 sm:flex">

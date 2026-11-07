@@ -100,7 +100,7 @@ export function How() {
   const last = steps.length - 1
   return (
     <Section id="how">
-      <h2 className="heading-4 lg:heading-3 mx-auto max-w-[680px] text-center">Three steps from invite to the door</h2>
+      <h2 className="heading-4 lg:heading-3 mx-auto max-w-[680px] text-center">From invite to inside</h2>
       <ol className="mt-16 flex flex-col gap-16 lg:mt-24 lg:gap-24">
         {steps.map((s, i) => (
           <li key={s.title} className="relative grid items-center gap-8 lg:grid-cols-2 lg:gap-24">
@@ -111,7 +111,7 @@ export function How() {
                 i === last ? 'bottom-1/2' : 'bottom-[-6rem]'
               }`}
             />
-            <div className={`flex flex-col gap-3 ${i % 2 ? 'lg:order-2' : ''}`}>
+            <div className={`flex flex-col items-center gap-3 text-center lg:items-start lg:text-left ${i % 2 ? 'lg:order-2' : ''}`}>
               <span
                 aria-hidden="true"
                 className="title-3 grid size-10 place-items-center rounded-full border border-line bg-surface-raised font-mono lg:hidden"

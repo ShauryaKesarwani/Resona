@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { ClockCounterClockwiseIcon, WarningCircleIcon } from '../../components/icons'
+import { useSearchParams } from 'react-router-dom'
+import { useHideTabs } from '../../components/AppTabs'
+import { WarningCircleIcon } from '../../components/icons'
 import { Row } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { DistanceGap, SonarRings } from '../../components/Sonar'
@@ -43,6 +44,7 @@ export default function Door() {
   const [params, setParams] = useSearchParams()
   const selectedPass = params.get('passId') ?? ''
   const [phase, setPhase] = useState<Phase>({ name: 'ready' })
+  useHideTabs(phase.name === 'running' || phase.name === 'done')
   const [code, setCode] = useState('')
   const [pin, setPin] = useState(() => localStorage.getItem(PIN_KEY) ?? '')
   const [pinRequired, setPinRequired] = useState(false)
@@ -151,12 +153,12 @@ export default function Door() {
     if (result.state === 'pass') {
       return (
         <Screen>
-          <TopBar back="/enter" title="Result" />
-          <section className="flex flex-1 flex-col justify-center gap-6" role="status">
+          <TopBar title="Result" />
+          <section className="stagger flex flex-1 flex-col justify-center gap-6" role="status">
             <DistanceGap cm={result.cm ?? 0} good />
             <h1 className="heading-3 text-center text-success">Pass</h1>
-            <div className="rounded-2xl border border-line bg-surface-raised p-2">
-              <div className="rounded-lg bg-surface-inset">
+            <div className="border-y border-line">
+              <div>
                 <Row label="Holder">
                   <span>{who.ensName ?? short(who.holder)}</span>
                 </Row>
@@ -182,8 +184,8 @@ export default function Door() {
       : fails[result.state] ?? fails.expired
     return (
       <Screen>
-        <TopBar back="/enter" title="Result" />
-        <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
+        <TopBar title="Result" />
+        <section className="stagger flex flex-1 flex-col justify-center gap-4" role="alert">
           {result.cm !== undefined && result.state === 'too_far' ? (
             <DistanceGap cm={result.cm} good={false} />
           ) : (
@@ -206,7 +208,7 @@ export default function Door() {
   if (phase.name === 'running') {
     return (
       <Screen>
-        <TopBar title="Checking" heading />
+        <TopBar title="Checking" heading right={null} />
         <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
           <SonarRings label="Listening for the holder’s phone" />
           <div className="w-full">
@@ -223,11 +225,11 @@ export default function Door() {
   }
 
   return (
-    <Screen>
-      <TopBar back="/enter" />
-      {phase.name === 'scanning' ? <QrScanner onCode={scanned} onFail={noCamera} /> : <GatewayFlow className="h-40 w-full rounded-2xl border border-line" />}
+    <Screen tabs>
+      <TopBar />
+      {phase.name === 'scanning' ? <QrScanner onCode={scanned} onFail={noCamera} /> : <GatewayFlow className="h-40 w-full border-y border-line" />}
       <h1 className="heading-4">Ready for the next ticket</h1>
-      {selectedPass && <div className="rounded-xl border border-line bg-surface-raised p-4">
+      {selectedPass && <div className="border-y border-line py-4">
         <p className="title-4">Selected ticket</p>
         <p className="caption-5 font-mono text-text-muted [overflow-wrap:anywhere]">{selectedPass}</p>
         <p className="body-6 text-text-muted">Ask the holder to tap Start check in on their phone first.</p>
@@ -245,7 +247,7 @@ export default function Door() {
               onBlur={savePin}
               type="password"
               autoComplete="off"
-              className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base"
+              className="field"
             />
           </label>
         )}
@@ -258,7 +260,7 @@ export default function Door() {
             autoComplete="off"
             placeholder="6 digits"
             aria-invalid={!!error}
-            className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 font-mono text-base tabular-nums placeholder:text-text-muted"
+            className="field font-mono tabular-nums placeholder:text-text-muted"
           />
         </label>
         <p role={error ? 'alert' : undefined} className="body-6 text-danger empty:hidden">
@@ -271,10 +273,6 @@ export default function Door() {
           savePin()
           void check(selectedPass, true)
         }}>Check in selected ticket</Button>}
-        <Link to="/door/recent" className="body-5 flex min-h-12 items-center gap-2 self-center text-text-muted">
-          <ClockCounterClockwiseIcon size={20} aria-hidden="true" />
-          Recent check ins
-        </Link>
         <Button
           type="button"
           variant={phase.name === 'scanning' ? 'secondary' : 'primary'}

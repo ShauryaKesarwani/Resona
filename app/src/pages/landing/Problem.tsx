@@ -1,77 +1,115 @@
-import { ArrowRightIcon, CheckIcon, XIcon } from '../../components/icons'
+import { useEffect, useRef, useState } from 'react'
+import { CheckIcon, XIcon } from '../../components/icons'
 import { Section } from './Section'
+import { BotArt, QrArt, RelayArt, type Phase } from './ProblemArt'
 
 const rows = [
   {
     how: 'A QR code at the door',
     beaten: 'The holder streams the code over a video call and someone else scans in.',
     answer: 'The code only names the ticket. Your phone still has to answer with sound.',
+    Art: QrArt,
+    captions: { attack: 'Code copied over a call', answer: 'No sound comes back' },
   },
   {
     how: 'Bluetooth proximity',
     beaten: 'A relay forwards the radio signal, so a far phone looks near.',
     answer: 'We skip radio. Sound is far slower, so any relay delay shows up as distance.',
+    Art: RelayArt,
+    captions: { attack: 'A relay fakes near', answer: 'Delay reads as distance' },
   },
   {
     how: 'Cheap or allocated tickets',
     beaten: 'Bots collect them and resell at a markup.',
     answer: 'World ID limits claims to one per person, and the organizer approves every transfer.',
+    Art: BotArt,
+    captions: { attack: 'One bot, every ticket', answer: 'One person, one ticket' },
   },
 ]
 
-/** A before and after table: how each method gets beaten on the left, what Resona does on the right, an arrow between. */
+const ATTACK_MS = 2400
+const ANSWER_MS = 3000
+
+/**
+ * Each way of cheating plays out as a small animation on the center line: first it works, then Resona stops it.
+ * One row plays at a time while the section is on screen, and tapping a row jumps to it. With reduced motion every row rests on its answer.
+ */
 export function Problem() {
+  const [row, setRow] = useState(0)
+  const [phase, setPhase] = useState<Phase>('attack')
+  const [inView, setInView] = useState(false)
+  const list = useRef<HTMLUListElement>(null)
+  const still = useRef(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+
+  useEffect(() => {
+    if (still.current || !list.current) return
+    const seen = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.2 })
+    seen.observe(list.current)
+    return () => seen.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!inView) return
+    const timer = setTimeout(() => {
+      if (phase === 'attack') return setPhase('answer')
+      setRow((r) => (r + 1) % rows.length)
+      setPhase('attack')
+    }, phase === 'attack' ? ATTACK_MS : ANSWER_MS)
+    return () => clearTimeout(timer)
+  }, [inView, row, phase])
+
   return (
     <Section>
       <h2 className="heading-4 lg:heading-3 mx-auto max-w-[680px] text-center">A QR code can be shared. Sound has to cross the room.</h2>
-      <div className="mt-12 lg:mt-16">
-        <div className="caption-1 hidden grid-cols-[1fr_3rem_1fr] gap-x-8 pb-4 text-text-muted lg:grid">
-          <span>How it gets beaten today</span>
-          <span />
-          <span>What Resona does</span>
-        </div>
-        <ul className="border-b border-line lg:hidden">
-          {rows.map((r) => (
-            <li key={r.how} className="border-t border-line py-8">
-              <h3 className="title-1">{r.how}</h3>
-              <div className="relative mt-6 flex flex-col gap-6 ">
-                <div className="relative flex gap-4">
-                  <span aria-hidden="true" className="z-10 grid size-6 shrink-0 place-items-center rounded-full border border-line bg-surface text-text-muted">
-                    <XIcon size={12} />
-                  </span>
-                  <div>
-                    <p className="caption-4 text-text-muted">How it gets beaten</p>
-                    <p className="body-6 mt-1 text-text-muted">{r.beaten}</p>
-                  </div>
+      <ul ref={list} className="mt-12 border-b border-line lg:mt-16">
+        {rows.map((r, i) => {
+          const active = inView && i === row
+          const shown: Phase = active ? phase : 'answer'
+          return (
+            <li
+              key={r.how}
+              onClick={() => {
+                if (still.current) return
+                setRow(i)
+                setPhase('attack')
+              }}
+              className="relative flex cursor-pointer flex-col gap-6 border-t border-line py-8 lg:py-12"
+            >
+              {active && (
+                <span
+                  key={`${row}`}
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -top-px h-px origin-left bg-accent"
+                  style={{ animation: `grow ${ATTACK_MS + ANSWER_MS}ms linear forwards` }}
+                />
+              )}
+              <h3 className="title-1 text-center">{r.how}</h3>
+              <div className="grid items-center gap-6 lg:grid-cols-[1fr_16rem_1fr] lg:gap-12">
+                <figure className="mx-auto flex w-full max-w-64 flex-col items-center gap-3 lg:order-2">
+                  <r.Art phase={shown} playing={active} />
+                  <figcaption key={shown} className={`caption-4 animate-rise ${shown === 'attack' ? 'text-danger' : 'text-accent'}`}>
+                    {r.captions[shown]}
+                  </figcaption>
+                </figure>
+                <div className="text-center lg:order-1 lg:text-right">
+                  <p className={`caption-4 inline-flex items-center gap-1 transition-colors duration-500 ${active && phase === 'attack' ? 'text-danger' : 'text-text-muted'}`}>
+                    <XIcon size={14} aria-hidden="true" />
+                    How it gets beaten
+                  </p>
+                  <p className="body-3 mt-2 text-text-muted [text-wrap:balance]">{r.beaten}</p>
                 </div>
-                <div className="relative flex gap-4 before:absolute before:-top-6 before:left-3 before:h-6 before:w-px before:bg-line">
-                  <span aria-hidden="true" className="z-10 grid size-6 shrink-0 place-items-center rounded-full bg-accent text-on-accent">
-                    <CheckIcon size={14} />
-                  </span>
-                  <div>
-                    <p className="caption-4 text-accent">What Resona does</p>
-                    <p className="body-3 mt-1">{r.answer}</p>
-                  </div>
+                <div className="text-center lg:order-3 lg:text-left">
+                  <p className={`caption-4 inline-flex items-center gap-1 transition-colors duration-500 ${active && phase === 'attack' ? 'text-text-muted' : 'text-accent'}`}>
+                    <CheckIcon size={14} aria-hidden="true" />
+                    What Resona does
+                  </p>
+                  <p className="body-3 mt-2 [text-wrap:balance]">{r.answer}</p>
                 </div>
               </div>
             </li>
-          ))}
-        </ul>
-        <ul className="hidden border-b border-line lg:block">
-          {rows.map((r) => (
-            <li key={r.how} className="grid grid-cols-[1fr_3rem_1fr] items-center gap-x-8 border-t border-line py-8">
-              <div>
-                <h3 className="title-1">{r.how}</h3>
-                <p className="body-6 mt-2 max-w-prose text-text-muted">{r.beaten}</p>
-              </div>
-              <span aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-full border border-line text-accent">
-                <ArrowRightIcon size={20} />
-              </span>
-              <p className="body-3 max-w-prose">{r.answer}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
+          )
+        })}
+      </ul>
     </Section>
   )
 }

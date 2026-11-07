@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Screen, TopBar } from '../../components/Screen'
+import { RowsSkeleton } from '../../components/Skeleton'
 import { allEvents, myPurchases, type ArkivEvent, type ArkivPayment } from '../../services/arkiv'
 
 /** W7. Everything this wallet has bought, each linked to its payment on the explorer. */
 export default function Purchases() {
+  const back = (useLocation().state as { back?: string } | null)?.back ?? '/wallet'
   const [payments, setPayments] = useState<ArkivPayment[]>()
   const [events, setEvents] = useState<ArkivEvent[]>([])
   const [failed, setFailed] = useState(false)
@@ -21,7 +23,7 @@ export default function Purchases() {
 
   return (
     <Screen>
-      <TopBar back="/wallet" title="Purchases" />
+      <TopBar back={back} title="Purchases" />
       <h1 className="heading-4">{payments ? `${payments.length} ${payments.length === 1 ? 'purchase' : 'purchases'}` : 'Purchases'}</h1>
 
       {failed && (
@@ -29,11 +31,11 @@ export default function Purchases() {
           Could not read your purchases from Arkiv. Check your connection, then open this page again.
         </p>
       )}
-      {!payments && !failed && <div aria-busy="true" aria-label="Loading purchases" className="h-24 animate-pulse rounded-2xl border border-line bg-surface-raised" />}
+      {!payments && !failed && <RowsSkeleton label="Loading purchases" />}
       {payments?.length === 0 && <p className="body-6 text-text-muted">You have not bought any tickets yet.</p>}
 
       {payments && payments.length > 0 && (
-        <ul className="flex flex-col">
+        <ul className="stagger flex flex-col">
           {payments.map((p) => (
             <li key={p.txnHash} className="flex items-center justify-between gap-4 py-3 not-first:border-t not-first:border-line">
               <div className="min-w-0">

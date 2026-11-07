@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { TabLayout } from './components/AppTabs'
 import { RequireSignIn } from './components/RequireSignIn'
-import Enter from './pages/Enter'
 import Lab from './pages/Lab'
 import Landing from './pages/Landing'
 import NotFound from './pages/NotFound'
@@ -53,7 +53,6 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/account-transfer" element={<AccountTransfer />} />
-        <Route path="/events" element={<Events />} />
         <Route path="/e/:id" element={<Event />} />
         <Route path="/u/:name" element={<Profile />} />
         {import.meta.env.DEV && <Route path="/canvas" element={<Canvas />} />}
@@ -61,23 +60,28 @@ export default function App() {
         <Route path="/lab" element={<Lab />} />
         {screens.filter(isPublic).map(stub)}
         <Route element={<RequireSignIn />}>
-          <Route path="/enter" element={<Enter />} />
-          <Route path="/organizer" element={<Organizer />} />
-          <Route path="/organizer/attendees" element={<Attendees />} />
-          <Route path="/organizer/transfers" element={<Transfers />} />
-          <Route path="/door" element={<Door />} />
-          <Route path="/door/recent" element={<Recent />} />
-          <Route path="/wallet" element={<Tickets />} />
+          <Route path="/enter" element={<Navigate to="/account" replace />} />
           <Route path="/wallet/events" element={<Navigate to="/events" replace />} />
           <Route path="/e/:id/buy" element={<Buy />} />
           <Route path="/wallet/purchases" element={<Purchases />} />
           <Route path="/wallet/receipt/:txn" element={<Receipt />} />
-          <Route path="/account" element={<Account />} />
           <Route path="/wallet/ticket/:id" element={<Ticket />} />
           <Route path="/wallet/claim/:id" element={<Claim />} />
           <Route path="/wallet/checkin/:id" element={<CheckIn />} />
           <Route path="/wallet/transfer/:id" element={<Transfer />} />
           {screens.filter((s) => !isPublic(s)).map(stub)}
+        </Route>
+        <Route element={<TabLayout />}>
+          <Route path="/events" element={<Events />} />
+          <Route element={<RequireSignIn />}>
+            <Route path="/wallet" element={<Tickets />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/door" element={<Door />} />
+            <Route path="/door/recent" element={<Recent />} />
+            <Route path="/organizer" element={<Organizer />} />
+            <Route path="/organizer/attendees" element={<Attendees />} />
+            <Route path="/organizer/transfers" element={<Transfers />} />
+          </Route>
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

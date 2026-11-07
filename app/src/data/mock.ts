@@ -27,9 +27,13 @@ export const wallet = {
   name: 'Resona wallet',
   address: walletAddress(),
   network: 'Rabdi',
+  /** The person's ENS name. Nothing assigns one yet, so this stays empty until that feature lands. */
+  ens: null as string | null,
 }
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
+export const displayName = () => wallet.ens ?? short(wallet.address)
+export const avatarName = () => wallet.ens ?? wallet.address.slice(2)
 
 let tickets: Ticket[] = []
 let ticketsState: 'loading' | 'ready' | 'failed' = 'loading'

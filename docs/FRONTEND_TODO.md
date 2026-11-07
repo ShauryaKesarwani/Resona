@@ -17,6 +17,7 @@ Nothing here needs new screens. It needs two real phones and a public HTTPS URL.
 
 | Item | Why | Notes |
 |---|---|---|
+| ENS names for people | The top right chip already shows a name when there is one | Assign a name to each attendee wallet and set `wallet.ens` in `data/mock.ts`. The chip, Account and the avatar pick it up |
 | ENS names and search across the screens | The ENS track needs names visible where people see them and clear name lookup | ENS lookup now resolves names to their Rabdi address record for organizer ticket issue/lookup, attendee search and `/u/:name` profiles. The event and purchase-success screens show the configured ENS event and active pass names; wallet ticket and door results show the pass name. Verify against the configured ENSNode. Door ownership enforcement is implemented in code; tests and live Sepolia verification remain. |
 | Claim screen: real phone lock | The claim's phone lock step is still simulated, and shows as such | Depends on the server's claim route |
 | Transfer: organizer approval | Wallet request and organizer review screens now call signed server routes; ENS reassignment and Arkiv updates are implemented in code | Build/tests, live Sepolia roles and transfer, Arkiv reconciliation, and phone flow remain |
@@ -24,6 +25,8 @@ Nothing here needs new screens. It needs two real phones and a public HTTPS URL.
 | Event page: more than name, date and price | Judges see a thin page | Needs description and venue fields on the Arkiv event first |
 
 Done in the remake pass: the check in sonar visuals, the ticket as a pass, Account and backup, Before you check in, Receipt, and the organizer's New event and Live door tabs. `POST /api/event` is a demo stand in like `/api/issue`, with no organizer authorization yet.
+
+Done in the flow pass: the role switch moved to Account and `/enter` is gone, tabs follow the role, the top right chip is clickable on every screen, direction C icons, the flat style on all app screens, next screen skeletons, and the small transitions.
 
 ## 3. Policy gaps that show up on screens
 
@@ -42,7 +45,7 @@ These are server decisions, listed so the screens can follow.
 - [ ] **`/lab` page** is outside the design system, and its Back button points to a guarded route. Restyle it or hide it from the demo.
 - [ ] **`/privacy` and `/terms`** are stubs. Write one honest paragraph each: a hackathon demo on a test network.
 - [ ] **Empty and offline states** for the wallet, the door and the organizer when the server is unreachable.
-- [ ] **Landing page copy** after the features settle: the "How it works" steps and the limits section should match what is real by then.
+- [ ] **Landing page copy** after the features settle: the "How it works" steps and the door log should match what is real by then.
 
 ## 5. For the submission
 

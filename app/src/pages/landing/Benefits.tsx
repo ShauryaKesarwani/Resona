@@ -1,5 +1,5 @@
 import { ArrowsLeftRightIcon, FingerprintIcon, TrophyIcon, WaveformIcon } from '../../components/icons'
-import { Section } from './Section'
+import { Aside, Section } from './Section'
 
 const lead = {
   icon: WaveformIcon,
@@ -29,7 +29,8 @@ const rest = [
 export function Benefits() {
   return (
     <Section>
-      <h2 className="heading-4 lg:heading-3 mx-auto max-w-[680px] text-center">What changes for the door and for the crowd</h2>
+      <h2 className="heading-4 lg:heading-3 mx-auto max-w-[680px] text-center">One ticket. One person. One door.</h2>
+      <Aside className="mt-2 text-center">scalpers hate this one</Aside>
       <div className="mt-12 grid gap-8 lg:mt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
         <div className="flex flex-col justify-center gap-6 rounded-2xl border border-line bg-surface-raised p-8 lg:p-10">
           <span className="grid size-16 place-items-center rounded-full bg-surface-inset text-accent">

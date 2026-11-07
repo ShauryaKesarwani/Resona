@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowsLeftRightIcon, InfoIcon } from '../../components/icons'
-import { Row, StatusPill, WalletChip } from '../../components/Bits'
+import { Row, StatusPill } from '../../components/Bits'
+import { Collapse } from '../../components/Collapse'
+import { DetailSkeleton } from '../../components/Skeleton'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { short, useTickets, wallet } from '../../data/mock'
+import { short, useTickets, useTicketsState, wallet } from '../../data/mock'
 import { api, type EnsPass } from '../../services/api'
 import { myPurchases } from '../../services/arkiv'
 import { EventImage } from '../events/EventImage'
@@ -13,6 +15,7 @@ import { EventImage } from '../events/EventImage'
 export default function Ticket() {
   const { id } = useParams()
   const ticket = useTickets().find((t) => t.id === id)
+  const state = useTicketsState()
   const [gloss, setGloss] = useState(false)
   const [ens, setEns] = useState<EnsPass | null>(null)
   const [ensError, setEnsError] = useState('')
@@ -32,6 +35,15 @@ export default function Ticket() {
     myPurchases().then((all) => setReceipt(all.find((p) => p.passId === id)?.txnHash)).catch(() => {})
   }, [id])
 
+  if (!ticket && state === 'loading') {
+    return (
+      <Screen>
+        <TopBar back="/wallet" />
+        <DetailSkeleton label="Loading ticket" />
+      </Screen>
+    )
+  }
+
   if (!ticket) {
     return (
       <Screen>
@@ -49,8 +61,8 @@ export default function Ticket() {
 
   return (
     <Screen>
-      <TopBar back="/wallet" right={<WalletChip />} />
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface-raised">
+      <TopBar back="/wallet" />
+      <div className="animate-rise overflow-hidden border border-accent">
         <EventImage eventId={ticket.eventId} ratio="16 / 9" />
         <h1 className="heading-4 p-4">{ticket.event}</h1>
         <div aria-hidden="true" className="relative border-t border-dashed border-line">
@@ -67,15 +79,15 @@ export default function Ticket() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface-raised p-2">
-        <div className="rounded-lg bg-surface-inset">
+      <div className="border-y border-line">
+        <div>
           <Row label="Holder">
             <span className="font-mono">{short(wallet.address)}</span>
           </Row>
           <Row label="Verification">{ticket.level}</Row>
           {receipt && (
             <Row label="Payment">
-              <Link to={`/wallet/receipt/${receipt}`} className="inline-flex min-h-12 items-center text-accent">
+              <Link to={`/wallet/receipt/${receipt}`} state={{ back: `/wallet/ticket/${id}` }} className="inline-flex min-h-12 items-center text-accent">
                 See receipt
               </Link>
             </Row>
@@ -85,7 +97,7 @@ export default function Ticket() {
               type="button"
               onClick={() => setGloss(!gloss)}
               aria-expanded={gloss}
-              className="inline-flex min-h-12 items-center gap-1 rounded-lg text-right"
+              className="inline-flex min-h-12 items-center gap-1 rounded-md text-right"
             >
               Organizer approves
               <InfoIcon size={16} className="text-text-muted" aria-hidden="true" />
@@ -97,12 +109,12 @@ export default function Ticket() {
             </span>
           </Row>}
           {ensError && <p role="status" className="body-6 border-t border-line px-4 py-3 text-danger">{ensError}</p>}
-          {gloss && (
+          <Collapse open={gloss}>
             <p className="body-6 border-t border-line px-4 py-3 text-text-muted">
               You cannot send this ticket straight to someone. You ask the organizer, and they approve or deny. A
               request that nobody answers lapses after 24&nbsp;hours.
             </p>
-          )}
+          </Collapse>
         </div>
       </div>
 

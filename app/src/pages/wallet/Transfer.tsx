@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { ClockIcon } from '../../components/icons'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { refreshTickets, useTickets } from '../../data/mock'
+import { DetailSkeleton } from '../../components/Skeleton'
+import { refreshTickets, useTickets, useTicketsState } from '../../data/mock'
 import { api, type TransferRequest } from '../../services/api'
 import { signedBy } from '../../services/auth'
 
@@ -29,6 +30,7 @@ function remaining(expiresAt: string, now: number) {
 export default function Transfer() {
   const { id } = useParams()
   const ticket = useTickets().find((item) => item.id === id)
+  const ticketsState = useTicketsState()
   const [to, setTo] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -92,6 +94,10 @@ export default function Transfer() {
     }
   }
 
+  if (!ticket && ticketsState === 'loading') {
+    return <Screen><TopBar back={back} title="Send ticket" /><DetailSkeleton label="Loading ticket" picture={false} /></Screen>
+  }
+
   if (!ticket || ticket.status !== 'claimed') {
     return <Screen><TopBar back={back} title="Send ticket" /><section className="flex flex-1 flex-col justify-center gap-2">
       <h1 className="heading-5">This ticket cannot be sent right now</h1>
@@ -124,7 +130,7 @@ export default function Transfer() {
       <label className="flex flex-col gap-2">
         <span className="title-4">Recipient ENS name</span>
         <input value={to} onChange={(event) => setTo(event.target.value)} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-          placeholder="sam.eth" aria-invalid={!!error} className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base placeholder:text-text-muted" />
+          placeholder="sam.eth" aria-invalid={!!error} className="field placeholder:text-text-muted" />
       </label>
       {error && <p role="alert" className="body-6 text-danger">{error}</p>}
       {request && terminalMessage[request.status] && <p role="status" className="body-6 text-text-muted">{terminalMessage[request.status]}</p>}

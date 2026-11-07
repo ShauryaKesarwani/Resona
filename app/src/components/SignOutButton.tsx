@@ -11,7 +11,7 @@ export function SignOutButton() {
         signOut()
         navigate('/signin', { replace: true })
       }}
-      className="body-5 min-h-12 self-center rounded-lg px-4 text-text-muted"
+      className="body-5 min-h-12 self-center rounded-md px-4 text-text-muted"
     >
       Sign out
     </button>

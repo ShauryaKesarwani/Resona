@@ -8,7 +8,8 @@ import { GatewayFlow } from '../../components/GatewayFlow'
 import { LiveWave, TraceChart } from '../../components/Waveform'
 import type { Analysis } from '../../sonar/analyze'
 import { Screen, TopBar } from '../../components/Screen'
-import { ordinal, refreshTickets, updateTicket, useTickets } from '../../data/mock'
+import { DetailSkeleton } from '../../components/Skeleton'
+import { ordinal, refreshTickets, updateTicket, useTickets, useTicketsState, wallet } from '../../data/mock'
 import { api, waitForNextAttempt, waitForResult, waitUntilRunning, type CheckinResult } from '../../services/api'
 import { explorerTx } from '../../services/arkiv'
 import { signedBy } from '../../services/auth'
@@ -56,6 +57,7 @@ export default function CheckIn() {
   const alive = useRef(true)
   const live = useRef<{ close: () => void; id: string; attempt: number } | null>(null)
   const back = `/wallet/ticket/${id}`
+  const state = useTicketsState()
 
   useEffect(() => {
     alive.current = true
@@ -127,6 +129,15 @@ export default function CheckIn() {
     await api.checkinRetry(check.id, await signedBy(`checkin-retry:${check.id}:${check.attempt}`)).catch(() => setError('Could not start another try.'))
   }
 
+  if (!ticket && state === 'loading') {
+    return (
+      <Screen>
+        <TopBar back={back} title="Check in" />
+        <DetailSkeleton label="Loading ticket" picture={false} />
+      </Screen>
+    )
+  }
+
   if (!ticket) {
     return (
       <Screen>
@@ -145,7 +156,7 @@ export default function CheckIn() {
     return (
       <Screen>
         <TopBar back={back} title="Check in" />
-        <section className="flex flex-1 flex-col justify-center gap-4" role="status">
+        <section className="stagger flex flex-1 flex-col justify-center gap-4" role="status">
           <DistanceGap cm={cm ?? 0} good />
           <h1 className="heading-3 text-center">You are in</h1>
           <p className="body-3 text-center text-text-muted">You are {ordinal(place ?? 0)} through the door.</p>
@@ -156,7 +167,10 @@ export default function CheckIn() {
             </a>
           )}
         </section>
-        <Button to={back}>Back to ticket</Button>
+        <Button to={`/u/${wallet.address}`}>View your trophy</Button>
+        <Button variant="secondary" size="md" to={back}>
+          Back to ticket
+        </Button>
       </Screen>
     )
   }
@@ -169,7 +183,7 @@ export default function CheckIn() {
     return (
       <Screen>
         <TopBar back={back} title="Check in" />
-        <section className="flex flex-1 flex-col justify-center gap-4" role="alert">
+        <section className="stagger flex flex-1 flex-col justify-center gap-4" role="alert">
           {state === 'too_far' && cm !== undefined ? (
             <DistanceGap cm={cm} good={false} />
           ) : (
@@ -188,10 +202,10 @@ export default function CheckIn() {
   if (phase.name === 'code') {
     return (
       <Screen>
-        <TopBar back={back} title="Check in" />
+        <TopBar back={back} title="Check in" right={null} />
         <section className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <h1 className="heading-5">Show this to the door</h1>
-          <QRCodeSVG value={phase.code} size={220} marginSize={2} className="rounded-xl" aria-label={`QR code for ${phase.code}`} />
+          <QRCodeSVG value={phase.code} size={220} marginSize={2} className="rounded-md" aria-label={`QR code for ${phase.code}`} />
           <p className="heading-3 font-mono tabular-nums tracking-widest">{phase.code}</p>
           <GatewayFlow className="h-28 w-full" />
           <p className="body-6 text-text-muted" aria-live="polite">
@@ -205,7 +219,7 @@ export default function CheckIn() {
   if (phase.name === 'running') {
     return (
       <Screen>
-        <TopBar title="Check in" heading />
+        <TopBar title="Check in" heading right={null} />
         <section className="flex flex-1 flex-col items-center justify-center gap-8 text-center" aria-live="polite">
           <SonarRings label="Sound leaving your phone" />
           <div className="w-full">
@@ -230,7 +244,7 @@ export default function CheckIn() {
           Pass&nbsp;{ticket.pass}, {ticket.event}
         </p>
       </header>
-      <div className="rounded-2xl border border-line bg-surface-raised py-4">
+      <div className="border-y border-line py-4">
         <DistanceGap cm={30} good />
         <p className="body-6 text-center text-text-muted">Phones about this far apart, speakers facing each other.</p>
       </div>

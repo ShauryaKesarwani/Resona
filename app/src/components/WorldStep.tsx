@@ -121,7 +121,7 @@ function Flow({ flow, submit, onDone, onFailed }: FlowProps) {
   if (!flow.connectorURI) return <Button busy>Starting World ID</Button>
 
   const openLink = (
-    <a className="button-lg inline-flex min-h-16 w-full items-center justify-center rounded-xl bg-accent px-3 py-2 text-on-accent" href={flow.connectorURI}>
+    <a className="button-lg inline-flex min-h-16 w-full items-center justify-center rounded-md bg-accent px-3 py-2 text-on-accent" href={flow.connectorURI}>
       Open World ID
     </a>
   )
@@ -131,7 +131,7 @@ function Flow({ flow, submit, onDone, onFailed }: FlowProps) {
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <QRCodeSVG value={flow.connectorURI} size={200} marginSize={2} className="rounded-xl" />
+      <QRCodeSVG value={flow.connectorURI} size={200} marginSize={2} className="rounded-md" />
       <p className="body-6 text-text-muted">Scan with your phone's camera to open World ID.</p>
       {openLink}
     </div>

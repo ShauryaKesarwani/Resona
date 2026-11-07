@@ -170,7 +170,7 @@ export default function Lab() {
 
   return (
     <Screen>
-      <TopBar back="/enter" title="Sonar lab" />
+      <TopBar back="/" title="Sonar lab" heading />
       <p className="body-3 text-text-muted">
         Open this page on two phones. Use the same room, pick different roles, and tap Start on both within a second.
       </p>
