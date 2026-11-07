@@ -79,6 +79,31 @@ export function ticketRoutes(tickets: TicketStore & CheckinStore, registry: Acco
     res.json(await tickets.ticketsOf(holder));
   });
 
+  // Buyer-written records are not proof of payment. Reuse the door's payment checks.
+  router.post("/organizer/verify-purchases", async (req, res) => {
+    if (!tickets.ready) return void res.status(503).json({ error: "arkiv_not_configured" });
+    const { eventId, candidates, ...signed } = req.body ?? {};
+    if (typeof eventId !== "string" || !/^[a-f0-9]{64}$/.test(eventId) || !Array.isArray(candidates) || candidates.length > 50 ||
+        !candidates.every((c: any) => c && typeof c.passId === "string" && c.passId.length > 0 && c.passId.length <= 128 && typeof c.holder === "string" && isAddress(c.holder))) {
+      return void res.status(400).json({ error: "invalid_request" });
+    }
+    if (!(await isWalletOwner(`organizer-purchases:${eventId}`, signed))) return void res.status(401).json({ error: "bad_signature" });
+    const access = await organizerLogin(signed.wallet);
+    if (access) return void res.status(403).json({ error: access });
+    if (!(await tickets.canManageEvent(eventId, signed.wallet))) return void res.status(403).json({ error: "event_not_owned" });
+    const result = [];
+    const seen = new Set<string>();
+    for (const candidate of candidates) {
+      const identity = `${candidate.passId}:${candidate.holder.toLowerCase()}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      const ticket = await tickets.doorTicket(candidate.passId, candidate.holder);
+      if (!ticket || !ticket.bought || ticket.eventId !== eventId || ticket.holder !== candidate.holder.toLowerCase()) continue;
+      if (await tickets.paymentIsValid(ticket)) result.push({ passId: ticket.passId, holder: ticket.holder, tier: ticket.tier, status: ticket.status });
+    }
+    res.set("Cache-Control", "no-store").json({ tickets: result });
+  });
+
   router.get("/ens/pass/:passId", async (req, res) => {
     if (!ens.configured) return void res.status(503).json({ error: "ens_not_configured" });
     const ticket = await tickets.ticket(req.params.passId!);

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { Figure } from '../components/Figure'
+import { Button } from '../components/Button'
 import { Screen, TopBar } from '../components/Screen'
 import { WorldStep } from '../components/WorldStep'
 import { api } from '../services/api'
@@ -43,8 +44,9 @@ export default function SignIn() {
           <WarningCircleIcon size={48} className="text-danger" aria-hidden="true" />
           <h1 className="heading-4">You already have an account</h1>
           <p className="body-3 text-text-muted">
-            Each person gets one Resona account, and yours is on another device or browser. Open Resona there to sign in.
+            This World ID may have already been used to sign up. If you have access to your old Resona account, you can move it here.
           </p>
+          <Button to="/account-transfer">Move an existing account</Button>
         </section>
       </Screen>
     )
@@ -85,6 +87,7 @@ export default function SignIn() {
           return true
         }}
       />
+      <Button variant="secondary" size="md" to="/account-transfer">Move an existing account</Button>
     </Screen>
   )
 }
