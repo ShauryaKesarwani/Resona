@@ -17,7 +17,8 @@ export type Ticket = {
 export type IssuedTicket = Ticket & { transactionHash: Hex };
 export type TicketStore = {
   ready: boolean;
-  issue(holder: string, tier: string): Promise<IssuedTicket>;
+  issue(holder: string, tier: string, eventId?: string): Promise<IssuedTicket>;
+  canManageEvent(eventId: string, organizer: string): Promise<boolean>;
   ticket(passId: string): Promise<Ticket | undefined>;
   ticketsOf(holder: string): Promise<Ticket[]>;
   hasClaimed(userId: string, eventId: string): Promise<boolean>;
@@ -26,7 +27,7 @@ export type TicketStore = {
   /** Tops a wallet up to a fixed amount of test tokens. A funded wallet gets nothing more. */
   fund(wallet: string): Promise<void>;
   /** Publishes an event the organizer can sell tickets for. */
-  createEvent(event: { slug: string; eventName: string; eventDate: string; priceWei: bigint }): Promise<{ eventId: string; entityKey: Hex; transactionHash: Hex }>;
+  createEvent(event: { slug: string; eventName: string; eventDate: string; priceWei: bigint; organizer: string }): Promise<{ eventId: string; entityKey: Hex; transactionHash: Hex }>;
 };
 
 const notConfigured = async () => { throw new Error("Arkiv is not configured"); };
@@ -47,6 +48,7 @@ export type CheckinStore = Pick<TicketStore, "hasClaimed"> & {
 export const unconfiguredTickets: TicketStore & CheckinStore = {
   ready: false,
   issue: notConfigured,
+  canManageEvent: async () => false,
   ticket: async () => undefined,
   ticketsOf: async () => [],
   hasClaimed: async () => false,
@@ -148,11 +150,19 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
   return {
     ready: true as const,
     organizer: account.address,
-    issue: async (holder: string, tier: string) => {
+    issue: async (holder: string, tier: string, eventId = defaultEvent) => {
       if (!isAddress(holder) || typeof tier !== "string" || !tier.trim()) throw new Error("A valid holder address and tier are required");
-      const values = { passId: randomUUID(), eventId: defaultEvent, holder: getAddress(holder), tier: tier.trim(), status: "issued" };
+      const selectedEvent = await event(eventId);
+      if (!selectedEvent) throw new Error("Event not found");
+      const values = { passId: randomUUID(), eventId, holder: getAddress(holder), tier: tier.trim(), status: "issued" };
       const result = await write(`issue ${values.passId}`, 1, (tx) => writer.createEntity(TicketSchema, { ...values, holder: addr(values.holder) }, keep, tx));
       return { ...values, holder: values.holder.toLowerCase(), status: "issued" as const, entityKey: result.entityKey, transactionHash: result.txHash };
+    },
+    canManageEvent: async (eventId: string, organizer: string) => {
+      const selected = await event(eventId);
+      // Older shared events were written with the server wallet as the organizer.
+      return !!selected && (selected.organiser.value.toLowerCase() === organizer.toLowerCase()
+        || selected.organiser.value.toLowerCase() === account.address.toLowerCase());
     },
     ticket,
     ticketsOf: async (holder: string): Promise<Ticket[]> => {
@@ -190,8 +200,8 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       claimed.add(`${existing.eventId}:${userId}`);
       return { ...existing, status: "claimed" as const };
     }),
-    createEvent: async (event: { slug: string; eventName: string; eventDate: string; priceWei: bigint }) => {
-      const values = { eventId: eventHash(event.slug), eventName: event.eventName, organiser: addr(account.address), eventDate: event.eventDate, priceWei: event.priceWei.toString() };
+    createEvent: async (event: { slug: string; eventName: string; eventDate: string; priceWei: bigint; organizer: string }) => {
+      const values = { eventId: eventHash(event.slug), eventName: event.eventName, organiser: addr(getAddress(event.organizer)), eventDate: event.eventDate, priceWei: event.priceWei.toString() };
       const result = await write(`event ${values.eventId}`, 1, (tx) => writer.createEntity(EventSchema, values, { ...keep, flags: { readonly: true } }, tx));
       return { eventId: values.eventId, entityKey: result.entityKey, transactionHash: result.txHash };
     },
@@ -221,7 +231,7 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
       ]).catch(() => [null, null] as const);
       return !!transaction && !!receipt && receipt.status === "success"
         && getAddress(transaction.from) === buyer
-        && !!transaction.to && getAddress(transaction.to) === account.address
+        && !!transaction.to && getAddress(transaction.to) === getAddress(details.organiser.value)
         && transaction.value >= BigInt(details.priceWei.value);
     },
     eventEnded: async (eventId: string) => {

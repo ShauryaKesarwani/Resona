@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
-import { allEvents, organizerAttendees, type ArkivEvent, type AttendeeTicket } from '../../services/arkiv'
+import { organizerEvents, organizerAttendees, type ArkivEvent, type AttendeeTicket } from '../../services/arkiv'
 
 type Attendees = { tickets: AttendeeTicket[]; checkins: { passId: string; holder: string }[] }
 
@@ -17,7 +17,7 @@ export default function Attendees() {
 
   useEffect(() => {
     let active = true
-    allEvents().then((rows) => {
+    organizerEvents().then((rows) => {
       if (!active) return
       setEvents(rows)
       setEventId((current) => current || rows[0]?.eventId || '')

@@ -11,6 +11,7 @@ Anyone can write any schema tag, so a record counts only if the read filters it 
 | Entity | Written by | Attributes | Trusted read filter | Status |
 |---|---|---|---|---|
 | `resona.account` | Organizer | Read-only | `createdBy(organizer)` | Implemented |
+| `resona.organizer` | Server signer after an admin request | Read-only | `createdBy(organizer)` | Partially implemented |
 | `resona.event` | Organizer | Read-only | `createdBy(organizer)` | Implemented |
 | `resona.ticket` | Organizer (issued) or buyer's wallet (bought) | Mutable | Issued: `createdBy(organizer)` and `ownedBy(organizer)`. Bought: `createdBy(holder)` | Implemented, see known gaps |
 | `resona.claim` | Organizer | Read-only | `createdBy(organizer)` | Partially implemented |
@@ -36,6 +37,19 @@ One record per human and wallet, defined in `server/src/arkiv/accounts.ts`.
 
 `NULLIFIER_HASH_KEY` must stay secret and must not change: a new key stops every lookup from matching. An account made before World sessions existed gains a second read-only record that adds `sessionHash`, and the record with a session wins when reading. A record is written once the proof is verified, then read back to wait for indexing.
 
+`ORGANIZER_WALLETS` (comma-separated addresses) bootstraps the initial admins. An existing admin can promote an existing World-linked account. A trusted `resona.organizer` record stores its wallet, stable account `userId`, promoting wallet and timestamp; only records created by the server signer count. Admin actions require a trusted account with a World session and a fresh signature from its linked wallet. A user ID is derived from the World ID nullifier and is not the raw nullifier. Promotion is implemented, but revocation, live Arkiv verification and durable write recovery are not.
+
+## Organizer grant — `resona.organizer` (partially implemented)
+
+| Field | Type | Meaning |
+|---|---|---|
+| `wallet`* | address | The promoted account's linked wallet |
+| `userId`* | string | Stable ID from its trusted World-linked account |
+| `promotedBy`* | address | Wallet of the promoting admin |
+| `promotedAt` | string | Promotion timestamp |
+
+Only records created by the server Arkiv signer count. Promotion requires an admin's fresh wallet signature and an existing account with a World session. Grants are read-only and cannot currently be revoked. The `ORGANIZER_WALLETS` list remains the bootstrap path if all promoted admins are lost.
+
 ## Event — `resona.event` (implemented)
 
 Created with `npm run arkiv:event`, defined in `server/src/arkiv/records.ts`.
@@ -50,9 +64,11 @@ Created with `npm run arkiv:event`, defined in `server/src/arkiv/records.ts`.
 
 Nothing stops a second event with the same `eventId`, and reads take the first match. An event with no record never counts as ended.
 
+New events store the signed-in organizer's wallet in `organiser`; paid tickets go to that address. Organizer ticket lists show events linked to that wallet, while older events written with the shared server wallet remain visible to all configured organizers for compatibility. Admin event ownership is checked before issuing a ticket.
+
 ## Ticket — `resona.ticket` (implemented)
 
-Defined in `server/src/arkiv/tickets.ts`. `POST /api/issue` requires a fresh signature, covering the holder and tier, from a wallet listed in `ORGANIZER_WALLETS`; with none listed, nobody can issue.
+Defined in `server/src/arkiv/tickets.ts`. `POST /api/issue` requires a selected event, an event-scoped fresh signature covering event, holder and tier, an authenticated World-linked organizer account, and an organizer identity bootstrapped by `ORGANIZER_WALLETS` or promoted through a trusted grant. The event must belong to that wallet or be a legacy shared-server event.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -165,6 +181,6 @@ The demo additionally requires a holder wallet signature and sonar pass. Neither
 
 Keep the current schema tags and optional fields readable unless a migration is explicitly implemented. New indexed fields must support a real query. For any schema or status change, update the server, the browser schema copies, API types, tests and this document together. Verify state transitions and reject claims/skips on `checked_in` or `revoked` tickets. Never infer safe concurrency or unique enforcement from a schema field alone.
 
-Existing Arkiv schemas and records remain readable; this change adds no required fields. Older bought-ticket check-ins are not backfilled with claims, and their existing wallet check-in records continue to block repeats while retained. Previously bought tickets now require a trusted account and an unused event claim to be admitted, regardless of their self-reported `claimed` status.
+Existing Arkiv schemas and records remain readable. This change adds the optional-to-existing-data `resona.organizer` tag; no existing record needs a new field or rewrite. Existing events keep their server-wallet organizer and remain shared among authorized admins, while newly published events carry their admin wallet. Older bought-ticket check-ins are not backfilled with claims, and their existing wallet check-in records continue to block repeats while retained. Previously bought tickets now require a trusted account and an unused event claim to be admitted, regardless of their self-reported `claimed` status.
 
 SQLite data was not migrated. Old demo tickets and nullifiers do not carry over, so create fresh tickets through the Arkiv API.

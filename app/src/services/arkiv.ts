@@ -11,6 +11,9 @@ import { signedBy } from './auth'
 const Accounts = defineSchema('resona.account', {
   wallet: addr().indexed(), nullifierHash: str().indexed(), userId: str().optional().indexed(), sessionHash: str().optional(),
 })
+export const Organizers = defineSchema('resona.organizer', {
+  wallet: addr().indexed(), userId: str().indexed(), promotedBy: addr().indexed(), promotedAt: str(),
+})
 const Events = defineSchema('resona.event', { eventId: str().indexed(), eventName: str(), organiser: addr().indexed(), eventDate: str(), priceWei: str() })
 const Tickets = defineSchema('resona.ticket', {
   passId: str().indexed(), eventId: str().indexed(), holder: addr().indexed(), tier: str().indexed(), status: str().indexed(),
@@ -97,6 +100,13 @@ export async function allEvents(): Promise<ArkivEvent[]> {
   }))
 }
 
+/** Events owned by this signed-in organizer, plus legacy events owned by the shared server wallet. */
+export async function organizerEvents(): Promise<ArkivEvent[]> {
+  const [events, sharedWriter] = await Promise.all([allEvents(), organizer()])
+  const wallet = walletAddress().toLowerCase()
+  return events.filter((event) => event.organiser.toLowerCase() === wallet || event.organiser.toLowerCase() === sharedWriter.toLowerCase())
+}
+
 /** Tickets the organizer issued to this wallet, plus the ones this wallet bought itself. */
 export async function myTickets(): Promise<ArkivTicket[]> {
   const holder = getAddress(walletAddress())
@@ -118,7 +128,7 @@ export async function myTickets(): Promise<ArkivTicket[]> {
 // The query builder is awaitable, so this must stay a plain function: awaiting it would run the query early.
 const checkinQuery = (organizerAddress: Hex) =>
   reader
-    .select({ passId: true, holder: true, ordinal: true, distanceCm: true, checkedInAt: true })
+    .select({ eventId: true, passId: true, holder: true, ordinal: true, distanceCm: true, checkedInAt: true })
     .from(Checkins)
     .createdBy(organizerAddress)
     .limit(100) // The most Arkiv returns in one query.
@@ -128,7 +138,7 @@ export async function recentCheckins(): Promise<ArkivCheckin[]> {
   const { entities } = await checkinQuery(await organizer()).fetch()
   return entities
     .map((c) => ({
-      passId: c.passId.value, holder: String(c.holder.value), ordinal: Number(c.ordinal.value),
+      eventId: c.eventId.value, passId: c.passId.value, holder: String(c.holder.value), ordinal: Number(c.ordinal.value),
       distanceCm: c.distanceCm.value, checkedInAt: c.checkedInAt.value,
     }))
     .sort((a, b) => b.checkedInAt.localeCompare(a.checkedInAt))
@@ -202,7 +212,7 @@ async function signPayment(event: ArkivEvent, wallet: Hex): Promise<Pending> {
     nonce: await reader.getTransactionCount({ address: wallet, blockTag: 'latest' }),
     gas: TRANSFER_GAS,
     gasPrice: await gasPrice(),
-    to: await organizer(),
+    to: getAddress(event.organiser as Hex),
     value: BigInt(event.priceWei),
   })
   const pending = { rawTransaction: signed, txnHash: keccak256(signed) }
@@ -220,7 +230,7 @@ export class PurchaseError extends Error {
 }
 
 /**
- * The wallet pays the organizer on Rabdi, then writes its own ticket and payment records.
+ * The wallet pays the event's organizer on Rabdi, then writes its own ticket and payment records.
  * The one human, one ticket check runs here, so the door must confirm the payment before admitting a bought ticket.
  */
 export async function buy(event: ArkivEvent, onStep: (step: BuyStep) => void) {

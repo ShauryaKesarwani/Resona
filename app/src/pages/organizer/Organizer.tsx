@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { CheckCircleIcon, WarningCircleIcon } from '../../components/icons'
 import { StatusPill } from '../../components/Bits'
 import { Button } from '../../components/Button'
 import { Screen, TopBar } from '../../components/Screen'
 import { api, type ServerTicket } from '../../services/api'
+import { organizerEvents, type ArkivEvent } from '../../services/arkiv'
 import { signedBy } from '../../services/auth'
 import { walletAddress } from '../../utils/wallet'
 import { DoorCount } from './DoorCount'
@@ -22,7 +23,12 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const MESSAGES: Record<string, string> = {
   invalid_holder: 'That is not a wallet address.',
   arkiv_not_configured: 'The server cannot reach Arkiv. Check its keys, then try again.',
-  not_organizer: `This wallet cannot issue tickets. Add ${walletAddress()} to ORGANIZER_WALLETS on the server, then restart it.`,
+  not_organizer: 'This account is not an organizer yet. Ask an existing admin to add it.',
+  organizer_login_required: 'Sign in with World ID using this wallet before opening organizer tools.',
+  event_not_owned: 'This event is not assigned to this organizer.',
+  event_required: 'Choose an event first.',
+  world_account_not_found: 'That wallet has no World-linked Resona account yet. Ask them to sign in first.',
+  arkiv_write_failed: 'The organizer could not be saved to Arkiv. Try again in a moment.',
   bad_signature: 'The server could not confirm this wallet. Check the phone clock, then try again.',
 }
 const explain = (err: unknown) =>
@@ -39,6 +45,20 @@ export default function Organizer() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [issued, setIssued] = useState<ServerTicket[]>([])
+  const [events, setEvents] = useState<ArkivEvent[]>([])
+  const [eventId, setEventId] = useState('')
+  const [eventsError, setEventsError] = useState('')
+  const [newOrganizer, setNewOrganizer] = useState('')
+  const [promoteError, setPromoteError] = useState('')
+  const [promoting, setPromoting] = useState(false)
+  const [promoted, setPromoted] = useState('')
+
+  useEffect(() => {
+    organizerEvents().then((rows) => {
+      setEvents(rows)
+      setEventId((current) => rows.some((row) => row.eventId === current) ? current : rows[0]?.eventId ?? '')
+    }).catch(() => setEventsError('Could not load events from Arkiv. Try again.'))
+  }, [])
 
   const [lookup, setLookup] = useState('')
   const [found, setFound] = useState<ServerTicket[] | null>(null)
@@ -53,7 +73,8 @@ export default function Organizer() {
     setError('')
     setBusy(true)
     try {
-      const ticket = await api.issue(address, tier, await signedBy(`issue:${address.toLowerCase()}:${tier}`))
+      if (!eventId) return setError('Create or choose an event before issuing tickets.')
+      const ticket = await api.issue(address, tier, eventId, await signedBy(`issue:${eventId}:${address.toLowerCase()}:${tier}`))
       setIssued((list) => [ticket, ...list])
       setHolder('')
     } catch (err) {
@@ -79,11 +100,41 @@ export default function Organizer() {
     }
   }
 
+  async function promote(e: FormEvent) {
+    e.preventDefault()
+    const address = newOrganizer.trim()
+    if (!isAddress(address)) return setPromoteError('Enter a wallet address that already has a World-linked Resona account.')
+    setPromoteError('')
+    setPromoted('')
+    setPromoting(true)
+    try {
+      await api.promoteOrganizer(address, await signedBy(`organizer:promote:${address.toLowerCase()}`))
+      setPromoted(address)
+      setNewOrganizer('')
+    } catch (err) {
+      setPromoteError(explain(err))
+    } finally {
+      setPromoting(false)
+    }
+  }
+
   return (
     <Screen>
       <TopBar back="/enter" />
       <h1 className="heading-4">Organizer</h1>
       <Button to="/organizer/attendees" variant="secondary" size="md">View attendees and check-ins</Button>
+
+      <form onSubmit={promote} noValidate className="flex flex-col gap-3 rounded-xl border border-line bg-surface-raised p-4">
+        <h2 className="title-3">Add an organizer</h2>
+        <p className="body-6 text-text-muted">Promote someone who already signed in with World ID. They can then manage their own events.</p>
+        <label className="flex flex-col gap-2">
+          <span className="title-4">Their wallet address</span>
+          <input value={newOrganizer} onChange={(e) => setNewOrganizer(e.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="0x…" className="min-h-12 rounded-xl border border-line bg-surface px-3 font-mono text-base" />
+        </label>
+        {promoteError && <p role="alert" className="body-6 text-danger">{promoteError}</p>}
+        {promoted && <p role="status" className="body-6 text-success">Organizer access granted to {short(promoted)}.</p>}
+        <Button type="submit" busy={promoting}>{promoting ? 'Adding organizer' : 'Add organizer'}</Button>
+      </form>
 
       <div role="group" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-raised p-1">
         {(['issue', 'lookup', 'event', 'door'] as const).map((m) => (
@@ -107,6 +158,15 @@ export default function Organizer() {
       {mode === 'issue' && (
         <form onSubmit={issue} noValidate className="flex flex-1 flex-col gap-4">
           <p className="body-3 max-w-prose text-text-muted">Send a ticket to a wallet address. It shows up in that person’s wallet.</p>
+          <label className="flex flex-col gap-2">
+            <span className="title-4">Event</span>
+            <select value={eventId} onChange={(e) => setEventId(e.target.value)} disabled={events.length === 0} className="min-h-14 rounded-xl border border-line bg-surface-raised px-4 text-base">
+              {events.length === 0 && <option value="">No events available</option>}
+              {events.map((event) => <option key={event.eventId} value={event.eventId}>{event.eventName}</option>)}
+            </select>
+            {eventsError && <span role="alert" className="body-6 text-danger">{eventsError}</span>}
+            {events.length === 0 && !eventsError && <span className="body-6 text-text-muted">Publish an event before issuing tickets.</span>}
+          </label>
           <label className="flex flex-col gap-2">
             <span className="title-4">Wallet address</span>
             <input

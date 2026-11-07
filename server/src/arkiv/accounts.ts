@@ -15,6 +15,8 @@ export type AccountRegistry = {
   ready: boolean;
   findByWallet(wallet: string): Promise<Account | null>;
   findByNullifierHash(nullifierHash: string): Promise<Account | null>;
+  isOrganizer(userId: string): Promise<boolean>;
+  promoteOrganizer(account: Pick<Account, "wallet" | "userId">, promotedBy: string): Promise<void>;
   create(account: Pick<Account, "wallet" | "nullifierHash" | "sessionHash"> & { userId?: string }): Promise<void>;
 };
 
@@ -23,6 +25,13 @@ export const Accounts = defineSchema("resona.account", {
   nullifierHash: str().indexed(),
   userId: str().optional().indexed(),
   sessionHash: str().optional(),
+});
+
+export const Organizers = defineSchema("resona.organizer", {
+  wallet: addr().indexed(),
+  userId: str().indexed(),
+  promotedBy: addr().indexed(),
+  promotedAt: str(),
 });
 
 const JOURNAL = "arkiv-writes.log";
@@ -36,6 +45,8 @@ export const unconfiguredAccounts: AccountRegistry = {
   ready: false,
   findByWallet: async () => null,
   findByNullifierHash: async () => null,
+  isOrganizer: async () => false,
+  promoteOrganizer: async () => { throw new Error("Arkiv is not configured"); },
   create: async () => {
     throw new Error("Arkiv is not configured");
   },
@@ -55,6 +66,8 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
   // Only records this server created count: anyone can write an entity with this schema.
   const accounts = () =>
     publicClient.select({ wallet: true, nullifierHash: true, userId: true, sessionHash: true }).from(Accounts).createdBy(organizer).limit(MAX_RECORDS);
+  const organizerAccounts = () =>
+    publicClient.select({ userId: true }).from(Organizers).createdBy(organizer).limit(100);
 
   const first = ({ entities }: Awaited<ReturnType<ReturnType<typeof accounts>["fetch"]>>): Account | null => {
     // An older account has a second, read-only record that adds its World session. That record wins.
@@ -70,11 +83,32 @@ export function arkivAccounts({ privateKey, accessKey, maxCostWei }: ArkivConfig
   const findByWallet = async (wallet: string) => first(await accounts().where(eq("wallet", addr(wallet as Hex))).fetch());
   const findByNullifierHash = async (nullifierHash: string) =>
     first(await accounts().where(eq("nullifierHash", nullifierHash)).fetch());
+  const isOrganizer = async (userId: string) =>
+    (await organizerAccounts().where(eq("userId", userId)).limit(1).fetch()).entities.length > 0;
 
   return {
     ready: true,
     findByWallet,
     findByNullifierHash,
+    isOrganizer,
+    async promoteOrganizer(target, promotedBy) {
+      if (await isOrganizer(target.userId)) return;
+      const signer = localEnvSigner(publicClient, privateKey, journal);
+      const client = guardedWalletClient({
+        publicClient, signer, accessKey, maxCostWei,
+        approve: async () => true,
+        onSubmitted: journal,
+      });
+      await organizerWrites(() => client.createEntity(Organizers, {
+        wallet: addr(target.wallet as Hex), userId: target.userId,
+        promotedBy: addr(promotedBy as Hex), promotedAt: new Date().toISOString(),
+      }, { expiration: ExpirationTime.max(), flags: { readonly: true } }));
+      for (let attempt = 0; attempt < READBACK_ATTEMPTS; attempt++) {
+        if (await isOrganizer(target.userId)) return;
+        await pause(1_000);
+      }
+      throw new Error("Organizer promotion written but not readable yet");
+    },
     async create({ wallet, nullifierHash, sessionHash, userId = createHash("sha256").update(nullifierHash).digest("hex") }) {
       const signer = localEnvSigner(publicClient, privateKey, journal);
       const client = guardedWalletClient({

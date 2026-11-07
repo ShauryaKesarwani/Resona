@@ -39,6 +39,7 @@ const enroll = async (key = keyOne, overrides = {}) =>
 
 export function memoryRegistry(): AccountRegistry & { rows: Account[] } {
   const rows: Account[] = [];
+  const organizers = new Set<string>();
   return {
     rows,
     ready: true,
@@ -47,6 +48,8 @@ export function memoryRegistry(): AccountRegistry & { rows: Account[] } {
       return mine.find((row) => row.sessionHash) ?? mine[0] ?? null;
     },
     findByNullifierHash: async (hash) => rows.find((row) => row.nullifierHash === hash) ?? null,
+    isOrganizer: async (userId) => organizers.has(userId),
+    promoteOrganizer: async (account) => { organizers.add(account.userId); },
     create: async ({ wallet, nullifierHash, sessionHash, userId }) =>
       void rows.push({ wallet, nullifierHash, sessionHash, userId: userId ?? createHash("sha256").update(nullifierHash).digest("hex") }),
   };

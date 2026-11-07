@@ -7,7 +7,7 @@ Arkiv is the only persistent store. Accounts, events, tickets, claims, payments 
 1. Run `npm run arkiv:setup` to create a testnet-only signer in `.env.arkiv`.
 2. Fund its address with tGLM and add an Arkiv access key to `.env.arkiv`.
 3. Set the World ID fields and a stable `NULLIFIER_HASH_KEY` in `.env`.
-   Set `ORGANIZER_WALLETS` too, as a comma-separated list of wallets allowed to issue tickets. If it's empty, nobody can issue. The organizer page shows the address to add.
+   Set `ORGANIZER_WALLETS` too, as a comma-separated list of bootstrap admin wallets. Each admin must sign in with a World-linked Resona account; admins can then promote other existing accounts from the Organizer page.
 4. Set `ARKIV_EVENT_ID` to a stable identifier. The server hashes the event identifier before storing it.
 5. Run `npm start`.
 

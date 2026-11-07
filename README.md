@@ -39,7 +39,7 @@ To test sonar, open `/lab` on both phones, use the same room, pick different rol
 ### Before a door demo
 
 - Run exactly one server process. Check-in sessions are held in memory and disappear on restart; duplicate protection is not safe across multiple processes or every restart.
-- Set `DOOR_PIN` and keep it private. If it is unset, anyone can act as the door. Set `ORGANIZER_WALLETS` to the authorized issuing wallets; an empty list prevents issuing.
+- Set `DOOR_PIN` and keep it private. If it is unset, anyone can act as the door. Set `ORGANIZER_WALLETS` to the initial admin wallets; an empty list leaves no bootstrap admin. After signing in with World ID, a bootstrap admin can promote existing Resona accounts from the Organizer page. Organizers can publish events and issue tickets only for their own events; older events remain shared under the server wallet.
 - Check `ALLOW_WORLD_SKIP`: when enabled, an unverified guest with an organizer-issued skipped ticket may be admitted. Bought tickets still require a trusted World account and an unused event claim. The door is not restricted to a single event, so run one event at a time.
 - Test the real phones, microphone permissions and network before admitting anyone. If an Arkiv write fails, do not automatically repeat it: it may already have landed. Check the record before deciding what to do.
 - Arkiv data is public and expires; do not put identity details, raw proofs, keys or audio there. See [the data contract](arkiv/schema.md) for the full limitations and recovery gaps.

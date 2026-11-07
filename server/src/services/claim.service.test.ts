@@ -14,7 +14,7 @@ async function signedClaim(passId: string, signer = account) {
   return { passId, wallet, timestamp, signature };
 }
 
-const withAccount = { ready: true, findByWallet: async () => ({ wallet, nullifierHash: "h", userId: "user-hash" }), findByNullifierHash: async () => null, create: async () => {} } satisfies AccountRegistry;
+const withAccount = { ready: true, findByWallet: async () => ({ wallet, nullifierHash: "h", userId: "user-hash" }), findByNullifierHash: async () => null, isOrganizer: async () => false, promoteOrganizer: async () => {}, create: async () => {} } satisfies AccountRegistry;
 const noAccount = { ...withAccount, findByWallet: async () => null } satisfies AccountRegistry;
 
 let tickets: TicketStore;
@@ -26,6 +26,8 @@ beforeEach(() => {
   tickets = {
     ready: true,
     issue: async () => { throw new Error("Not used in this test"); },
+    canManageEvent: async () => false,
+    createEvent: async () => { throw new Error("Not used in this test"); },
     ticket: async (id) => rows.find((row) => row.passId === id),
     ticketsOf: async () => rows,
     hasClaimed: async (userId) => userClaims.has(userId),
