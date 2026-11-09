@@ -6,6 +6,7 @@ import { getAddress, http, keccak256, parseEther, type Hex } from 'viem'
 import { walletAccount, walletAddress } from '../utils/wallet'
 import { api } from './api'
 import { signedBy } from './auth'
+import { unverifiedPurchaseId } from './purchaseIdentity'
 
 /** Same schemas as server/src/arkiv. Everything on Arkiv is public, so the browser reads it directly. */
 const Accounts = defineSchema('resona.account', {
@@ -203,7 +204,8 @@ async function userIdOf(wallet: Hex) {
     .limit(1)
     .fetch()
   const row = entities[0]
-  if (!row) throw new Error('no_account')
+  // Payment metadata is self-reported; this wallet marker is not a World identity.
+  if (!row) return unverifiedPurchaseId(wallet)
   if (row.userId?.value) return row.userId.value
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(row.nullifierHash.value))
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -245,7 +247,7 @@ export class PurchaseError extends Error {
 
 /**
  * The wallet pays the event's organizer on Rabdi, then writes its own ticket and payment records.
- * The one human, one ticket check runs here, so the door must confirm the payment before admitting a bought ticket.
+ * The browser checks for an existing wallet ticket, not a one-human guarantee.
  */
 export async function buy(event: ArkivEvent, onStep: (step: BuyStep) => void) {
   const wallet = getAddress(walletAddress())

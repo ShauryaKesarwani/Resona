@@ -54,6 +54,7 @@ The current code is the source for implementation status; planned behavior and s
 
 ## World ID
 
+- [~] Allow unverified demo purchases using wallet-only payment metadata without claiming World verification. The purchase screen warns that bought-ticket admission still requires World ID; payment, wallet and door checks are unchanged. Verify purchase on demo phones and decide separately whether unverified admission should be enabled.
 - [~] Allow a local, unverified demo account without World ID, including when World setup fails or a session exists; show the local sign-in status on Account and do not infer credential levels from ticket status. World-protected server actions remain gated; verify the flow on fresh demo phones and live World sign-in.
 - [~] IDKit sign-in, server-side proof verification, wallet signal binding, session sign-in and demo guest path exist. The user reports a first-time World sign-in succeeded on the VPS from another person's phone, and their existing tunnel account signed in on the VPS after manually copying its wallet key and World session; the full demo journey remains to verify.
 - [ ] Confirm action, RP and environment match on the deployed setup, and test repeat-human rejection end to end.
