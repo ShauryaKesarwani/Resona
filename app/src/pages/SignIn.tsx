@@ -34,6 +34,10 @@ export default function SignIn() {
     markSignedIn()
     navigate(/^\/(?!\/)/.test(next) ? next : '/wallet', { replace: true })
   }
+  const enterUnverified = () => {
+    continueAsGuest()
+    navigate(/^\/(?!\/)/.test(next) ? next : '/wallet', { replace: true })
+  }
   const session = worldSession()
 
   if (taken) {
@@ -47,6 +51,7 @@ export default function SignIn() {
             This World ID may have already been used to sign up. If you have access to your old Resona account, you can move it here.
           </p>
           <Button to="/account-transfer">Move an existing account</Button>
+          <Button variant="secondary" onClick={enterUnverified}>Continue without World ID</Button>
         </section>
       </Screen>
     )
@@ -56,11 +61,11 @@ export default function SignIn() {
     <Screen>
       <TopBar back="/" title="Sign in" right={null} />
       <Figure ratio="16 / 7" position="50% 45%" />
-      <h1 className="heading-4 mt-2">{session ? 'Welcome back' : 'Sign in with World ID'}</h1>
+      <h1 className="heading-4 mt-2">{session ? 'Welcome back' : 'Open your account'}</h1>
       <p className="body-3 text-text-muted">
         {session
           ? 'Approve in World ID to sign in. It proves you are the same person, without sharing who you are.'
-          : 'World ID proves you are human without sharing who you are.'}
+          : 'Continue without World ID for testing, or verify to use World-protected features.'}
       </p>
       <div className="flex-1" />
       <WorldStep
@@ -73,20 +78,13 @@ export default function SignIn() {
           if ('session_id' in result && result.session_id) saveWorldSession(result.session_id)
         }}
         onDone={enter}
-        onSkip={
-          session
-            ? undefined
-            : () => {
-                continueAsGuest()
-                navigate(/^\/(?!\/)/.test(next) ? next : '/wallet', { replace: true })
-              }
-        }
         onCode={(code) => {
           if (!REPEAT_CODES.has(code)) return false
           setTaken(true)
           return true
         }}
       />
+      <Button variant="secondary" size="md" onClick={enterUnverified}>Continue without World ID</Button>
       <Button variant="secondary" size="md" to="/account-transfer">Move an existing account</Button>
     </Screen>
   )

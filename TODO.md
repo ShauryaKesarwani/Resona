@@ -54,6 +54,7 @@ The current code is the source for implementation status; planned behavior and s
 
 ## World ID
 
+- [~] Allow a local, unverified demo account without World ID, including when World setup fails or a session exists; show the local sign-in status on Account and do not infer credential levels from ticket status. World-protected server actions remain gated; verify the flow on fresh demo phones and live World sign-in.
 - [~] IDKit sign-in, server-side proof verification, wallet signal binding, session sign-in and demo guest path exist. The user reports a first-time World sign-in succeeded on the VPS from another person's phone, and their existing tunnel account signed in on the VPS after manually copying its wallet key and World session; the full demo journey remains to verify.
 - [ ] Confirm action, RP and environment match on the deployed setup, and test repeat-human rejection end to end.
 - [ ] Diagnose the VPS World ID `integrity_verification_failed` response using the actual test environment and World configuration; a successful verification has not been confirmed.

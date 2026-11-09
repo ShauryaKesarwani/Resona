@@ -6,7 +6,7 @@ import { walletAddress } from '../utils/wallet'
  * This wallet's tickets, read from Arkiv and held for the screens. Nothing here is simulated.
  */
 export type Status = 'issued' | 'claimed' | 'skipped' | 'checked_in' | 'revoked'
-export type Level = 'Orb verified' | 'Camera verified' | 'Government ID' | 'Not verified'
+export type Level = 'Not available'
 
 export type Ticket = {
   id: string
@@ -71,7 +71,7 @@ async function loadTickets() {
         pass: index + 1,
         event: event?.eventName ?? 'Event details not published',
         tier: tierNames[row.tier] ?? row.tier,
-        level: row.status === 'claimed' || row.status === 'checked_in' ? 'Orb verified' : 'Not verified',
+        level: 'Not available', // Ticket status does not establish a World credential level.
         status: entered.has(row.passId) ? 'checked_in' : (row.status as Status),
         past: event ? event.eventDate < today : false,
         transferExpires: local?.transferExpires,

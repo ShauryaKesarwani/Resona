@@ -9,6 +9,7 @@ import { SignOutButton } from '../../components/SignOutButton'
 import { avatarName, displayName, wallet } from '../../data/mock'
 import { explorerAddress } from '../../services/arkiv'
 import { useIsOrganizer, useRole } from '../../services/organizerStatus'
+import { worldSignInStatus } from '../../services/auth'
 
 /** The home for everything about you: how you are using the app, your wallet on chain, and moving it to another device. */
 export default function Account() {
@@ -44,6 +45,15 @@ export default function Account() {
           )}
         </button>
       </header>
+
+      <section aria-labelledby="verification" className="flex flex-col gap-2">
+        <h2 id="verification" className="title-4 text-text-muted">Account status</h2>
+        <div className="border-y border-line">
+          <Row label="World ID">{worldSignInStatus() ? 'Verified sign-in' : 'Not verified'}</Row>
+        </div>
+        <p className="body-6 text-text-muted">{worldSignInStatus() ? 'This browser signed in with World ID. Credential level is not recorded.' : 'You are using a local demo account. World-protected features still require verification.'}</p>
+        {!worldSignInStatus() && <Button variant="secondary" size="md" to="/signin?next=%2Faccount">Verify with World ID</Button>}
+      </section>
 
       <section aria-labelledby="role" className="flex flex-col gap-2">
         <h2 id="role" className="title-4 text-text-muted">

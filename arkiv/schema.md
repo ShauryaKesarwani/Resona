@@ -115,6 +115,8 @@ One human per event is the target. The implementation has two steps, neither of 
 
 **Sign-up.** One World action, `WORLD_ACTION`, covers first sign-in for the whole app; it is not per event. The server verifies the proof server-side, binds its signal to the wallet, and refuses a nullifier hash or a wallet that already has an account. Later sign-ins prove the account's own World session from its wallet. World rejecting a replayed nullifier is the only external check.
 
+For demonstrations, a browser can also continue without World ID using its locally stored wallet. This does not create a `resona.account`, prove a human, or bypass server-side World requirements. Account status reflects the browser's local sign-in state, not a trusted server lookup; the app does not record a credential level. Ticket status is not evidence of an Orb or other credential. Existing World-linked accounts and records are unchanged.
+
 **Claim.** A claim needs no new proof: the wallet's account stands in for it, and `userId` plus `eventId` give one claim per human per event. Organizer-issued tickets create the claim when claimed; bought tickets create it atomically with admission. An existing event claim (including one for an issued ticket) blocks a bought ticket. The payment record's self-reported `userId` is never used as identity evidence. Purchase-time uniqueness still runs only in the browser: the server enforces eligibility at admission, not before the buyer pays.
 
 | Field | Type | Meaning |
