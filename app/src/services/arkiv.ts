@@ -25,7 +25,7 @@ const Payments = defineSchema('resona.payment', {
 })
 
 const Checkins = defineSchema('resona.checkin', {
-  eventId: str().indexed(), passId: str().indexed(), holder: addr().indexed(), ordinal: str(), distanceCm: str(), checkedInAt: str(),
+  eventId: str().indexed(), passId: str().indexed(), holder: addr().indexed(), ordinal: str(), distanceCm: str(), checkedInAt: str(), verificationLevel: str().optional(),
 })
 export const Transfers = defineSchema('resona.transfer', {
   requestId: str().indexed(), eventId: str().indexed(), passId: str().indexed(),

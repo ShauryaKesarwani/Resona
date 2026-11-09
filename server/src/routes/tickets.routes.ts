@@ -249,7 +249,7 @@ export function ticketRoutes(tickets: TicketStore & CheckinStore, registry: Acco
     if (!tickets.ready) return void res.status(503).json({ error: "arkiv_not_configured" });
     if (!(await isWalletOwner("fund", req.body ?? {}))) return void res.status(401).json({ error: "bad_signature" });
     const wallet = req.body.wallet.toLowerCase();
-    if (!(await registry.findByWallet(wallet))) return void res.status(403).json({ error: "no_account" });
+    if (!env.world.allowSkip && !(await registry.findByWallet(wallet))) return void res.status(403).json({ error: "no_account" });
     await tickets.fund(wallet);
     res.json({ wallet });
   });

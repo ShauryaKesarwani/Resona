@@ -18,7 +18,7 @@ const sign = async (purpose: string, key = holderKey, as = wallet) => {
 };
 
 let ticket: DoorTicket;
-let written: Array<{ passId: string; cm: number }>;
+let written: Array<{ passId: string; cm: number; verificationLevel: string }>;
 let store: CheckinStore;
 let clock: number;
 let checkins: ReturnType<typeof createCheckins>;
@@ -68,7 +68,7 @@ beforeEach(() => {
     commitCheckin: (door, cm, revalidate) => exclusive(async () => {
       const current = await revalidate();
       if (writeFails) throw new Error("write failed");
-      written.push({ passId: door.passId, cm });
+      written.push({ passId: door.passId, cm, verificationLevel: current.verificationLevel });
       if (current.userId) humanClaimed = true;
       return { ordinal: written.length, transactionHash: "0xabc", entityKey: "0xdef" };
     }),
@@ -265,7 +265,7 @@ test("a bought ticket needs a real payment, and an issued one doesn't", async ()
   assert.deepEqual(out, { status: 402, error: "payment_not_found" });
 });
 
-test("a bought ticket needs a World account regardless of demo skip", async () => {
+test("a bought ticket needs a World account unless demo skip is enabled", async () => {
   ticket.bought = true;
   account = null;
   const out = await checkins.start({ passId, ...await sign(`checkin:${passId}`) });
@@ -274,7 +274,9 @@ test("a bought ticket needs a World account regardless of demo skip", async () =
   assert.equal((await checkins.start({ passId, ...await sign(`checkin:${passId}`) })).status, 200);
   account = null;
   const demo = createCheckins({ store, registry, allowSkip: true, doorPin: "1234", now: () => clock });
-  assert.deepEqual(await demo.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 403, error: "not_verified" });
+  assert.equal((await demo.start({ passId, ...await sign(`checkin:${passId}`) })).status, 200);
+  paymentOk = false;
+  assert.deepEqual(await demo.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 402, error: "payment_not_found" });
 });
 
 test("an old code stops working, and a code works once", async () => {
@@ -363,21 +365,20 @@ test("a running or passed check can't be restarted", async () => {
   assert.deepEqual(await checkins.retry(session.id, { doorToken: session.doorToken }), { status: 409, error: "cannot_retry" });
 });
 
-test("purchased tickets require a trusted World account even when demo skip is enabled", async () => {
+test("demo skip admits an unverified buyer without a human claim", async () => {
   ticket.bought = true;
   account = null;
   checkins = createCheckins({ store, registry, allowSkip: true });
-  for (const status of ["claimed", "skipped"] as const) {
-    ticket.status = status;
-    assert.deepEqual(await checkins.start({ passId, ...await sign(`checkin:${passId}`) }), { status: 403, error: "not_verified" });
-  }
-  assert.equal(written.length, 0);
+  assert.equal((await measure(1.50175, 1.5)).state, "pass");
+  assert.equal(written[0].verificationLevel, "not_verified");
+  assert.equal(humanClaimed, false);
 });
 
 test("a verified buyer with payment is admitted and consumes the event claim", async () => {
   ticket.bought = true;
   assert.equal((await measure(1.50175, 1.5)).state, "pass");
   assert.equal(humanClaimed, true);
+  assert.equal(written[0].verificationLevel, "world_linked");
 });
 
 test("a buyer cannot use an event already claimed by their human", async () => {

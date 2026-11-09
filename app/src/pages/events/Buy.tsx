@@ -17,6 +17,7 @@ const steps: Record<BuyStep, string> = {
 }
 
 const MESSAGES: Record<string, string> = {
+  no_account: 'This wallet needs test tokens. Automatic top-up currently requires World ID; add Rabdi test tokens to your wallet, then try again.',
   human_already_claimed: 'You already have a ticket for this event.',
   event_ended: 'This event has ended.',
   payment_not_confirmed: 'Your payment is not confirmed yet. Buy again to pick it up, and you will not pay twice.',
@@ -77,7 +78,7 @@ export default function Buy() {
         <section className="stagger flex flex-1 flex-col justify-center gap-4" role="status">
           <CheckCircleIcon size={48} className="text-success" aria-hidden="true" />
           <h1 className="heading-4">You have a ticket</h1>
-          <p className="body-3 max-w-prose text-text-muted">{event.eventName} on {prettyDate(event.eventDate)}. It is in your wallet. The door currently requires World ID verification to check in.</p>
+          <p className="body-3 max-w-prose text-text-muted">{event.eventName} on {prettyDate(event.eventDate)}. It is in your wallet. Unverified check-in requires demo skip to be enabled by the server.</p>
         </section>
         <Button to={`/wallet/ticket/${passId}`}>Open your ticket</Button>
         <Button variant="secondary" size="md" to="/events">
@@ -102,8 +103,9 @@ export default function Buy() {
           <Row label="Network">{wallet.network} test network</Row>
         </div>
       </div>
-      <p className="body-6 max-w-prose text-text-muted">Free test tokens only. If your wallet is short, Resona adds some first.</p>
-      <p className="body-6 max-w-prose text-text-muted">You can buy without World ID for the demo, but the door currently requires World ID verification to use a purchased ticket. Unverified purchases do not provide one-ticket-per-person protection.</p>
+      <p className="body-6 max-w-prose text-text-muted">Free test tokens only. Automatic top-up for unverified wallets requires demo skip to be enabled by the server.</p>
+      <a href="https://hub.arkiv.network/faucet" target="_blank" rel="noreferrer" className="body-6 text-accent">Get Rabdi test tokens</a>
+      <p className="body-6 max-w-prose text-text-muted">Unverified purchases and demo check-ins do not provide one-ticket-per-person protection. The door must have demo skip enabled.</p>
 
       {error && (
         <div role="alert" className="body-6 flex items-start gap-2 text-danger">

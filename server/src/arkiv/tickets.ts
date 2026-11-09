@@ -46,7 +46,7 @@ export type TicketStore = {
 const notConfigured = async () => { throw new Error("Arkiv is not configured"); };
 export type DoorTicket = Ticket & { bought: boolean };
 export type Admission = { ordinal: number; transactionHash: Hex; entityKey: Hex };
-export type AdmissionEligibility = { ticket: DoorTicket; userId?: string };
+export type AdmissionEligibility = { ticket: DoorTicket; userId?: string; verificationLevel: "world_linked" | "not_verified" };
 export type CheckinStore = Pick<TicketStore, "hasClaimed"> & {
   /** The ticket for this holder, whether the organizer issued it or the holder's own wallet bought it. */
   doorTicket(passId: string, holder: string): Promise<DoorTicket | undefined>;
@@ -355,17 +355,17 @@ export function createArkivTickets(privateKey: Hex, accessKey: string, defaultEv
         .where(eq("eventId", door.eventId)).limit(1).withCount().fetch();
       // Arkiv's index can lag behind a write that just landed, so the count never goes backwards.
       const ordinal = Math.max(Number(page.count), lastOrdinal.get(door.eventId) ?? 0) + 1;
-      const values = {
-        eventId: door.eventId, passId: door.passId, holder: addr(getAddress(door.holder)), ordinal: String(ordinal),
-        distanceCm: String(Math.round(distanceCm)), checkedInAt: new Date().toISOString(),
-      };
-      const creates = [{ schema: CheckinSchema, values, ...keep, flags: { readonly: true } }];
       let admittedUserId: string | undefined;
       const result = await write(`checkin ${door.passId}`, 2, async (tx) => {
         // Run after both the claim/check-in queue and signer queue have been acquired.
         const current = await revalidate();
+        const values = {
+          eventId: door.eventId, passId: door.passId, holder: addr(getAddress(door.holder)), ordinal: String(ordinal),
+          distanceCm: String(Math.round(distanceCm)), checkedInAt: new Date().toISOString(), verificationLevel: current.verificationLevel,
+        };
+        const creates = [{ schema: CheckinSchema, values, ...keep, flags: { readonly: true } }];
         if (door.bought) {
-          if (!current.userId) throw new Error("A bought ticket requires a verified account");
+          if (!current.userId) return writer.executeBatch({ creates }, tx);
           admittedUserId = current.userId;
           return writer.executeBatch({ creates: [
             ...creates,

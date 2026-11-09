@@ -24,6 +24,7 @@ const express = (await import("express")).default;
 const issued: string[] = [];
 const promoted: string[] = [];
 let purchaseChecks = 0;
+const funded: string[] = [];
 const purchaseEvent = "a".repeat(64);
 const tickets = {
   ready: true,
@@ -32,6 +33,7 @@ const tickets = {
   issue: async (to: string) => { issued.push(to); return { holder: to }; },
   doorTicket: async (passId: string, wallet: string) => ({ passId, holder: wallet.toLowerCase(), eventId: passId === "wrong-event" ? "b".repeat(64) : purchaseEvent, tier: "general", status: "claimed", bought: passId !== "issued" }),
   paymentIsValid: async (ticket: { passId: string }) => { purchaseChecks++; return ticket.passId === "paid"; },
+  fund: async (wallet: string) => { funded.push(wallet); },
 };
 const app = express();
 app.use(express.json());
@@ -47,6 +49,23 @@ const registry = {
 app.use("/api", ticketRoutes(tickets as never, registry as never, { configured: false } as never));
 const server = app.listen(0);
 after(() => server.close());
+
+test("demo funding requires the wallet signature and demo skip", async () => {
+  const original = env.world.allowSkip;
+  const wallet = stranger.address.toLowerCase();
+  const timestamp = Date.now();
+  const signature = await stranger.signMessage({ message: signedMessage("fund", wallet, timestamp) });
+  const { port } = server.address() as { port: number };
+  const send = (body: unknown) => fetch(`http://127.0.0.1:${port}/api/fund`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  try {
+    env.world.allowSkip = false;
+    assert.equal((await send({ wallet, timestamp, signature })).status, 403);
+    env.world.allowSkip = true;
+    assert.equal((await send({ wallet, timestamp, signature: "0x" })).status, 401);
+    assert.equal((await send({ wallet, timestamp, signature })).status, 200);
+    assert.deepEqual(funded, [wallet]);
+  } finally { env.world.allowSkip = original; }
+});
 
 const post = (body: unknown) => {
   const { port } = server.address() as { port: number };

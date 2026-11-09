@@ -49,7 +49,7 @@ export function createCheckins({ store, registry, allowSkip, doorPin, ens, now =
   }
 
   /** Shared by session start and the serialized admission write; buyer status is not World evidence. */
-  async function eligible(passId: string, wallet: string): Promise<{ ticket: DoorTicket; userId?: string; ensName?: string } | Failure> {
+  async function eligible(passId: string, wallet: string): Promise<{ ticket: DoorTicket; userId?: string; ensName?: string; verificationLevel: "world_linked" | "not_verified" } | Failure> {
     const ticket = await store.doorTicket(passId, wallet);
     if (!ticket) return { status: 404, error: "ticket_not_found" };
     if (ticket.holder !== wallet) return { status: 403, error: "not_ticket_holder" };
@@ -70,16 +70,17 @@ export function createCheckins({ store, registry, allowSkip, doorPin, ens, now =
         return { status: 403, error: "ens_verification_failed" };
       }
     }
+    if (!registry.ready) throw new Error("Account registry unavailable");
+    const account = await registry.findByWallet(wallet);
+    const linked = !!account && account.wallet.toLowerCase() === wallet && !!account.userId;
     let userId: string | undefined;
     if (ticket.bought) {
-      // Demo skip applies only to organizer-issued tickets, never to self-reported buyer status.
-      const account = registry.ready ? await registry.findByWallet(wallet) : null;
-      if (!account || account.wallet.toLowerCase() !== wallet || !account.userId) return { status: 403, error: "not_verified" };
-      userId = account.userId;
-      if (await store.hasClaimed(userId, ticket.eventId)) return { status: 409, error: "human_already_claimed" };
+      if (!linked && !allowSkip) return { status: 403, error: "not_verified" };
+      userId = linked ? account!.userId : undefined;
+      if (userId && await store.hasClaimed(userId, ticket.eventId)) return { status: 409, error: "human_already_claimed" };
       if (!(await store.paymentIsValid(ticket))) return { status: 402, error: "payment_not_found" };
     }
-    return { ticket, userId, ensName };
+    return { ticket, userId, ensName, verificationLevel: linked && ticket.status !== "skipped" ? "world_linked" : "not_verified" };
   }
 
   /** The holder's wallet proves it is here before any sound plays. */

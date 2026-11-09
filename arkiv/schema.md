@@ -88,7 +88,7 @@ An **issued** ticket is written by the organizer with status `issued`. Its allow
 - `issued` or `skipped` to `claimed`, when the wallet has an account, in one batch with the claim.
 - `claimed` to `checked_in`, or `skipped` to `checked_in` when skip is allowed, in one batch with the check-in.
 
-A **bought** ticket is written by the buyer's own wallet with status `claimed`, in one batch with its payment record. This self-reported status is not World verification. Admission requires an organizer-created account for the holder and no existing organizer-created claim for its server-derived `userId` and event. Demo skip never waives this requirement for bought tickets. The buyer owns the ticket, so the organizer cannot patch it. Its status stays `claimed` after admission, which makes `resona.checkin`, not ticket status, the authority for whether it was used. The organizer atomically creates the bought ticket's `resona.claim` and `resona.checkin` at admission.
+A **bought** ticket is written by the buyer's own wallet with status `claimed`, in one batch with its payment record. This self-reported status is not World verification. With `ALLOW_WORLD_SKIP=true`, an unverified holder may check in without a human claim; otherwise an organizer-created account is required. Verified holders still require an unused human/event claim, created atomically with check-in. The buyer owns the ticket, so the organizer cannot patch it. Its status stays `claimed` after admission; `resona.checkin` is the authority for use.
 
 `revoked` is refused at the door, but nothing sets it: revocation is not implemented.
 
@@ -107,7 +107,7 @@ Written by the buyer's wallet from the browser, defined in `server/src/arkiv/rec
 | `amountWei` | string | Self-reported amount. The door uses the chain's value instead |
 | `createdAt`* | string | ISO timestamp |
 
-The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`. The buyer's wallet must also have a trusted account and an unused human/event claim, regardless of `ALLOW_WORLD_SKIP`.
+The door accepts a bought ticket only if the buyer's payment record matches the pass and event, that transaction backs no other payment record from the buyer, the event exists, and the chain shows a successful transaction from the buyer to the organizer worth at least `priceWei`. A trusted account and unused human/event claim are required unless demo skip is enabled. Unverified admission does not guarantee one ticket per human.
 
 ## World ID uniqueness and claim — `resona.claim` (partially implemented)
 
@@ -115,7 +115,7 @@ One human per event is the target. The implementation has two steps, neither of 
 
 **Sign-up.** One World action, `WORLD_ACTION`, covers first sign-in for the whole app; it is not per event. The server verifies the proof server-side, binds its signal to the wallet, and refuses a nullifier hash or a wallet that already has an account. Later sign-ins prove the account's own World session from its wallet. World rejecting a replayed nullifier is the only external check.
 
-For demonstrations, a browser can also continue and purchase without World ID using its locally stored wallet. The payment record's self-reported `userId` uses an `unverified:` wallet marker when no trusted account exists; this marker is not proof of identity. This does not create a `resona.account`, prove a human, or bypass the door's World requirement, which is shown before payment. Account status reflects the browser's local sign-in state, not a trusted server lookup; the app does not record a credential level. Ticket status is not evidence of an Orb or other credential. Existing World-linked accounts and records are unchanged.
+For demonstrations, a browser can also continue and purchase without World ID using its locally stored wallet. The payment record's self-reported `userId` uses an `unverified:` wallet marker when no trusted account exists; this marker is not proof of identity. When `ALLOW_WORLD_SKIP=true`, signed wallets can receive automatic test-token funding and unverified ticket holders can check in. This creates no account or human claim. Public funding can drain the organizer's test-token balance through many wallets; use only for a controlled demo. Account status reflects local sign-in, not a trusted server lookup. Existing World-linked records are unchanged.
 
 **Claim.** A claim needs no new proof: the wallet's account stands in for it, and `userId` plus `eventId` give one claim per human per event. Organizer-issued tickets create the claim when claimed; bought tickets create it atomically with admission. An existing event claim (including one for an issued ticket) blocks a bought ticket. The payment record's self-reported `userId` is never used as identity evidence. Purchase-time uniqueness still runs only in the browser: the server enforces eligibility at admission, not before the buyer pays.
 
@@ -149,13 +149,14 @@ Defined in `server/src/arkiv/records.ts`. The session logic is in `server/src/se
 | `ordinal` | string | Arrival number within the event |
 | `distanceCm` | string | The measured distance, rounded |
 | `checkedInAt` | string | ISO timestamp |
+| `verificationLevel` | optional string | `world_linked` or `not_verified` at admission; older records have no value and must be treated as unknown. This does not identify an Orb, selfie, or passport level. |
 
 Create a record only after every one of these holds:
 
 1. The holder's wallet signed the start request and owns the ticket.
 2. The ticket is `claimed`, or `skipped` when skip is allowed, and the event has not ended.
 3. This wallet has no check-in for the event.
-4. A bought ticket passes the payment check above, has a trusted World account for the holder, and has no existing event claim for that account's server-derived `userId`. `ALLOW_WORLD_SKIP` applies only to issued tickets.
+4. A bought ticket passes the payment check above and, unless demo skip is enabled, has a trusted World account. If linked, it has no existing event claim for its server-derived `userId`.
 5. Each phone reported once for the current attempt, with a fresh random seed: the door with its session token, and the holder with a signature over the session and reading.
 6. The server computed the distance from both reports and it passed.
 
@@ -165,7 +166,7 @@ The organizer attendee list shows organizer-created and organizer-owned issued t
 
 Failed sonar or eligibility attempts write nothing. Either phone in the check can retry after a failed reading, up to 20 times, with a new seed; a report for an earlier attempt is refused, and a failed Arkiv write is never retried because it may have landed. Sessions live in server memory and expire. `DOOR_PIN` guards the door; if it is unset, anyone can act as the door. Never store audio.
 
-An issued ticket's check-in and its `checked_in` status land in one atomic batch; a bought ticket gets its claim and check-in in one batch. Both use the same in-process queue as issued-ticket claims. Successful bought-ticket admission also updates the recent-claim guard. This is not a multi-instance lock. Read-only attributes do not prevent owner deletion or ownership transfer.
+An issued ticket's check-in and its `checked_in` status land in one atomic batch; a verified bought ticket gets its claim and check-in in one batch. An unverified bought ticket creates only a check-in. Both use the same in-process queue as issued-ticket claims. Successful verified bought-ticket admission also updates the recent-claim guard. This is not a multi-instance lock. Read-only attributes do not prevent owner deletion or ownership transfer.
 
 Duplicate prevention and ordinals are not crash-safe. Both are a query followed by a write in one process, with in-memory floors for indexing lag; the ordinal uses Arkiv's query count rather than counting one result page. A restart during indexing lag can repeat an ordinal or allow a second admission. A failed write ends the session as `failed` and is never retried, even though it may have landed, so the organizer must check it before admitting the holder.
 
@@ -202,7 +203,7 @@ The demo additionally requires a holder wallet signature and sonar pass. Neither
 
 ## Known gaps
 
-- **Purchase-time policy and durable identity.** The browser can still be bypassed to pay and create multiple tickets; server-side World policy is enforced at admission only. Account uniqueness/recovery and expiration gaps still limit one-human guarantees. Bought-ticket policy and eligibility rechecks have fake-store unit tests, not live Arkiv verification.
+- **Purchase-time policy and durable identity.** The browser can still be bypassed to pay and create multiple tickets. With demo skip enabled, unverified admission has no one-human guarantee. Account uniqueness/recovery and expiration gaps also limit verified guarantees. Bought-ticket policy and eligibility rechecks have fake-store unit tests, not live Arkiv verification.
 - **The door is not tied to one event.** `/api/checkin/start` accepts a valid ticket for any event this organizer has, and the door's recent list shows all of them. Run one event at a time.
 - **Single process.** All uniqueness and ordering depends on one server process.
 

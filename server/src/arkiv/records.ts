@@ -17,6 +17,7 @@ export const CheckinSchema = defineSchema("resona.checkin", {
   ordinal: str(),
   distanceCm: str(),
   checkedInAt: str(),
+  verificationLevel: str().optional(),
 });
 
 /** One payment per transaction, with hashed event and user IDs. Reading by userId gives a person's purchase history. */
